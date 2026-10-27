@@ -156,12 +156,8 @@ describe("buildPermissionPickerGroups", () => {
             title: "nav.workbench",
             keys: ["terminal", "browser"],
           },
-          {
-            kind: "page",
-            id: "remote-desktop",
-            title: "nav.remoteDesktop",
-            keys: ["desktop", "mobile"],
-          },
+          // Remote desktop and Phone each hold one permission: shown as chips.
+          { kind: "chips", keys: ["desktop", "mobile"] },
         ],
       },
       {
@@ -288,8 +284,10 @@ describe("buildPermissionPickerGroups", () => {
       ],
     });
     expect(
-      groups[4]?.blocks.map((block) => ("id" in block ? block.id : "")),
-    ).toEqual(["workbench", "remote-desktop"]);
+      groups[4]?.blocks.map((block) =>
+        "id" in block ? block.id : block.keys.join(","),
+      ),
+    ).toEqual(["workbench", "desktop,mobile"]);
   });
 
   it("keeps personalization tabs with channels in the user's nav group", () => {

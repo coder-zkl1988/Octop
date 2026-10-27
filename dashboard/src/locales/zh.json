@@ -268,6 +268,7 @@
     "remoteBrowser": "浏览器 AI+",
     "workbench": "工作台",
     "remoteDesktop": "远程桌面",
+    "phone": "手机",
     "agent": "智能体",
     "skills": "技能",
     "agentConfig": "运行配置",
@@ -4982,11 +4983,14 @@
   },
   "remoteDesktopHub": {
     "title": "远程桌面",
-    "description": "在浏览器中操控服务器桌面或已连接的手机，远程完成操作",
+    "description": "在浏览器中操控服务器桌面，远程完成操作"
+  },
+  "phoneHub": {
+    "title": "手机",
+    "description": "管理已连接的手机：通过配套 App 交给 Agent 执行任务，或用 ADB 实时投屏和操控",
     "tabs": {
-      "desktop": "服务器",
-      "phone": "手机",
-      "companion": "手机 App"
+      "app": "手机 App",
+      "adb": "ADB 投屏"
     }
   },
   "terminal": {

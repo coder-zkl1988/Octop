@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Shield,
   PanelsTopLeft,
+  Smartphone,
 } from "lucide-react";
 import type { OctopUser } from "../api/modules/auth";
 import { navAllowed, userCan } from "../utils/permissions";
@@ -77,6 +78,7 @@ export const SIDEBAR_NAV_KEYS = [
   "bridge",
   "workbench",
   "remote-desktop",
+  "phone",
   "acp",
   "admin-users",
   "models",
@@ -131,6 +133,7 @@ export const SIDEBAR_GROUPED_NAV_KEYS = [
   "bridge",
   "workbench",
   "remote-desktop",
+  "phone",
   "acp",
   "admin-users",
   "models",
@@ -251,16 +254,21 @@ export function buildNavSections(
       labelKey: "nav.workbench",
     });
   }
-  // Server desktop + phone share one nav entry; phone tab also needs host capability.
-  if (
-    userCan(user, "desktop") ||
-    (opts?.mobileEnabled && userCan(user, "mobile"))
-  ) {
+  if (userCan(user, "desktop")) {
     controlItems.push({
       key: "remote-desktop",
       path: "/remote-desktop",
       icon: <Monitor size={iconSize} strokeWidth={iconStroke} />,
       labelKey: "nav.remoteDesktop",
+    });
+  }
+  // Companion-app and adb phones; ``mobileEnabled`` covers either backend.
+  if (opts?.mobileEnabled && userCan(user, "mobile")) {
+    controlItems.push({
+      key: "phone",
+      path: "/phone",
+      icon: <Smartphone size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.phone",
     });
   }
   // ACP: no module key this round — admin role only.

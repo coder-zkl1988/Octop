@@ -138,8 +138,9 @@ Octop 的 ADB 方案保持不动。新能力作为**第二种连接方式**并�
 | `GET /api/mobile/companion/devices/{device_id}/snapshot` | 最新一帧截图（JPEG） |
 | `GET/PUT /api/mobile/companion/settings` | 手机端模型选择（PUT 仅管理员） |
 
-### 4.7 Dashboard（「远程手机」页新增「配套 App」视图）
+### 4.7 Dashboard（独立的「手机」入口）
 
+- **入口**（实现后按用户要求调整）：侧边栏新增独立入口「手机」（`/phone`），包含「手机 App」（`/phone/app`，配套 App）和「ADB 投屏」（`/phone/adb`，原远程手机页）两个 tab；「远程桌面」只保留服务器桌面。旧地址 `/remote-desktop/phone*`、`/remote-desktop/companion`、`/remote-phone`、`/remote-android` 自动跳转到新位置。
 - **添加手机**：弹窗显示二维码（项目已有 `qrcode.react`）、URL（可复制）、有效期倒计时，以及三步说明：装 TabbyApp → 开无障碍 → 扫码。
 - **设备卡片**：状态点、型号、Android 版本、电量、当前 App、正在执行的任务及「停止」按钮、最新截图缩略图（页面可见时每 5 秒刷新）、解绑。
 - **手机端模型**：管理员可见的下拉框。

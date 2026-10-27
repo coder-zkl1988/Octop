@@ -16,6 +16,7 @@ const TokenUsagePage = lazy(() => import("../pages/Control/TokenUsage"));
 
 // Lazy-loaded pages — Control
 const RemoteDesktopPage = lazy(() => import("../pages/Control/RemoteDesktop"));
+const PhonePage = lazy(() => import("../pages/Control/Phone"));
 
 // Lazy-loaded pages — Settings
 const ModelsPage = lazy(() => import("../pages/Settings/Models"));
@@ -76,12 +77,13 @@ export const pathToKey: Record<string, string> = {
   "/remote-browser": "workbench",
   "/remote-desktop": "remote-desktop",
   "/remote-desktop/desktop": "remote-desktop",
-  "/remote-desktop/phone": "remote-desktop",
-  "/remote-desktop/phone/screen": "remote-desktop",
-  "/remote-desktop/phone/shell": "remote-desktop",
-  "/remote-desktop/companion": "remote-desktop",
-  "/remote-phone": "remote-desktop",
-  "/remote-android": "remote-desktop",
+  "/phone": "phone",
+  "/phone/app": "phone",
+  "/phone/adb": "phone",
+  "/phone/adb/screen": "phone",
+  "/phone/adb/shell": "phone",
+  "/remote-phone": "phone",
+  "/remote-android": "phone",
   "/subagents": "personalization",
   "/mbti": "personalization",
   "/memory": "personalization",
@@ -105,11 +107,11 @@ export const FULLSCREEN_PATHS = new Set([
   "/chat",
   "/remote-desktop",
   "/remote-desktop/desktop",
-  "/remote-desktop/phone",
-  "/remote-desktop/phone/screen",
-  "/remote-desktop/phone/shell",
-  "/remote-desktop/companion",
-  "/remote-phone",
+  "/phone",
+  "/phone/app",
+  "/phone/adb",
+  "/phone/adb/screen",
+  "/phone/adb/shell",
 ]);
 
 /**
@@ -141,6 +143,7 @@ export function resolveSelectedKey(pathname: string): string {
   if (pathname.startsWith("/chat/")) return "chat";
   if (pathname.startsWith("/workbench/")) return "workbench";
   if (pathname.startsWith("/remote-desktop/")) return "remote-desktop";
+  if (pathname.startsWith("/phone/")) return "phone";
   if (pathname.startsWith("/personalization/")) return "personalization";
   return "";
 }
@@ -189,17 +192,35 @@ export const routeConfigs: RouteConfig[] = [
   },
   { path: "/remote-desktop", element: <RemoteDesktopPage /> },
   { path: "/remote-desktop/desktop", element: <RemoteDesktopPage /> },
-  { path: "/remote-desktop/phone", element: <RemoteDesktopPage /> },
-  { path: "/remote-desktop/phone/screen", element: <RemoteDesktopPage /> },
-  { path: "/remote-desktop/phone/shell", element: <RemoteDesktopPage /> },
-  { path: "/remote-desktop/companion", element: <RemoteDesktopPage /> },
+  { path: "/phone", element: <PhonePage /> },
+  { path: "/phone/app", element: <PhonePage /> },
+  { path: "/phone/adb", element: <PhonePage /> },
+  { path: "/phone/adb/screen", element: <PhonePage /> },
+  { path: "/phone/adb/shell", element: <PhonePage /> },
+  // Phones used to live under remote desktop; keep old links working.
+  {
+    path: "/remote-desktop/phone",
+    element: <RedirectPreserveSearch to="/phone/adb" />,
+  },
+  {
+    path: "/remote-desktop/phone/screen",
+    element: <RedirectPreserveSearch to="/phone/adb/screen" />,
+  },
+  {
+    path: "/remote-desktop/phone/shell",
+    element: <RedirectPreserveSearch to="/phone/adb/shell" />,
+  },
+  {
+    path: "/remote-desktop/companion",
+    element: <RedirectPreserveSearch to="/phone/app" />,
+  },
   {
     path: "/remote-phone",
-    element: <RedirectPreserveSearch to="/remote-desktop/phone" />,
+    element: <RedirectPreserveSearch to="/phone/adb" />,
   },
   {
     path: "/remote-android",
-    element: <Navigate to="/remote-desktop/phone" replace />,
+    element: <Navigate to="/phone/adb" replace />,
   },
   {
     path: "/subagents",
