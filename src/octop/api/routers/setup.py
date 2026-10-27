@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
 
 from octop.api.deps import get_server, require_database, resolve_user_from_token, sign_token
+from octop.config import database_env_configured
 from octop.infra.agents.providers.presets import load_provider_presets
 from octop.infra.agents.providers.probe import make_probe_provider_row, probe_provider_row
 from octop.infra.errors import ErrorCode, OctopError
@@ -251,6 +252,8 @@ async def status(server: Any = Depends(get_server)) -> dict[str, Any]:
         "wizard_password_path": wizard_path if password_required else None,
         "database_driver": database_driver,
         "database_bound": server.database_bound,
+        # ``OCTOP_DATABASE_*`` overrides config.json, so ``/setup/database`` cannot switch it.
+        "database_from_env": database_env_configured(),
     }
 
 

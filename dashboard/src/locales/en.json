@@ -5449,7 +5449,13 @@
       "testOk": "Connection successful.",
       "testFailed": "Database connection test failed.",
       "applyFailed": "Could not save database settings.",
-      "alreadyBound": "Control-plane database is already bound ({{driver}}). Continue, or expand advanced options to switch engine before creating the admin.",
+      "boundTitle": "Current database: {{driver}}",
+      "boundReady": "The control-plane database is ready",
+      "boundHint": "Continuing keeps this database. To use a different one before the admin is created, choose \"Switch database\" below.",
+      "boundFromEnv": "It is set by OCTOP_DATABASE_* environment variables and can't be changed in the wizard. To switch, update those variables and restart Octop.",
+      "switchDatabase": "Switch database",
+      "switchHint": "Replace the current database with the PostgreSQL connection below. The target database must be empty.",
+      "continueBound": "Continue with current database",
       "continue": "Save and continue"
     },
     "password": {

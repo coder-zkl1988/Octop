@@ -41,6 +41,8 @@ export interface AuthStatus {
   database_bound: boolean;
   /** Active control-plane driver when bound (`sqlite` | `postgresql`). */
   database_driver?: string | null;
+  /** True when `OCTOP_DATABASE_*` env vars pick the DB (the wizard cannot switch it). */
+  database_from_env: boolean;
 }
 
 export interface SsoIdentity {
@@ -115,6 +117,7 @@ interface RawSetupStatus {
   wizard_password_path?: string;
   database_bound?: boolean;
   database_driver?: string | null;
+  database_from_env?: boolean;
 }
 
 interface RawLoginResponse {
@@ -159,6 +162,7 @@ export const authApi = {
           wizard_password_path: raw.wizard_password_path,
           database_bound: raw.database_bound ?? false,
           database_driver: raw.database_driver ?? null,
+          database_from_env: raw.database_from_env ?? false,
         };
         return applySetupFlags(value);
       } finally {
