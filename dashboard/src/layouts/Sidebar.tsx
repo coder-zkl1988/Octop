@@ -445,8 +445,11 @@ export default function Sidebar({
 
   const isRailCollapsed = collapsed && !isMobile;
   const wordmarkSrc = isDark
-    ? publicUrl("logo_horizontal_white.png")
-    : publicUrl("logo_horizontal_dark.png");
+    ? publicUrl("happytabby-logo-white.png")
+    : publicUrl("happytabby-logo.png");
+  const markSrc = isDark
+    ? publicUrl("happytabby-mark-white.png")
+    : publicUrl("happytabby-mark.png");
 
   const selectMinimalPane = useCallback(
     (pane: MinimalNavPane, opts?: { expand?: boolean }) => {
@@ -514,12 +517,14 @@ export default function Sidebar({
   const brandInner = (
     <>
       <img
-        src={isRailCollapsed ? "/pwa-192.png" : wordmarkSrc}
-        alt="Octop"
+        src={isRailCollapsed ? markSrc : wordmarkSrc}
+        alt="HappyTabby"
         style={{
-          height: isRailCollapsed ? 32 : isMobile ? 38 : 36,
+          // The HappyTabby wordmark is ~4.5:1, so keep it short on desktop
+          // to leave room for the version badges beside it.
+          height: isRailCollapsed ? 32 : isMobile ? 38 : 26,
           width: isRailCollapsed ? 32 : "auto",
-          maxWidth: isRailCollapsed ? 32 : isMobile ? 190 : 160,
+          maxWidth: isRailCollapsed ? 32 : isMobile ? 190 : 118,
           objectFit: "contain",
           display: "block",
           flexShrink: 0,
