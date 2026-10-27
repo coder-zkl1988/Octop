@@ -114,6 +114,12 @@ def resolve_user_from_token(server: OctopServer, token: str) -> User:
     user = server.user_manager.get_by_id(int(payload["sub"]))
     if user is None:
         raise OctopError(ErrorCode.USER_DISABLED, "user not active")
+    # Tokens carry a fingerprint of the password hash; a password change or
+    # reset revokes every token issued before it. Tokens minted before the
+    # claim existed have no ``pwv`` and simply expire (they are not renewed).
+    pwv = payload.get("pwv")
+    if pwv is not None and pwv != server.user_manager.credential_version(user.id):
+        raise OctopError(ErrorCode.AUTH_FAILED, "token revoked")
     return user
 
 
@@ -125,6 +131,8 @@ def maybe_sliding_renew_token(server: OctopServer, token: str, user: User) -> st
     """
     assert server.services is not None
     payload = _decode(server, token)
+    if "pwv" not in payload:
+        return None
     ttl = int(server.services.config.access_token_ttl_seconds)
     remaining = int(payload["exp"]) - int(time.time())
     threshold = max(1, int(ttl * _SLIDING_RENEW_REMAINING_FRACTION))
@@ -133,12 +141,14 @@ def maybe_sliding_renew_token(server: OctopServer, token: str, user: User) -> st
     secret = server.services.secret_repo.get("jwt")
     if secret is None:
         raise OctopError(ErrorCode.INTERNAL_ERROR, "jwt secret missing")
+    assert server.user_manager is not None
     return sign_token(
         secret,
         sub=user.id,
         uname=user.username,
         role=user.role,
         ttl_seconds=ttl,
+        pwv=server.user_manager.credential_version(user.id),
     )
 
 

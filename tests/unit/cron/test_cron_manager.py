@@ -1268,3 +1268,55 @@ def test_scheduler_miss_leaves_recurring_job_enabled(tmp_path: Path) -> None:
     assert row is not None
     assert row.enabled == 1
     assert row.last_status is None
+
+
+@pytest.mark.asyncio
+async def test_mail_auth_probe_runs_off_loop_and_is_cached(tmp_path, monkeypatch):
+    """``agently-cli auth status`` is a subprocess: never on the loop, reused per mailbox."""
+    import threading
+
+    from octop.infra.connectors.crypto import encrypt_credentials
+    from octop.infra.cron import manager as cron_manager
+
+    loop_thread = threading.get_ident()
+    probe_threads: list[int] = []
+
+    def fake_status(creds):
+        probe_threads.append(threading.get_ident())
+        return {"logged_in": True, "token_status": "ok"}
+
+    monkeypatch.setattr(cron_manager, "read_auth_status", fake_status)
+    services = _make_services(tmp_path)
+    aid, uid = _make_agent(services)
+    source_id = new_ulid()
+    services.repos.connector_repo.create(
+        instance_id=source_id,
+        user_id=uid,
+        kind="agently-cli",
+        display_name="mail",
+        mcp_server_name="mail_source",
+    )
+    services.repos.connector_repo.upsert_credentials(
+        instance_id=source_id,
+        blob=encrypt_credentials(services.secret_repo, {"cli_config_key": "mail"}),
+    )
+    mgr = _make_manager(services)
+    mgr._mail_watch = MagicMock()
+    mgr._mail_watch.close = AsyncMock()
+    cid = _cron_id()
+    await mgr.create(
+        cron_id=cid,
+        agent_id=aid,
+        user_id=uid,
+        trigger=f"agently:{source_id}",
+        prompt="Read new mail",
+        task_type="agent",
+    )
+    assert probe_threads
+    assert loop_thread not in probe_threads
+    probes_after_create = len(probe_threads)
+    mgr._make_job = lambda row: MagicMock(run=AsyncMock())
+    await mgr._run_mail_event(cid, "m1")
+    await mgr._run_mail_event(cid, "m2")
+    assert len(probe_threads) == probes_after_create
+    await mgr.shutdown()

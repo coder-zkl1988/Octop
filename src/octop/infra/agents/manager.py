@@ -556,6 +556,7 @@ class AgentManager:
             secret_repo=repos.secret_repo,
             settings_repo=repos.settings_repo,
             config=self._config,
+            user_repo=repos.user_repo,
         )
         # User-scoped custom MCP tools: (user_id, server_name, fingerprint) -> tools
         self._mcp_tool_cache: dict[tuple[int, str, str], list[Any]] = {}
@@ -591,6 +592,7 @@ class AgentManager:
             secret_repo=repos.secret_repo,
             settings_repo=repos.settings_repo,
             config=self._config,
+            user_repo=repos.user_repo,
         )
 
     def set_cron_manager(self, cron_manager: CronManager) -> None:
@@ -1117,35 +1119,44 @@ class AgentManager:
         affected_teams: list[str] = []
         thread_ids = self._repos.thread_repo.list_ids_for_agent(agent_id)
         workspace_dir = self.resolve_workspace_dir(agent_id, persist_if_missing=False)
-        async with self._lock:
-            if not is_team_agent(row):
+        if not is_team_agent(row):
+            async with self._lock:
                 try:
                     affected_teams = self._teams.drop_member(agent_id)
                 except Exception:
                     logger.exception("failed to drop deleted expert %s from team rosters", agent_id)
+        # Hold the per-agent lock until the row is gone. A reload or deferred
+        # bootstrap queued earlier waits here, then finds no row and stays down,
+        # instead of rebuilding a runtime over the workspace being removed.
+        # (Not nested in ``_lock``: stop() takes ``_lock`` then this lock.)
+        async with self._lifecycle_lock_for(agent_id):
             await asyncio.to_thread(self._quiesce_octop_memory, agent_id)
             await self._harness_manager.aremove_agent(agent_id)  # type: ignore[union-attr]
-        self._bootstrap_known.pop(agent_id, None)
-        self._plugin_tool_labels.pop(agent_id, None)
-        cfg = agent_config_from_row(row)
-        await asyncio.to_thread(
-            delete_agent_memory_and_checkpoints,
-            agent_id=agent_id,
-            thread_ids=thread_ids,
-            cfg=cfg,
-            octop_config=self._config,
-            workspace_dir=workspace_dir,
-            paths=self._paths,
-        )
-        try:
-            from octop.infra.agents.workspace.dir import remove_agent_host_dirs  # noqa: PLC0415
-
+            self._bootstrap_known.pop(agent_id, None)
+            self._plugin_tool_labels.pop(agent_id, None)
+            cfg = agent_config_from_row(row)
             await asyncio.to_thread(
-                remove_agent_host_dirs, cfg, paths=self._paths, agent_id=agent_id
+                delete_agent_memory_and_checkpoints,
+                agent_id=agent_id,
+                thread_ids=thread_ids,
+                cfg=cfg,
+                octop_config=self._config,
+                workspace_dir=workspace_dir,
+                paths=self._paths,
             )
-        except OSError:
-            logger.exception("rmtree failed for %s; agent removed from DB anyway", workspace_dir)
-        self._repos.agent_repo.delete(agent_id)
+            try:
+                from octop.infra.agents.workspace.dir import (  # noqa: PLC0415
+                    remove_agent_host_dirs,
+                )
+
+                await asyncio.to_thread(
+                    remove_agent_host_dirs, cfg, paths=self._paths, agent_id=agent_id
+                )
+            except OSError:
+                logger.exception(
+                    "rmtree failed for %s; agent removed from DB anyway", workspace_dir
+                )
+            self._repos.agent_repo.delete(agent_id)
         from octop.infra.users.groups import RESOURCE_EXPERT, GroupAccess  # noqa: PLC0415
 
         GroupAccess(self._repos).clear(RESOURCE_EXPERT, agent_id)
@@ -1159,12 +1170,16 @@ class AgentManager:
                 logger.exception("failed to reload team %s after dropping %s", team_id, agent_id)
 
     async def start(self, agent_id: str) -> None:
-        """Load agent into harness runtime (no-op config merge)."""
-        async with self._lock:
-            row = self._repos.agent_repo.get(agent_id)
-            if row is None:
-                raise OctopError(ErrorCode.AGENT_NOT_FOUND, f"agent {agent_id!r} not found")
-            await self._start_agent(row, init_workspace=False)
+        """Load agent into harness runtime (no-op config merge).
+
+        Serialized per agent by ``_start_agent``'s lifecycle lock only: holding
+        the global ``_lock`` through a slow start (MCP load, sandbox spin-up)
+        blocked create / stop / delete for every agent of every user.
+        """
+        row = self._repos.agent_repo.get(agent_id)
+        if row is None:
+            raise OctopError(ErrorCode.AGENT_NOT_FOUND, f"agent {agent_id!r} not found")
+        await self._start_agent(row, init_workspace=False)
 
     def _lifecycle_lock_for(self, agent_id: str) -> asyncio.Lock:
         lock = self._agent_lifecycle_locks.get(agent_id)
@@ -3330,7 +3345,7 @@ class AgentManager:
             fresh = self._repos.agent_repo.get(row.agent_id)
             if fresh is None:
                 return
-            agent = await self._start_agent(fresh, init_workspace=True)
+            agent = await self._start_agent(fresh, init_workspace=True, skip_if_stopped=True)
             if agent is not None and fresh.template_name:
                 reload = getattr(agent, "reload_subagents", None)
                 if callable(reload):
@@ -3339,13 +3354,30 @@ class AgentManager:
             logger.exception("Deferred bootstrap failed for agent %s", row.agent_id)
 
     async def _start_agent(
-        self, row: AgentRow, *, init_workspace: bool = True
+        self,
+        row: AgentRow,
+        *,
+        init_workspace: bool = True,
+        skip_if_stopped: bool = False,
     ) -> HarnessAgent | None:
+        """Register *row* with the harness.
+
+        ``skip_if_stopped`` (deferred bootstrap) leaves the agent down when the
+        user stopped it while the start was queued.
+        """
         assert self._harness_manager is not None, "_start_agent called before boot()"
         if self._harness_manager.shared_factory is None:
             self._repos.agent_repo.set_state(row.agent_id, "failed", error=NO_MODELS_CONFIGURED)
             return None
         async with self._lifecycle_lock_for(row.agent_id):
+            # Re-read under the lock: a delete (or stop) may have won the race.
+            current = self._repos.agent_repo.get(row.agent_id)
+            if current is None:
+                logger.info("Agent %s was deleted before it started; skip", row.agent_id)
+                return None
+            if skip_if_stopped and current.last_state == "stopped":
+                logger.info("Agent %s was stopped before its deferred start; skip", row.agent_id)
+                return None
             existing = self._octop_harness_or_none(row.agent_id)
             if existing is not None:
                 # Idempotent: a concurrent reload/boot may have already registered.

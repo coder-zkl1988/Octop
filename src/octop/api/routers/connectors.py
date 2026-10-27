@@ -15,7 +15,12 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, model_validator
 
 from octop.api.common.public_base import resolve_public_base
-from octop.api.deps import current_user, get_server, require_permission
+from octop.api.deps import (
+    current_user,
+    get_server,
+    require_any_permission,
+    require_permission,
+)
 from octop.i18n import tr
 from octop.infra.auth.sso.redirect_after import sanitize_redirect_after
 from octop.infra.connectors.builder import (
@@ -30,7 +35,9 @@ from octop.infra.connectors.catalog import (
 )
 from octop.infra.connectors.custom_mcp import (
     CUSTOM_MCP_KIND,
+    changed_stdio_servers,
     is_custom_mcp_kind,
+    is_stdio_spec,
     oauth_configured,
     parse_synthetic_instance_id,
     redact_servers_for_api,
@@ -74,6 +81,7 @@ from octop.infra.users.groups import (
     RESOURCE_CONNECTOR,
     GroupAccess,
 )
+from octop.infra.users.permissions import user_has_permission
 from octop.infra.utils.locale import resolve_request_locale
 from octop.infra.utils.ulid import new_ulid
 
@@ -290,12 +298,24 @@ async def _begin_oauth_flow(
     return {"authorize_url": authorize_url, "state_id": state_id}
 
 
+def _require_stdio_permission(user: Any, *, servers: list[str]) -> None:
+    """stdio MCP servers run a host command — same trust level as the terminal."""
+    if user_has_permission(user, "terminal"):
+        return
+    raise OctopError(
+        ErrorCode.FORBIDDEN,
+        "stdio MCP servers require the terminal permission",
+        details={"permission": "terminal", "servers": servers},
+    )
+
+
 def _connector_service(server: Any) -> ConnectorService:
     return ConnectorService(
         repo=server.services.repos.connector_repo,
         secret_repo=server.services.secret_repo,
         settings_repo=server.services.settings_repo,
         config=server.services.config,
+        user_repo=server.services.repos.user_repo,
     )
 
 
@@ -643,7 +663,7 @@ async def list_instances(
 
 @router.get("/connectors/custom-mcp", summary="Get custom MCP servers")
 async def get_custom_mcp(
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Return the user's custom MCP server map (langchain-mcp-adapters shape)."""
@@ -654,11 +674,18 @@ async def get_custom_mcp(
 @router.put("/connectors/custom-mcp", summary="Save custom MCP servers")
 async def put_custom_mcp(
     body: CustomMcpPutBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
-    """Replace the user's custom MCP servers document and reload agents."""
+    """Replace the user's custom MCP servers document and reload agents.
+
+    New or changed ``stdio`` servers launch a host process, so they also need
+    the ``terminal`` permission.
+    """
     svc = _connector_service(server)
+    changed = changed_stdio_servers(body.servers, svc.get_custom_servers(user.id))
+    if changed:
+        _require_stdio_permission(user, servers=changed)
     try:
         servers = svc.put_custom_servers(user.id, body.servers)
     except ConnectorNameTakenError as exc:
@@ -688,7 +715,7 @@ async def put_custom_mcp(
 async def patch_custom_mcp_server(
     server_name: str,
     body: CustomMcpServerPatchBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_any_permission("connector_custom", "connector_enabled")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Update ``enabled`` and/or ``default_open`` for one custom MCP server."""
@@ -714,7 +741,7 @@ async def patch_custom_mcp_server(
 @router.post("/connectors/custom-mcp/test", summary="Probe a custom MCP server")
 async def test_custom_mcp(
     body: CustomMcpTestBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Probe connectivity for one custom MCP server (saved name or inline spec)."""
@@ -735,6 +762,8 @@ async def test_custom_mcp(
             ErrorCode.CONNECTOR_INVALID_CREDENTIALS,
             "provide name or server spec to probe",
         )
+    if is_stdio_spec(spec):
+        _require_stdio_permission(user, servers=[body.name or "inline"])
     result = await probe_custom_mcp_server(spec)
     if body.name:
         try:

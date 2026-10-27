@@ -9,7 +9,7 @@ import os
 import re
 import shutil
 import time
-from collections.abc import Iterator
+from collections.abc import Awaitable, Callable, Iterator
 from contextlib import suppress
 from dataclasses import dataclass
 from logging.handlers import TimedRotatingFileHandler
@@ -268,6 +268,40 @@ def _purge_stale_logs(log_dir: Path, retention_days: int) -> None:
         if entry.stat().st_mtime < cutoff:
             with suppress(OSError):
                 entry.unlink()
+
+
+_SECRET_QUERY_RE = re.compile(r"([?&](?:access_token|token)=)[^&\s\"]*", re.IGNORECASE)
+
+
+class _RedactQueryTokenFilter(logging.Filter):
+    """Mask ``token`` / ``access_token`` query values in uvicorn request lines.
+
+    WebSocket, SSE and media URLs carry the JWT as a query parameter (browsers
+    cannot set headers there); uvicorn would otherwise write it to ``octop.log``.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple) and record.args:
+            record.args = tuple(
+                _SECRET_QUERY_RE.sub(r"\1***", arg) if isinstance(arg, str) else arg
+                for arg in record.args
+            )
+        elif isinstance(record.msg, str):
+            record.msg = _SECRET_QUERY_RE.sub(r"\1***", record.msg)
+        return True
+
+
+async def _shutdown_step(name: str, step: Callable[[], Awaitable[Any]]) -> None:
+    """Run one ``OctopServer.stop`` step; log a failure so later steps still run."""
+    try:
+        await step()
+    except Exception:
+        logger.exception("shutdown step %s failed", name)
+
+
+def _attach_query_token_filter(target: logging.Logger) -> None:
+    if not any(isinstance(f, _RedactQueryTokenFilter) for f in target.filters):
+        target.addFilter(_RedactQueryTokenFilter())
 
 
 def _attach_log_handler(target: logging.Logger, handler: TimedRotatingFileHandler) -> None:
@@ -565,7 +599,10 @@ class OctopServer:
             repos=self.services.repos,
             timezone=config.default_timezone,
         )
-        await cron_mgr.boot()
+        # Jobs may be registered now, but the scheduler starts only after
+        # ``registry.boot()``: a one-shot that fell due during downtime would
+        # otherwise fire before its agent is registered, fail with
+        # AGENT_NOT_RUNNING, and be disabled for good.
 
         from octop.infra.setup.tls.renewal import install_auto_renewal_job
 
@@ -601,6 +638,7 @@ class OctopServer:
         registry.set_proactive_scheduler(proactive_scheduler)
 
         await registry.boot()
+        await cron_mgr.boot()
         registry.schedule_idle_reclaim_sweep()
         await gateway.refresh_media_backends()
 
@@ -608,7 +646,7 @@ class OctopServer:
         await user_mgr.boot()
         await proactive_scheduler.start_all()
 
-        from octop.infra.auth.tokens import sign_token
+        from octop.infra.auth.tokens import credential_fingerprint, sign_token
         from octop.infra.bridge.manager import BridgeManager, public_base_url_from_config
 
         services = self.services
@@ -620,12 +658,19 @@ class OctopServer:
             if secret is None:
                 raise RuntimeError("jwt secret missing")
             ttl = services.config.access_token_ttl_seconds
+            manager = self.user_manager
+            if manager is not None:
+                pwv = manager.credential_version(int(user.id))
+            else:
+                row = services.user_repo.get(int(user.id))
+                pwv = credential_fingerprint(row.password_hash if row is not None else None)
             return sign_token(
                 secret,
                 sub=int(user.id),
                 uname=str(user.username),
                 role=str(user.role),
                 ttl_seconds=ttl,
+                pwv=pwv,
             )
 
         advertise = public_base_url_from_config(config.bind_host, config.port)
@@ -759,19 +804,29 @@ class OctopServer:
         try:
             from octop.infra.connectors.gateway import agently_auth
 
-            await agently_auth.close()
+            # Each step is isolated: one failing shutdown must not skip the
+            # harness drain or the DB close that follow it.
+            await _shutdown_step("agently auth", agently_auth.close)
             if self.app_runtime is not None:
                 rt = self.app_runtime
-                await rt.proactive_scheduler.shutdown()
-                await rt.cron_manager.shutdown()
-                await rt.gateway.shutdown()
-                await rt.agent_registry.shutdown()
-                await rt.user_manager.shutdown_all()
+                if rt.bridge_manager is not None:
+                    await _shutdown_step("bridge", rt.bridge_manager.shutdown)
+                await _shutdown_step("proactive scheduler", rt.proactive_scheduler.shutdown)
+                await _shutdown_step("cron", rt.cron_manager.shutdown)
+                await _shutdown_step("gateway", rt.gateway.shutdown)
+                await _shutdown_step("agent registry", rt.agent_registry.shutdown)
+                await _shutdown_step("user manager", rt.user_manager.shutdown_all)
                 if rt.history_archive is not None:
-                    rt.history_archive.store.close()
+                    try:
+                        rt.history_archive.store.close()
+                    except Exception:
+                        logger.exception("shutdown step history archive failed")
             from octop.infra.backend.browse import dispose_all_browse_sessions
 
-            dispose_all_browse_sessions()
+            try:
+                dispose_all_browse_sessions()
+            except Exception:
+                logger.exception("shutdown step browse sessions failed")
         finally:
             if self.services is not None:
                 self.services.db.close()
@@ -812,6 +867,7 @@ class OctopServer:
         # Persist framework (uvicorn) request/error logs into the same file too.
         for name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
             _attach_log_handler(logging.getLogger(name), handler)
+            _attach_query_token_filter(logging.getLogger(name))
 
         level = os.environ.get("OCTOP_LOG_LEVEL", "info").upper()
         root.setLevel(getattr(logging, level, logging.INFO))

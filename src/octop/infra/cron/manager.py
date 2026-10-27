@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
+import time
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
@@ -63,6 +64,10 @@ class CronCreateSpec:
     username: str | None = None
 
 
+# ``agently-cli auth status`` is a subprocess; cache its answer per mailbox.
+_MAIL_AUTH_TTL_SECONDS = 60.0
+
+
 class CronManager:
     """Process-wide singleton: owns APScheduler + all CronJob instances."""
 
@@ -84,6 +89,8 @@ class CronManager:
         self._mail_watch = AgentlyWatchManager()
         # Process-level jobs (e.g. TLS auto-renew) that must survive reload_from_db.
         self._system_job_ids: set[str] = set()
+        # mailbox instance_id -> (monotonic probe time, authorized)
+        self._mail_auth_cache: dict[str, tuple[float, bool]] = {}
 
     def replace_repos(self, repos: RepoBundle) -> None:
         """Point cron persistence at a rebound control-plane pool."""
@@ -93,6 +100,7 @@ class CronManager:
     async def boot(self) -> None:
         self._scheduler.start()
         rows = self._repos.cron_repo.list_all(include_disabled=False)
+        await self._prime_mail_auth_for_rows(rows)
         for row in rows:
             self._schedule(row)
         logger.info("CronManager booted; scheduled %d jobs", len(rows))
@@ -112,6 +120,7 @@ class CronManager:
                     continue
                 self._scheduler.remove_job(job_id)
             rows = self._repos.cron_repo.list_all(include_disabled=False)
+            await self._prime_mail_auth_for_rows(rows)
             for row in rows:
                 self._schedule(row)
             logger.info("CronManager reloaded from DB; scheduled %d jobs", len(rows))
@@ -125,6 +134,7 @@ class CronManager:
     async def create(self, spec: CronCreateSpec | None = None, **kwargs: Any) -> CronJobRow:
         if spec is None:
             spec = CronCreateSpec(**kwargs)
+        await self._prime_mail_auth(spec.trigger, refresh=True)
         self._mail_source(spec.trigger, spec.user_id)
         session_key = spec.session_key or ThreadRegistry.dashboard_key(
             agent_id=spec.agent_id,
@@ -208,10 +218,9 @@ class CronManager:
             # Validate a new trigger, or a mailbox, before persisting. Echoing the
             # current trigger on a rename must not re-check authorization.
             if trigger_changed or (enabled_bool is True and not existing.enabled):
-                self._mail_source(
-                    trigger if trigger is not None else existing.trigger,
-                    existing.user_id,
-                )
+                new_trigger = trigger if trigger is not None else existing.trigger
+                await self._prime_mail_auth(new_trigger, refresh=True)
+                self._mail_source(new_trigger, existing.user_id)
             repo_kwargs: dict[str, Any] = {
                 "trigger": trigger,
                 "name": name,
@@ -400,14 +409,54 @@ class CronManager:
             self._scheduler.remove_job(cron_id)
 
     def _mailbox_authorized(self, source: ConnectorRow) -> bool:
-        if source.credential_blob is None:
-            return False
-        creds = decrypt_credentials(self._repos.secret_repo, source.credential_blob)
+        """Cached mailbox auth. Async callers prime it off the loop first."""
+        cached = self._mail_auth_cache.get(source.instance_id)
+        if cached is not None and time.monotonic() - cached[0] < _MAIL_AUTH_TTL_SECONDS:
+            return cached[1]
+        return self._probe_mailbox_auth(source)
+
+    def _probe_mailbox_auth(self, source: ConnectorRow) -> bool:
+        """Run ``agently-cli auth status`` (blocking, up to 60s) and cache the result."""
+        authorized = False
+        if source.credential_blob is not None:
+            creds = decrypt_credentials(self._repos.secret_repo, source.credential_blob)
+            try:
+                data = read_auth_status({**creds, "instance_id": source.instance_id})
+            except (OSError, ValueError):
+                data = {}
+            authorized = data.get("logged_in") is True and data.get("token_status") != "expired"
+        self._mail_auth_cache[source.instance_id] = (time.monotonic(), authorized)
+        return authorized
+
+    async def _prime_mail_auth(self, spec: str, *, refresh: bool = False) -> None:
+        """Probe the mailbox behind a mail trigger in a worker thread.
+
+        The sync ``_mail_source`` / ``_schedule`` checks then read the cache
+        instead of blocking the event loop on the CLI subprocess.
+        """
+        if not spec.startswith("agently:"):
+            return
         try:
-            data = read_auth_status({**creds, "instance_id": source.instance_id})
-        except (OSError, ValueError):
-            return False
-        return data.get("logged_in") is True and data.get("token_status") != "expired"
+            trigger = build_trigger(spec)
+        except OctopError:
+            return
+        if not isinstance(trigger, AgentlyMailTrigger):
+            return
+        source = self._repos.connector_repo.get(trigger.instance_id)
+        if source is None:
+            return
+        cached = self._mail_auth_cache.get(source.instance_id)
+        if (
+            not refresh
+            and cached is not None
+            and time.monotonic() - cached[0] < _MAIL_AUTH_TTL_SECONDS
+        ):
+            return
+        await asyncio.to_thread(self._probe_mailbox_auth, source)
+
+    async def _prime_mail_auth_for_rows(self, rows: list[Any]) -> None:
+        for spec in sorted({row.trigger for row in rows if row.trigger.startswith("agently:")}):
+            await self._prime_mail_auth(spec)
 
     def _mail_source(self, spec: str, user_id: int) -> ConnectorRow | None:
         trigger = build_trigger(spec)
@@ -434,6 +483,7 @@ class CronManager:
         if row is None or not row.enabled:
             return
         # Recheck visibility after sharing, credentials, or the job has changed.
+        await self._prime_mail_auth(row.trigger)
         source = self._mail_source(row.trigger, row.user_id)
         if source is None:
             return
@@ -459,7 +509,9 @@ class CronManager:
         """Rebuild every mailbox watch after a full cron reload."""
         async with self._lock:
             await self._mail_watch.close()
-            for row in self._repos.cron_repo.list_all(include_disabled=False):
+            rows = self._repos.cron_repo.list_all(include_disabled=False)
+            await self._prime_mail_auth_for_rows(rows)
+            for row in rows:
                 if row.trigger.startswith("agently:"):
                     self._schedule(row)
 
@@ -472,7 +524,8 @@ class CronManager:
                 and source.kind == "agently-cli"
                 and source.status == "active"
                 and source.has_credentials
-                and self._mailbox_authorized(source)
+                # Auth just changed (or is being checked): probe fresh, off the loop.
+                and await asyncio.to_thread(self._probe_mailbox_auth, source)
             )
             if not available:
                 await self._mail_watch.stop_instance(instance_id)

@@ -522,6 +522,21 @@ def user_has_permission(user: PermissionUser, key: str) -> bool:
     return False
 
 
+@dataclass
+class _StoredPermissionUser:
+    role: str
+    permissions: list[str]
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
+
+
+def stored_user_has_permission(role: str, permissions: list[str] | None, key: str) -> bool:
+    """``user_has_permission`` for a persisted user row (``role`` + ``permissions``)."""
+    return user_has_permission(_StoredPermissionUser(str(role), list(permissions or [])), key)
+
+
 def validate_permission_keys(keys: list[str]) -> list[str]:
     """Return a deduped assignable list or raise ``ValueError`` on unknown keys.
 

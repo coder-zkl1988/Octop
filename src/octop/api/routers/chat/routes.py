@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from octop.api.common.agent import assert_agent_access
 from octop.api.deps import current_user, get_server
 from octop.api.routers.chat.models import HitlResumeBody, PolishBody
-from octop.api.routers.chat.sse import format_sse
+from octop.api.routers.chat.sse import format_sse, stream_detached
 from octop.i18n.domains.stream import format_stream_error
 from octop.infra.agents.experts.catalog import (
     default_welcome_payload,
@@ -271,8 +271,10 @@ async def resume_hitl(
     if body.hitl_policy is not None:
         hitl_coordinator.session_policies.set(body.thread_id, body.hitl_policy.model_dump())
 
-    async def gen() -> AsyncIterator[str]:
-        async for frame in iter_dashboard_hitl_resume_sse(
+    locale = resolve_request_locale(request)
+
+    def resume_source(client_gone: Callable[[], Awaitable[bool]]) -> AsyncIterator[str]:
+        return iter_dashboard_hitl_resume_sse(
             server=server,
             processor=processor,
             hitl_coordinator=hitl_coordinator,
@@ -283,12 +285,16 @@ async def resume_hitl(
             pending=pending,
             session_key=session_key,
             channel_type=channel_type,
-            locale=resolve_request_locale(request),
-            is_disconnected=request.is_disconnected,
-        ):
-            yield frame
+            locale=locale,
+            is_disconnected=client_gone,
+        )
 
-    return StreamingResponse(gen(), media_type="text/event-stream")
+    # The approved turn must finish (persist history, settle the pending record,
+    # drain parked steers) even when the user refreshes the tab mid-resume.
+    return StreamingResponse(
+        stream_detached(resume_source, name=f"hitl-resume:{body.thread_id}"),
+        media_type="text/event-stream",
+    )
 
 
 @router.post(

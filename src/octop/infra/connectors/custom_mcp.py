@@ -115,6 +115,45 @@ def _normalize_args(raw: Any) -> list[str]:
     return [str(item) for item in raw]
 
 
+def is_stdio_spec(spec: Any) -> bool:
+    """True when *spec* launches a local process (``transport: stdio``)."""
+    return isinstance(spec, dict) and str(spec.get("transport") or "").strip() == "stdio"
+
+
+def _stdio_launch(spec: dict[str, Any]) -> tuple[str, tuple[str, ...], tuple[tuple[str, str], ...]]:
+    return (
+        str(spec.get("command") or "").strip(),
+        tuple(_normalize_args(spec.get("args"))),
+        tuple(sorted(_normalize_env(spec.get("env")).items())),
+    )
+
+
+def changed_stdio_servers(new_servers: Any, existing: dict[str, Any]) -> list[str]:
+    """Names in *new_servers* whose stdio command, args, or env differ from *existing*.
+
+    Unchanged stdio entries are not listed, so a user can still save other edits
+    to a document that already holds a stdio server.
+    """
+    if not isinstance(new_servers, dict):
+        return []
+    changed: list[str] = []
+    for name, spec in new_servers.items():
+        if not is_stdio_spec(spec):
+            continue
+        old = existing.get(str(name).strip())
+        try:
+            same = (
+                isinstance(old, dict)
+                and is_stdio_spec(old)
+                and _stdio_launch(old) == _stdio_launch(spec)
+            )
+        except ValueError:
+            same = False
+        if not same:
+            changed.append(str(name))
+    return changed
+
+
 def validate_mcp_http_url(url: str) -> str:
     """Validate a user-configured MCP/connector URL.
 

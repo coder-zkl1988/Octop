@@ -12,7 +12,9 @@ export async function loadMermaid() {
     mermaidModule.initialize({
       startOnLoad: false,
       theme: "default",
-      securityLevel: "loose",
+      // Diagrams come from model output: strict keeps DOMPurify on the SVG
+      // and drops click handlers / javascript: links.
+      securityLevel: "strict",
       fontFamily: "inherit",
     });
   }

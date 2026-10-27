@@ -31,6 +31,7 @@ from octop.api.deps import (
 )
 from octop.i18n.domains.voice import realtime_error_message
 from octop.infra.errors import ErrorCode, OctopError
+from octop.infra.users.permissions import user_has_permission
 from octop.infra.utils.locale import Locale, normalize_locale, resolve_request_locale
 from octop.infra.voice import realtime
 from octop.infra.voice.manager import VoiceManager
@@ -58,14 +59,16 @@ def _active_payload(mgr: VoiceManager) -> dict[str, Any]:
     return active
 
 
-def _row_to_dict(r: Any) -> dict[str, Any]:
+def _row_to_dict(r: Any, *, reveal_secret: bool = True) -> dict[str, Any]:
+    """Serialize a voice provider row. ``reveal_secret=False`` hides the API key."""
     return {
         "id": r.id,
         "name": r.name,
         "kind": r.kind,
         "capability": r.capability,
         "base_url": r.base_url,
-        "api_key": r.api_key,
+        "api_key": r.api_key if reveal_secret else None,
+        "has_api_key": bool(r.api_key),
         "extra": r.get_extra(),
         "note": r.note,
         "enabled": bool(r.enabled),
@@ -119,10 +122,14 @@ async def list_voice_presets(_: Any = Depends(current_user)) -> list[dict[str, A
 
 @router.get("/providers")
 async def list_voice_providers(
-    _: Any = Depends(current_user),
+    user: Any = Depends(current_user),
     server: Any = Depends(get_server),
 ) -> list[dict[str, Any]]:
-    return [_row_to_dict(r) for r in server.services.voice_provider_repo.list_all()]
+    reveal = user_has_permission(user, "voice")
+    return [
+        _row_to_dict(r, reveal_secret=reveal)
+        for r in server.services.voice_provider_repo.list_all()
+    ]
 
 
 @router.get("/active")

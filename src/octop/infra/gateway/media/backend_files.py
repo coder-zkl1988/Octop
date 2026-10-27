@@ -25,6 +25,7 @@ import tempfile
 import time
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -328,8 +329,11 @@ _DENIED_WIN_DOWNLOAD_PREFIXES = (
 
 
 def is_allowed_host_download_abs_path(path: str, *, workspace: Path) -> bool:
-    """Allow host-absolute download when under workspace / agents / temp, or
+    """Allow host-absolute download when under workspace / temp, or
     non-system user paths (e.g. Desktop tool outputs). Deny OS system roots.
+
+    This is only the system-root denylist. The workspace API also applies
+    :func:`check_workspace_host_path`, which guards the Octop home.
     """
     raw = path.strip()
     if not raw:
@@ -364,8 +368,6 @@ def is_allowed_host_download_abs_path(path: str, *, workspace: Path) -> bool:
     except ValueError:
         pass
 
-    if "/.octop/agents/" in norm:
-        return True
     if is_allowed_host_temp_path(resolved):
         return True
 
@@ -377,6 +379,81 @@ def is_allowed_host_download_abs_path(path: str, *, workspace: Path) -> bool:
         and any(norm.startswith(prefix) for prefix in _DENIED_WIN_DOWNLOAD_PREFIXES)
     )
     return not win_denied
+
+
+class HostPathDeniedError(ValueError):
+    """A host path the agent workspace API must not read or write."""
+
+
+def _path_within(child: str, parent: str) -> bool:
+    child_n = os.path.normcase(child)
+    parent_n = os.path.normcase(parent)
+    try:
+        return os.path.commonpath([child_n, parent_n]) == parent_n
+    except ValueError:
+        # Different drives on Windows.
+        return False
+
+
+def _octop_agent_dir_id(resolved: str, home: str) -> str | None:
+    """Return ``<id>`` when *resolved* sits under ``{home}/agents/<id>/``."""
+    rel = os.path.relpath(resolved, home)
+    parts = Path(rel).parts
+    if len(parts) >= 2 and parts[0] == "agents":
+        return parts[1]
+    return None
+
+
+def check_workspace_host_path(
+    path: str,
+    *,
+    workspace: Path,
+    octop_home: Path,
+    protected_files: tuple[Path, ...] = (),
+    jail_root: str | None = None,
+    may_access_agent: Callable[[str], bool] | None = None,
+) -> str:
+    """Validate a host path that reaches ``BackendWorkspace`` through the HTTP API.
+
+    Returns the path to pass on, with ``file://`` and ``~`` expanded. Raises
+    :class:`HostPathDeniedError` for:
+
+    * system roots (the download denylist);
+    * anything inside the Octop home — database, ``config.json``, secrets,
+      logs, backups — except this agent's workspace, or an ``agents/<id>/``
+      directory that *may_access_agent* allows;
+    * *protected_files* (e.g. a SQLite database stored outside the home);
+    * paths outside the caller's ``workspace_root_dir`` jail.
+
+    Checks run on the symlink-resolved path.
+    """
+    raw = path.strip()
+    if raw.startswith("file://"):
+        raw = file_url_to_abs_path(raw)
+    if raw.startswith("~"):
+        raw = os.path.expanduser(raw)
+    if not raw or "\0" in raw:
+        raise HostPathDeniedError("invalid path")
+    try:
+        resolved = os.path.realpath(raw)
+    except (OSError, ValueError) as exc:
+        raise HostPathDeniedError("invalid path") from exc
+
+    if _path_within(resolved, os.path.realpath(workspace)):
+        return raw
+    if jail_root and not _path_within(resolved, os.path.realpath(jail_root)):
+        raise HostPathDeniedError("outside the workspace root directory")
+    home = os.path.realpath(octop_home)
+    if _path_within(resolved, home):
+        agent_id = _octop_agent_dir_id(resolved, home)
+        if agent_id is None or may_access_agent is None or not may_access_agent(agent_id):
+            raise HostPathDeniedError("inside the Octop data directory")
+    for protected in protected_files:
+        if _path_within(resolved, os.path.realpath(protected)):
+            raise HostPathDeniedError("protected file")
+    if not is_allowed_host_download_abs_path(raw, workspace=workspace):
+        raise HostPathDeniedError("system path")
+    return raw
 
 
 def is_host_absolute_path(path: str) -> bool:
@@ -552,7 +629,9 @@ async def ensure_workspace_media_path(
 
 
 __all__ = [
+    "HostPathDeniedError",
     "backend_workspace_path",
+    "check_workspace_host_path",
     "dashboard_media_url",
     "ensure_workspace_media_path",
     "extract_workspace_rel",
