@@ -303,6 +303,7 @@ export default function SetupPage() {
           {current === STEP_DATABASE && (
             <DatabaseStep
               onContinue={() => void handleDatabaseContinue()}
+              ensureWizardToken={ensureWizardToken}
               onBack={passwordRequired ? handleBackFromDatabase : undefined}
             />
           )}

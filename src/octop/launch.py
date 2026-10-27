@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
-from contextlib import suppress
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
+from types import FrameType
 from typing import Any
 
 from octop.infra.server import OctopServer
@@ -54,6 +58,51 @@ async def _serve(server: Any) -> None:
     await server.serve()
 
 
+_EXIT_SIGNALS: tuple[int, ...] = tuple(
+    sig
+    for sig in (
+        getattr(signal, "SIGINT", None),
+        getattr(signal, "SIGTERM", None),
+        getattr(signal, "SIGBREAK", None),
+    )
+    if sig is not None
+)
+
+
+@contextmanager
+def _shutdown_on_signals(servers: list[Any]) -> Iterator[None]:
+    """Route SIGINT / SIGTERM to every uvicorn server and let ``run_foreground`` finish.
+
+    ``uvicorn.Server.capture_signals`` re-raises the captured signal once
+    ``serve()`` returns. For SIGTERM the restored handler is ``SIG_DFL``, which
+    killed the process before ``OctopServer.stop()`` ran — every systemd /
+    Docker stop skipped the DB close, harness drain, and cron/gateway shutdown.
+    The servers here skip uvicorn's capture; this handler asks all of them to
+    exit (a second signal forces it) and restores the old handlers afterwards.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def handle_exit(sig: int, frame: FrameType | None) -> None:
+        del sig, frame
+        for server in servers:
+            if server.should_exit:
+                server.force_exit = True
+            server.should_exit = True
+
+    previous: dict[int, Any] = {}
+    for sig in _EXIT_SIGNALS:
+        with suppress(OSError, ValueError):
+            previous[sig] = signal.signal(sig, handle_exit)
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            with suppress(OSError, ValueError):
+                signal.signal(sig, handler)
+
+
 async def run_foreground(
     *,
     host: str | None,
@@ -99,6 +148,16 @@ async def run_foreground(
         )
         reload = False
 
+    class _Server(uvicorn.Server):
+        """uvicorn server whose signals are handled by ``_shutdown_on_signals``."""
+
+        @contextmanager
+        def capture_signals(self) -> Iterator[None]:
+            yield
+
+        def install_signal_handlers(self) -> None:  # uvicorn < 0.29
+            return None
+
     app = build_app(srv)
     servers: list[uvicorn.Server] = []
 
@@ -125,8 +184,8 @@ async def run_foreground(
             workers=1,
             reload=False,
         )
-        servers.append(uvicorn.Server(https_config))
-        servers.append(uvicorn.Server(http_config))
+        servers.append(_Server(https_config))
+        servers.append(_Server(http_config))
         logger.info(
             "Listening on https://%s:%s and http://%s:%s (ACME + redirect)",
             plan.bind_host,
@@ -146,7 +205,7 @@ async def run_foreground(
             ssl_keyfile=plan.ssl_keyfile,
             ws_max_size=BRIDGE_WS_MAX_BYTES,
         )
-        servers.append(uvicorn.Server(single_config))
+        servers.append(_Server(single_config))
 
     from octop.infra.agents.memory.slim_control import MemorySlimControl
 
@@ -154,7 +213,8 @@ async def run_foreground(
     with coalesce_accept_errors(asyncio.get_running_loop()):
         try:
             await memory_control.start()
-            await asyncio.gather(*(_serve(s) for s in servers))
+            with _shutdown_on_signals(servers):
+                await asyncio.gather(*(_serve(s) for s in servers))
         finally:
             await memory_control.close()
             await _cancel_background_task(bwrap_task)

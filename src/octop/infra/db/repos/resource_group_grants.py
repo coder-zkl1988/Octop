@@ -100,11 +100,13 @@ class ResourceGroupGrantRepo:
                 )
 
     def delete_prefix(self, resource_type: str, prefix: str) -> None:
-        needle = f"{prefix}/%"
-        exact = prefix
+        # Case-sensitive prefix via ``substr``, not ``LIKE '<prefix>/%'``: ``_`` / ``%``
+        # are LIKE wildcards and SQLite's LIKE ignores case, so deleting ``my_llm``
+        # also dropped ``my-llm/…`` grants (and the model became visible to all).
+        child_prefix = f"{prefix}/"
         with self._db.transaction() as conn:
             conn.execute(
                 "DELETE FROM resource_group_grant"
-                " WHERE resource_type = ? AND (resource_key = ? OR resource_key LIKE ?)",
-                (resource_type, exact, needle),
+                " WHERE resource_type = ? AND (resource_key = ? OR substr(resource_key, 1, ?) = ?)",
+                (resource_type, prefix, len(child_prefix), child_prefix),
             )

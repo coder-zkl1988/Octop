@@ -2898,3 +2898,29 @@ async def test_restore_respects_runtime_capability_and_expert_scope(
     finally:
         for row in rows:
             await manager.stop(row.agent_id)
+
+
+def _harness_must_not_be_touched(*_args: Any, **_kwargs: Any) -> Any:
+    raise AssertionError("harness registry should not be consulted")
+
+
+@pytest.mark.asyncio
+async def test_start_agent_skips_row_deleted_before_lock(manager: AgentManager) -> None:
+    manager._harness_manager = SimpleNamespace(  # type: ignore[assignment]
+        shared_factory=object(), get_agent=_harness_must_not_be_touched
+    )
+    assert await manager._start_agent(_row(agent_id="01GONE")) is None
+
+
+@pytest.mark.asyncio
+async def test_deferred_start_respects_a_stop(
+    manager: AgentManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import dataclasses
+
+    stopped = dataclasses.replace(_row(agent_id="01STOP"), last_state="stopped")
+    monkeypatch.setattr(manager._repos.agent_repo, "get", lambda _aid: stopped)
+    manager._harness_manager = SimpleNamespace(  # type: ignore[assignment]
+        shared_factory=object(), get_agent=_harness_must_not_be_touched
+    )
+    assert await manager._start_agent(stopped, skip_if_stopped=True) is None

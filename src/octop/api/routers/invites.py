@@ -169,7 +169,14 @@ async def redeem_invite(
     await try_bootstrap_default_agent(server, user_id=user.id, locale=user.locale)
     secret = server.services.secret_repo.get("jwt")
     ttl = server.services.config.access_token_ttl_seconds
-    token = sign_token(secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=ttl)
+    token = sign_token(
+        secret,
+        sub=user.id,
+        uname=user.username,
+        role=user.role,
+        ttl_seconds=ttl,
+        pwv=server.user_manager.credential_version(user.id),
+    )
     return {
         "access_token": token,
         "token_type": "Bearer",

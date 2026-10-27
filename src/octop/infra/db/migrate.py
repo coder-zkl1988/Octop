@@ -6,10 +6,11 @@ Each file is ``NNN_description.sql`` (SQLite) or ``NNN_description.pg.sql``
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import time
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -322,6 +323,53 @@ def _create_skill_packages_identity_table(db: DatabasePool) -> None:
         )
 
 
+@contextlib.contextmanager
+def _sqlite_foreign_keys_off(db: DatabasePool) -> Iterator[None]:
+    """Disable SQLite FK enforcement around a table rebuild; no-op on PostgreSQL.
+
+    ``PRAGMA foreign_keys`` is silently ignored inside a transaction, so it is
+    set before ``BEGIN`` and restored after ``COMMIT`` / ``ROLLBACK``.
+    """
+    if db.dialect != "sqlite":
+        yield
+        return
+    with db.connect() as conn:
+        conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        yield
+    finally:
+        with db.connect() as conn:
+            conn.execute("PRAGMA foreign_keys = ON")
+
+
+_FK_PRAGMA_LINE_RE = re.compile(
+    r"^[ \t]*PRAGMA[ \t]+foreign_keys[ \t]*=[ \t]*(?:ON|OFF)[ \t]*;[ \t]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_FK_OFF_RE = re.compile(r"^[ \t]*PRAGMA[ \t]+foreign_keys[ \t]*=[ \t]*OFF\b", re.I | re.M)
+
+
+def _sqlite_executescript_atomic(db: DatabasePool, sql: str) -> None:
+    """Run a multi-statement SQLite script as one transaction.
+
+    ``executescript`` applies each statement in autocommit mode, so a crash
+    mid-script (say right after ``ALTER TABLE … RENAME``) left a half-applied
+    schema the next boot could not repair. ``PRAGMA foreign_keys`` lines are
+    lifted out of the transaction (where they would be ignored) and applied
+    around it via :func:`_sqlite_foreign_keys_off`.
+    """
+    disable_fk = _FK_OFF_RE.search(sql) is not None
+    body = _FK_PRAGMA_LINE_RE.sub("", sql)
+    guard = _sqlite_foreign_keys_off(db) if disable_fk else contextlib.nullcontext()
+    with guard, db.connect() as conn:
+        try:
+            conn.executescript(f"BEGIN;\n{body}\nCOMMIT;")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+            raise
+
+
 def _rebuild_skill_packages_identity_schema(db: DatabasePool) -> None:
     """Give skill_packages an integer PK plus public ``skill_package_id``."""
     if _skill_packages_identity_ready(db):
@@ -334,9 +382,7 @@ def _rebuild_skill_packages_identity_schema(db: DatabasePool) -> None:
     if "icon_url" not in _table_columns(db, "skill_packages"):
         _ensure_column(db, "skill_packages", "icon_url", "TEXT NOT NULL DEFAULT ''")
     pk = _integer_pk_sql(db)
-    with db.transaction() as conn:
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = OFF")
+    with _sqlite_foreign_keys_off(db), db.transaction() as conn:
         conn.execute("ALTER TABLE skill_packages RENAME TO skill_packages_legacy")
         conn.execute(
             f"""
@@ -369,8 +415,6 @@ def _rebuild_skill_packages_identity_schema(db: DatabasePool) -> None:
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_packages_name ON skill_packages(name)"
         )
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = ON")
 
 
 def _ensure_skill_packages_schema(db: DatabasePool) -> None:
@@ -422,9 +466,7 @@ def _rebuild_published_experts_identity_schema(db: DatabasePool) -> None:
         _create_published_experts_identity_table(db)
         return
     pk = _integer_pk_sql(db)
-    with db.transaction() as conn:
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = OFF")
+    with _sqlite_foreign_keys_off(db), db.transaction() as conn:
         conn.execute("ALTER TABLE published_experts RENAME TO published_experts_legacy")
         conn.execute(
             f"""
@@ -464,8 +506,6 @@ def _rebuild_published_experts_identity_schema(db: DatabasePool) -> None:
             "CREATE INDEX IF NOT EXISTS idx_published_experts_created_by "
             "ON published_experts(created_by)"
         )
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = ON")
 
 
 def _ensure_published_experts_schema(db: DatabasePool) -> None:
@@ -579,9 +619,7 @@ def _rebuild_knowledge_identity_schema(db: DatabasePool) -> None:
         _create_knowledge_identity_tables(db)
         return
     pk = _integer_pk_sql(db)
-    with db.transaction() as conn:
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = OFF")
+    with _sqlite_foreign_keys_off(db), db.transaction() as conn:
         if _relation_exists(db, "knowledge_base_members", conn):
             conn.execute("DROP TABLE knowledge_base_members")
         conn.execute("ALTER TABLE knowledge_bases RENAME TO knowledge_bases_legacy")
@@ -678,8 +716,6 @@ def _rebuild_knowledge_identity_schema(db: DatabasePool) -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_knowledge_documents_kb ON knowledge_documents(kb_id)"
         )
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = ON")
 
 
 def _drop_knowledge_base_members(db: DatabasePool) -> None:
@@ -701,9 +737,9 @@ def _ensure_sso_oidc_schema(db: DatabasePool) -> None:
     """Apply OIDC SSO tables and nullable password_hash (SQLite users rebuild)."""
     if _table_exists(db, "sso_providers"):
         return
-    with db.connect() as conn:
-        conn.executescript(
-            """
+    _sqlite_executescript_atomic(
+        db,
+        """
             CREATE TABLE IF NOT EXISTS sso_providers (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               enabled INTEGER NOT NULL DEFAULT 0,
@@ -796,8 +832,8 @@ def _ensure_sso_oidc_schema(db: DatabasePool) -> None:
               WHERE sso_provider_id IS NOT NULL AND sso_subject IS NOT NULL;
 
             PRAGMA foreign_keys = ON;
-            """
-        )
+            """,
+    )
 
 
 def _ensure_sso_provider_kind_schema(db: DatabasePool) -> None:
@@ -1412,11 +1448,12 @@ def _user_policies_identity_ready(db: DatabasePool) -> bool:
     )
 
 
-def _create_user_policies_table(db: DatabasePool) -> None:
+def _create_user_policies_table(db: DatabasePool, conn: Any | None = None) -> None:
+    """Create ``user_policies``; pass *conn* to run inside an open transaction."""
     pk = _integer_pk_sql(db)
     id_type = "BIGINT" if db.dialect == "postgresql" else "INTEGER"
-    with db.connect() as conn:
-        conn.execute(
+    with contextlib.nullcontext(conn) if conn is not None else db.connect() as active:
+        active.execute(
             f"""
             CREATE TABLE IF NOT EXISTS user_policies (
               id {pk},
@@ -1481,19 +1518,16 @@ def _rebuild_user_policies_from_legacy_kv(db: DatabasePool) -> None:
         for row in rows
         if row["key"] and row["value"] is not None
     ]
-    with db.transaction() as conn:
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = OFF")
+    # One transaction: a crash between the rename and the copy used to strand
+    # every policy in ``user_policies_kv_legacy``.
+    with _sqlite_foreign_keys_off(db), db.transaction() as conn:
         conn.execute("ALTER TABLE user_policies RENAME TO user_policies_kv_legacy")
-    _create_user_policies_table(db)
-    with db.transaction() as conn:
+        _create_user_policies_table(db, conn)
         for user_id, name, value in legacy:
             if not str(value).strip():
                 continue
             _insert_user_policy_row(conn, user_id=user_id, name=name, value=value, ts=ts)
         conn.execute("DROP TABLE IF EXISTS user_policies_kv_legacy")
-        if db.dialect == "sqlite":
-            conn.execute("PRAGMA foreign_keys = ON")
 
 
 def _copy_legacy_user_policy_columns(db: DatabasePool) -> None:
@@ -1991,8 +2025,7 @@ def _apply_sqlite_migration(db: DatabasePool, version: int, path: Path) -> None:
             conn.execute("UPDATE _schema_version SET version = ?", (version,))
         return
     sql = path.read_text(encoding="utf-8")
-    with db.connect() as conn:
-        conn.executescript(sql)
+    _sqlite_executescript_atomic(db, sql)
 
 
 _NAV_PAGE_PERMISSIONS = ("experts", "tasks", "token_usage")

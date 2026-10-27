@@ -257,10 +257,15 @@ async def status(server: Any = Depends(get_server)) -> dict[str, Any]:
 @router.post("/setup/test-database", summary="Probe control-plane database connectivity")
 async def test_database(
     body: DatabaseSetupBody,
+    authorization: str | None = Header(default=None),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
-    """Validate DSN/settings with a short-lived pool (does not replace the process pool)."""
+    """Validate DSN/settings with a short-lived pool (does not replace the process pool).
+
+    Requires the wizard token: the probe opens outbound connections.
+    """
     _enforce_wizard_open(server)
+    _require_wizard_token(authorization, server)
     from octop.infra.db.probe import probe_database
     from octop.infra.db.rebind import database_config_from_payload
 
@@ -275,14 +280,17 @@ async def test_database(
 @router.post("/setup/database", summary="Persist control-plane database and bind")
 async def apply_database(
     body: DatabaseSetupBody,
+    authorization: str | None = Header(default=None),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Write ``config.json`` database section, open the pool, migrate, and boot runtime.
 
     First-run path binds once (no prior pool). If already bound with zero users
-    (e.g. changing engine mid-wizard), swaps via rebind.
+    (e.g. changing engine mid-wizard), swaps via rebind. Requires the wizard
+    token so only the operator holding the wizard password can pick the database.
     """
     _enforce_wizard_open(server)
+    _require_wizard_token(authorization, server)
     from octop.infra.db.probe import probe_database
     from octop.infra.db.rebind import (
         assert_control_plane_database_empty,
@@ -370,7 +378,12 @@ async def initial_admin(
     secret = server.services.secret_repo.get("jwt")
     ttl = server.services.config.access_token_ttl_seconds
     access_token = sign_token(
-        secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=ttl
+        secret,
+        sub=user.id,
+        uname=user.username,
+        role=user.role,
+        ttl_seconds=ttl,
+        pwv=server.user_manager.credential_version(user.id),
     )
     return {
         "id": user.id,

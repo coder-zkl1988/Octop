@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import time
 from typing import Any
 
@@ -14,6 +15,17 @@ class InvalidToken(Exception): ...
 class TokenExpired(InvalidToken): ...
 
 
+def credential_fingerprint(password_hash: str | None) -> str:
+    """Short fingerprint of a user's stored password hash (``pwv`` token claim).
+
+    Changing or resetting the password changes the fingerprint, so tokens
+    issued before that no longer validate. Accounts without a local password
+    share one constant value.
+    """
+    digest = hashlib.sha256(f"octop-pwv:{password_hash or ''}".encode()).hexdigest()
+    return digest[:16]
+
+
 def sign_token(
     secret: bytes,
     *,
@@ -21,15 +33,18 @@ def sign_token(
     uname: str,
     role: str,
     ttl_seconds: int = 86400,
+    pwv: str | None = None,
 ) -> str:
     now = int(time.time())
-    payload = {
+    payload: dict[str, Any] = {
         "sub": str(sub),
         "uname": uname,
         "role": role,
         "iat": now,
         "exp": now + ttl_seconds,
     }
+    if pwv is not None:
+        payload["pwv"] = pwv
     return jwt.encode(payload, secret, algorithm="HS256")
 
 

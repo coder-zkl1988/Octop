@@ -70,12 +70,18 @@ class SqlitePool:
             try:
                 yield self._conn
                 self._conn.execute("COMMIT")
-            except Exception:
-                self._conn.execute("ROLLBACK")
+            except BaseException:
+                # BaseException too: a cancelled / interrupted caller (CancelledError,
+                # KeyboardInterrupt, GeneratorExit) must not leave BEGIN open on the
+                # one shared connection, or every later transaction() fails with
+                # "cannot start a transaction within a transaction".
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
                 raise
 
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._conn.close()
 
 
 class _CompatRow(Mapping[str, Any]):

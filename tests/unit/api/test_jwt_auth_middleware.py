@@ -121,6 +121,7 @@ async def test_near_expiry_token_gets_sliding_renew(client) -> None:
         uname=user.username,
         role=user.role,
         ttl_seconds=60,
+        pwv=srv.user_manager.credential_version(user.id),
     )
     r = await c.get("/api/auth/me", headers=bearer(short))
     assert r.status_code == 200
@@ -141,12 +142,35 @@ async def test_maybe_sliding_renew_helper_threshold(client) -> None:
     secret = srv.services.secret_repo.get("jwt")
     assert secret is not None
     ttl = srv.services.config.access_token_ttl_seconds
-    fresh = sign_token(secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=ttl)
+    pwv = srv.user_manager.credential_version(user.id)
+    fresh = sign_token(
+        secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=ttl, pwv=pwv
+    )
     assert maybe_sliding_renew_token(srv, fresh, user) is None
-    short = sign_token(secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=60)
+    short = sign_token(
+        secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=60, pwv=pwv
+    )
     renewed = maybe_sliding_renew_token(srv, short, user)
     assert renewed is not None
     assert renewed != short
+    assert decode_token(secret, renewed)["pwv"] == pwv
+
+
+async def test_legacy_token_without_pwv_is_accepted_but_not_renewed(client) -> None:
+    """Tokens minted before the ``pwv`` claim keep working until they expire."""
+    c, srv, home = client
+    await bootstrap_admin(c, home)
+    assert srv.user_manager is not None
+    assert srv.services is not None
+    user = srv.user_manager.get("admin")
+    assert user is not None
+    secret = srv.services.secret_repo.get("jwt")
+    assert secret is not None
+    legacy = sign_token(secret, sub=user.id, uname=user.username, role=user.role, ttl_seconds=60)
+    r = await c.get("/api/auth/me", headers=bearer(legacy))
+    assert r.status_code == 200
+    assert ACCESS_TOKEN_RESPONSE_HEADER not in r.headers
+    assert maybe_sliding_renew_token(srv, legacy, user) is None
 
 
 async def test_middleware_localizes_auth_errors_by_accept_language(client) -> None:

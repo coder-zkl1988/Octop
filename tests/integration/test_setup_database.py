@@ -35,9 +35,11 @@ def _seed_occupied_sqlite(home, *, relative_path: str = "occupied.db") -> None:
 async def test_setup_database_sqlite_bind(patched_app_client) -> None:
     """Already-bound empty wizard can still swap sqlite path via rebind."""
     client, srv, home = patched_app_client
+    wizard = {"Authorization": f"Bearer {await wizard_token(client, home)}"}
     r = await client.post(
         "/api/setup/test-database",
         json={"driver": "sqlite", "sqlite_path": "data/wizard.db"},
+        headers=wizard,
     )
     assert r.status_code == 200, r.text
     assert r.json()["ok"] is True
@@ -45,6 +47,7 @@ async def test_setup_database_sqlite_bind(patched_app_client) -> None:
     r = await client.post(
         "/api/setup/database",
         json={"driver": "sqlite", "sqlite_path": "data/wizard.db"},
+        headers=wizard,
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -101,6 +104,7 @@ async def test_deferred_verify_password_then_bind(tmp_octop_home: Path) -> None:
         applied = await client.post(
             "/api/setup/database",
             json={"driver": "sqlite", "sqlite_path": "octop.db"},
+            headers={"Authorization": f"Bearer {tok}"},
         )
         assert applied.status_code == 200, applied.text
         assert srv.database_bound is True
@@ -124,10 +128,12 @@ async def test_setup_database_refuses_nonempty_target(patched_app_client) -> Non
     client, srv, home = patched_app_client
     _seed_occupied_sqlite(home)
     before = load_config(home / "config.json")
+    tok = await wizard_token(client, home)
 
     r = await client.post(
         "/api/setup/database",
         json={"driver": "sqlite", "sqlite_path": "occupied.db"},
+        headers={"Authorization": f"Bearer {tok}"},
     )
     assert r.status_code == 409, r.text
     assert r.json()["error"]["code"] == "DATABASE_NOT_EMPTY"
@@ -136,7 +142,6 @@ async def test_setup_database_refuses_nonempty_target(patched_app_client) -> Non
     assert after.database.sqlite_path == before.database.sqlite_path
     assert srv.user_manager.count() == 0
 
-    tok = await wizard_token(client, home)
     created = await client.post(
         "/api/setup/initial-admin",
         json={"username": "admin", "password": "TestPass12"},

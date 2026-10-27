@@ -22,6 +22,7 @@ from octop.infra.connectors.custom_mcp import (
     expand_custom_instances,
     extract_servers,
     is_custom_mcp_kind,
+    is_stdio_spec,
     mark_oauth_reauth_required,
     merge_preserved_oauth,
     oauth_configured,
@@ -45,6 +46,7 @@ from octop.infra.connectors.oauth.registry import refresh_custom_mcp_oauth
 from octop.infra.db.repos.connectors import ConnectorRepo, ConnectorRow
 from octop.infra.db.repos.secrets import SecretRepo
 from octop.infra.errors import ErrorCode, OctopError
+from octop.infra.users.permissions import stored_user_has_permission
 from octop.infra.utils.paths import PathLayout
 from octop.infra.utils.ulid import new_ulid
 
@@ -85,11 +87,13 @@ class ConnectorService:
         secret_repo: SecretRepo,
         settings_repo: Any,
         config: OctopConfig,
+        user_repo: Any | None = None,
     ) -> None:
         self._repo = repo
         self._secret_repo = secret_repo
         self._settings_repo = settings_repo
         self._config = config
+        self._user_repo = user_repo
 
     def list_user_instances(
         self,
@@ -589,14 +593,43 @@ class ConnectorService:
             raise ValueError(f"mcp_servers not available for user: {unknown}")
         return list(names)
 
+    def stdio_owner_allowed(self, user_id: int) -> bool:
+        """True when *user_id* may launch stdio MCP servers (``terminal`` permission).
+
+        Without a ``user_repo`` (offline callers) the check is skipped.
+        """
+        if self._user_repo is None:
+            return True
+        row = self._user_repo.get(user_id)
+        if row is None or bool(getattr(row, "disabled", 0)):
+            return False
+        return stored_user_has_permission(row.role, row.permissions, "terminal")
+
+    def _without_disallowed_stdio(self, owner_id: int, servers: dict[str, Any]) -> dict[str, Any]:
+        if not any(is_stdio_spec(spec) for spec in servers.values()):
+            return servers
+        if self.stdio_owner_allowed(owner_id):
+            return servers
+        skipped = sorted(name for name, spec in servers.items() if is_stdio_spec(spec))
+        logger.warning(
+            "skip stdio MCP servers %s of user %s: terminal permission required",
+            skipped,
+            owner_id,
+        )
+        return {name: spec for name, spec in servers.items() if not is_stdio_spec(spec)}
+
     def custom_harness_configs(self, user_id: int) -> dict[str, Any]:
         if not self._repo.connector_feature_allows(user_id):
             return {}
-        configs = enabled_harness_configs(self.get_custom_servers(user_id))
+        configs = enabled_harness_configs(
+            self._without_disallowed_stdio(user_id, self.get_custom_servers(user_id))
+        )
         for parent in self._repo.list_by_kind(CUSTOM_MCP_KIND):
             if parent.user_id == user_id or not parent.has_credentials:
                 continue
-            servers = extract_servers(self.decrypt(parent.instance_id))
+            servers = self._without_disallowed_stdio(
+                parent.user_id, extract_servers(self.decrypt(parent.instance_id))
+            )
             for name, spec in servers.items():
                 if (
                     not isinstance(spec, dict)

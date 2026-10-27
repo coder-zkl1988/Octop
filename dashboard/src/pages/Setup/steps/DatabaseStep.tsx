@@ -20,10 +20,16 @@ const { Text } = Typography;
 
 interface Props {
   onContinue: () => void;
+  /** Wizard token for the database calls (issued by the password / begin step). */
+  ensureWizardToken: () => Promise<string>;
   onBack?: () => void;
 }
 
-export default function DatabaseStep({ onContinue, onBack }: Props) {
+export default function DatabaseStep({
+  onContinue,
+  ensureWizardToken,
+  onBack,
+}: Props) {
   const { t } = useTranslation();
   const [form] = Form.useForm<DatabaseSetupBody>();
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -75,7 +81,7 @@ export default function DatabaseStep({ onContinue, onBack }: Props) {
   });
 
   const applyAndContinue = async (body: DatabaseSetupBody) => {
-    await wizardApi.applyDatabase(body);
+    await wizardApi.applyDatabase(body, await ensureWizardToken());
     onContinue();
   };
 
@@ -91,7 +97,10 @@ export default function DatabaseStep({ onContinue, onBack }: Props) {
         "user",
         "password",
       ]);
-      await wizardApi.testDatabase(buildPostgresBody(values));
+      await wizardApi.testDatabase(
+        buildPostgresBody(values),
+        await ensureWizardToken(),
+      );
       setTestedOk(true);
       setTestMsg(t("wizard.database.testOk"));
     } catch (e) {
@@ -132,7 +141,7 @@ export default function DatabaseStep({ onContinue, onBack }: Props) {
       ]);
       const body = buildPostgresBody(values);
       if (!testedOk) {
-        await wizardApi.testDatabase(body);
+        await wizardApi.testDatabase(body, await ensureWizardToken());
         setTestedOk(true);
       }
       await applyAndContinue(body);

@@ -671,6 +671,25 @@ class BridgeManager:
         self._repo.update_status(connection_id, status="error", last_error="bridge connect timeout")
         raise OctopError(ErrorCode.BRIDGE_PEER_UNREACHABLE, "bridge connect timeout")
 
+    async def shutdown(self) -> None:
+        """Close live links on server stop.
+
+        Unlike :meth:`disconnect` this records no user stop and leaves the stored
+        status alone, so auto-reconnect links resume on the next boot.
+        """
+        tasks = list(self._client_tasks.values())
+        self._client_tasks.clear()
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            with suppress(asyncio.CancelledError, Exception):
+                await task
+        sessions = list(self._sessions.values())
+        self._sessions.clear()
+        for sess in sessions:
+            with suppress(Exception):
+                await sess.close()
+
     async def disconnect(self, connection_id: str) -> None:
         self._user_stopped.add(connection_id)
         task = self._client_tasks.pop(connection_id, None)

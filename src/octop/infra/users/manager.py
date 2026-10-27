@@ -18,6 +18,7 @@ try:
 except ImportError:  # pragma: no cover - optional PostgreSQL driver
     pg_errors = None  # type: ignore[assignment]
 
+from octop.infra.auth.tokens import credential_fingerprint
 from octop.infra.db.repos._base import UNSET
 from octop.infra.db.repos.audit import ACTOR_ADMIN
 from octop.infra.db.repos.users import UserRepo
@@ -89,6 +90,8 @@ class UserManager:
     def __init__(self, services: SharedServices):
         self._services = services
         self._users: dict[str, User] = {}
+        # user id -> ``credential_fingerprint`` of the stored password hash.
+        self._credential_versions: dict[int, str] = {}
         self._lock = asyncio.Lock()
         self._login_max_attempts = max(1, services.config.login_max_attempts)
         self._login_lockout_seconds = max(60, services.config.login_lockout_seconds)
@@ -96,6 +99,7 @@ class UserManager:
     def replace_services(self, services: SharedServices) -> None:
         """Point at a new SharedServices (control-plane DB rebind during setup)."""
         self._services = services
+        self._credential_versions.clear()
         self._login_max_attempts = max(1, services.config.login_max_attempts)
         self._login_lockout_seconds = max(60, services.config.login_lockout_seconds)
 
@@ -104,6 +108,7 @@ class UserManager:
     async def boot(self) -> None:
         async with self._lock:
             for row in self._services.user_repo.list(include_disabled=False):
+                self._credential_versions[row.id] = credential_fingerprint(row.password_hash)
                 user = User(
                     id=row.id,
                     username=row.username,
@@ -221,6 +226,15 @@ class UserManager:
             if u.id == user_id:
                 return u
         return None
+
+    def credential_version(self, user_id: int) -> str:
+        """``pwv`` claim value for *user_id*; cached, loaded from the row on a miss."""
+        cached = self._credential_versions.get(user_id)
+        if cached is None:
+            row = self._services.user_repo.get(user_id)
+            cached = credential_fingerprint(row.password_hash if row is not None else None)
+            self._credential_versions[user_id] = cached
+        return cached
 
     def get_row(self, user_id: int) -> Any:
         """Return the raw UserRow (includes disabled flag) for admin read operations."""
@@ -522,7 +536,9 @@ class UserManager:
         if not verify_password(old, row.password_hash):
             raise OctopError(ErrorCode.AUTH_FAILED, "current password incorrect")
         validate_password_policy(new, old_password=old)
-        self._services.user_repo.set_password_hash(row.id, hash_password(new))
+        new_hash = hash_password(new)
+        self._services.user_repo.set_password_hash(row.id, new_hash)
+        self._credential_versions[row.id] = credential_fingerprint(new_hash)
         self._services.user_repo.clear_login_lockout(row.id)
         self._services.audit_repo.write(
             actor=username, action="user.password_changed", target=username
@@ -534,7 +550,9 @@ class UserManager:
         if row is None:
             raise OctopError(ErrorCode.NOT_FOUND, "user not found")
         validate_password_policy(new)
-        self._services.user_repo.set_password_hash(row.id, hash_password(new))
+        new_hash = hash_password(new)
+        self._services.user_repo.set_password_hash(row.id, new_hash)
+        self._credential_versions[row.id] = credential_fingerprint(new_hash)
         self._services.user_repo.clear_login_lockout(row.id)
         self._services.audit_repo.write(
             actor=ACTOR_ADMIN, action="user.password_reset", target=username
