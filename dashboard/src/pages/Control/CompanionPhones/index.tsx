@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Alert,
-  Button,
-  Modal,
-  Popover,
-  Select,
-  Spin,
-  Tag,
-  Typography,
-} from "antd";
+import { useNavigate } from "react-router-dom";
+import { Alert, Button, Modal, Popover, Spin, Typography } from "antd";
 import { QRCodeSVG } from "qrcode.react";
 import { Download, QrCode, RefreshCw, Smartphone } from "lucide-react";
 import { message } from "@/utils/antdMessage";
@@ -29,10 +21,6 @@ const DEVICES_POLL_MS = 3000;
 const APP_DOWNLOAD_URL =
   "https://downloads.happywork.today/releases/app-release.apk";
 
-function candidateValue(provider: string, model: string): string {
-  return `${provider}\u0000${model}`;
-}
-
 interface CompanionPhonesPanelProps {
   isVisible?: boolean;
 }
@@ -43,10 +31,9 @@ export default function CompanionPhonesPanel({
   const { t } = useTranslation();
   const user = useCurrentUser();
   const isAdmin = user?.role === "admin";
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<CompanionDevice[] | null>(null);
   const [settings, setSettings] = useState<CompanionSettings | null>(null);
-  const [modelChoice, setModelChoice] = useState<string | undefined>();
-  const [savingModel, setSavingModel] = useState(false);
   const [pairing, setPairing] = useState<CompanionPairing | null>(null);
   const [pairingBusy, setPairingBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,13 +54,7 @@ export default function CompanionPhonesPanel({
 
   const loadSettings = useCallback(async () => {
     try {
-      const data = await companionApi.settings();
-      setSettings(data);
-      setModelChoice(
-        data.provider && data.model
-          ? candidateValue(data.provider, data.model)
-          : undefined,
-      );
+      setSettings(await companionApi.settings());
     } catch {
       setSettings(null);
     }
@@ -147,21 +128,6 @@ export default function CompanionPhonesPanel({
     );
   };
 
-  const saveModel = async () => {
-    if (!modelChoice) return;
-    const [provider, model] = modelChoice.split("\u0000");
-    setSavingModel(true);
-    try {
-      const data = await companionApi.saveSettings({ provider, model });
-      setSettings(data);
-      message.success(t("companionPhone.modelSaved", "手机端模型已更新"));
-    } catch {
-      message.error(t("companionPhone.modelSaveFailed", "保存失败"));
-    } finally {
-      setSavingModel(false);
-    }
-  };
-
   const stopTask = async (deviceId: string) => {
     try {
       await companionApi.cancelTask(deviceId);
@@ -203,22 +169,6 @@ export default function CompanionPhonesPanel({
       setMirrorDevice(device);
     }
   };
-
-  const modelOptions = (settings?.candidates ?? []).map((c) => ({
-    value: candidateValue(c.provider, c.model),
-    label: (
-      <span className={styles.modelOption}>
-        <span>
-          {c.provider} / {c.model}
-        </span>
-        {c.vision ? (
-          <Tag color="blue" bordered={false}>
-            {t("companionPhone.vision", "视觉")}
-          </Tag>
-        ) : null}
-      </span>
-    ),
-  }));
 
   const secondsLeft = pairing ? Math.max(0, pairing.expires_at - now) : 0;
 
@@ -278,62 +228,31 @@ export default function CompanionPhonesPanel({
           </div>
         </div>
 
-        <section className={styles.modelCard}>
-          <div className={styles.modelTitle}>
-            <span>{t("companionPhone.modelTitle", "手机端视觉模型")}</span>
-            {settings?.ready ? (
-              <Tag color="success" bordered={false}>
-                {t("companionPhone.modelReady", "已就绪")}
-              </Tag>
-            ) : (
-              <Tag color="warning" bordered={false}>
-                {t("companionPhone.modelMissing", "未配置")}
-              </Tag>
+        {settings && !settings.ready ? (
+          <Alert
+            type="warning"
+            showIcon
+            message={t(
+              "companionPhone.modelNotReady",
+              "还没有配置手机端视觉模型，手机暂时无法执行任务。",
             )}
-            <Typography.Text type="secondary" className={styles.modelHint}>
-              {t(
-                "companionPhone.modelHint",
-                "手机上的 Agent 用这个支持看图的模型操作屏幕。请求经 Octop 转发，模型密钥不会下发到手机。",
-              )}
-            </Typography.Text>
-          </div>
-          {isAdmin ? (
-            <div className={styles.modelRow}>
-              <Select
-                className={styles.modelSelect}
-                size="small"
-                placeholder={t(
-                  "companionPhone.modelPlaceholder",
-                  "选择 OpenAI 兼容的视觉模型",
-                )}
-                value={modelChoice}
-                onChange={setModelChoice}
-                options={modelOptions}
-                showSearch
-                optionFilterProp="value"
-                notFoundContent={t(
-                  "companionPhone.noCandidates",
-                  "没有可用的 OpenAI 兼容模型，请先在模型设置中添加",
-                )}
-              />
-              <Button
-                size="small"
-                type="primary"
-                loading={savingModel}
-                disabled={!modelChoice}
-                onClick={() => void saveModel()}
-              >
-                {t("companionPhone.saveModel", "保存")}
-              </Button>
-            </div>
-          ) : (
-            <Typography.Text>
-              {settings?.provider && settings.model
-                ? `${settings.provider} / ${settings.model}`
-                : t("companionPhone.askAdmin", "请联系管理员配置手机端模型")}
-            </Typography.Text>
-          )}
-        </section>
+            action={
+              isAdmin ? (
+                <Button
+                  size="small"
+                  onClick={() => navigate("/admin/models?tab=phone")}
+                >
+                  {t("companionPhone.configureModel", "前往配置")}
+                </Button>
+              ) : undefined
+            }
+            description={
+              isAdmin
+                ? undefined
+                : t("companionPhone.askAdmin", "请联系管理员配置手机端模型")
+            }
+          />
+        ) : null}
 
         {devices === null ? (
           <div className={styles.loading}>

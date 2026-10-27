@@ -6,7 +6,14 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../api/modules/mobile", () => ({
   companionApi: {
@@ -45,6 +52,9 @@ import { companionApi } from "../../../api/modules/mobile";
 import CompanionPhonesPanel from "./index";
 
 const api = vi.mocked(companionApi, true);
+
+const render = (ui: ReactElement) =>
+  rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 const DEVICE = {
   device_id: "24094RAD4C-abc",
@@ -169,12 +179,19 @@ describe("<CompanionPhonesPanel />", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the model picker to admins and a hint to other users", async () => {
+  it("points admins to the models page when no phone model is set", async () => {
     api.devices.mockResolvedValue({ devices: [] });
 
     const { unmount } = render(<CompanionPhonesPanel />);
-    expect(await screen.findByText("未配置")).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "还没有配置手机端视觉模型，手机暂时无法执行任务。",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "前往配置" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     unmount();
 
     currentUser.value = { role: "user" };
@@ -182,6 +199,23 @@ describe("<CompanionPhonesPanel />", () => {
     expect(
       await screen.findByText("请联系管理员配置手机端模型"),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "前往配置" })).toBeNull();
+  });
+
+  it("hides the model hint once a phone model is ready", async () => {
+    api.devices.mockResolvedValue({ devices: [] });
+    api.settings.mockResolvedValue({
+      ...SETTINGS,
+      provider: "step",
+      model: "step-3.7-flash",
+      ready: true,
+    });
+
+    render(<CompanionPhonesPanel />);
+    await screen.findByText("还没有配对的手机");
+    await waitFor(() => expect(api.settings).toHaveBeenCalled());
+    expect(
+      screen.queryByText("还没有配置手机端视觉模型，手机暂时无法执行任务。"),
+    ).toBeNull();
   });
 });

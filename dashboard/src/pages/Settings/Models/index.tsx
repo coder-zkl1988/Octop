@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Scale,
   Search,
+  Smartphone,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -51,6 +52,7 @@ import { MediaGenerationSettingsPanel } from "../MediaGeneration";
 import { VoiceSettingsPanel } from "../Voice";
 import { SearchSettingsPanel } from "../SearchConfig";
 import { DecisionSettingsPanel } from "./components/DecisionSettingsPanel";
+import { PhoneModelSettingsPanel } from "./components/PhoneModelSettingsPanel";
 
 type ModelCategory =
   | "chat"
@@ -58,7 +60,8 @@ type ModelCategory =
   | "generation"
   | "voice"
   | "search"
-  | "decision";
+  | "decision"
+  | "phone";
 
 function resolveModelCategory(
   requestedTab: string | null,
@@ -68,12 +71,14 @@ function resolveModelCategory(
   canVoice: boolean,
   canSearch: boolean,
   canDecision: boolean,
+  canPhone: boolean,
 ): ModelCategory {
   if (requestedTab === "embedding" && canEmbedding) return "embedding";
   if (requestedTab === "generation" && canGeneration) return "generation";
   if (requestedTab === "decision" && canDecision) return "decision";
   if (requestedTab === "voice" && canVoice) return "voice";
   if (requestedTab === "search" && canSearch) return "search";
+  if (requestedTab === "phone" && canPhone) return "phone";
   if ((requestedTab === "chat" || requestedTab === null) && canChat) {
     return "chat";
   }
@@ -83,6 +88,7 @@ function resolveModelCategory(
   if (canVoice) return "voice";
   if (canDecision) return "decision";
   if (canSearch) return "search";
+  if (canPhone) return "phone";
   return "chat";
 }
 
@@ -98,6 +104,8 @@ export default function ModelsPage() {
   const canDecision = userCan(user, "model_decision");
   const canVoice = userCan(user, "voice");
   const canSearch = userCan(user, "search");
+  // Companion-app phones' vision model (the phone agent's, not the chat one).
+  const canPhone = userCan(user, "mobile");
   const canChat = canProviders || canOllama;
   const canEmbedding = canProviders || canOnnx;
   const {
@@ -122,6 +130,7 @@ export default function ModelsPage() {
     canVoice,
     canSearch,
     canDecision,
+    canPhone,
   );
   const setModelCategory = (next: string) => {
     const updated = new URLSearchParams(searchParams);
@@ -130,7 +139,8 @@ export default function ModelsPage() {
       next === "generation" ||
       next === "voice" ||
       next === "search" ||
-      next === "decision"
+      next === "decision" ||
+      next === "phone"
     ) {
       updated.set("tab", next);
     } else updated.delete("tab");
@@ -370,9 +380,24 @@ export default function ModelsPage() {
                 },
               ]
             : []),
+          ...(canPhone
+            ? [
+                {
+                  key: "phone",
+                  label: (
+                    <Space className={styles.modelTabLabel} size={6}>
+                      <Smartphone size={15} />
+                      {t("models.phoneModelsTab")}
+                    </Space>
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
-      {modelCategory === "generation" ? (
+      {modelCategory === "phone" ? (
+        <PhoneModelSettingsPanel />
+      ) : modelCategory === "generation" ? (
         <MediaGenerationSettingsPanel />
       ) : modelCategory === "voice" ? (
         <VoiceSettingsPanel />
