@@ -256,7 +256,9 @@ step; password verification works without a pool. The modern flow uses
    the rest of the API.
 
 `GET /api/setup/status` returns `setup_required`, wizard password fields,
-plus `database_bound` / `database_driver`. `setup_lockdown` middleware
+plus `database_bound` / `database_driver` and `database_from_env` (true when
+`OCTOP_DATABASE_*` picks the DB, which `/api/setup/database` cannot override;
+the wizard then hides its switch option). `setup_lockdown` middleware
 blocks non-setup routes until the wizard completes.
 
 For unattended installs, use `octop init --yes` with

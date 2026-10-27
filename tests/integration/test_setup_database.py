@@ -61,6 +61,7 @@ async def test_setup_database_sqlite_bind(patched_app_client) -> None:
     status = await client.get("/api/setup/status")
     assert status.json()["database_driver"] == "sqlite"
     assert status.json()["database_bound"] is True
+    assert status.json()["database_from_env"] is False
 
     # Runtime stores must use the live pool (not a closed previous sqlite).
     assert srv.app_runtime is not None
@@ -120,6 +121,19 @@ async def test_deferred_verify_password_then_bind(tmp_octop_home: Path) -> None:
             headers={"Authorization": f"Bearer {tok}"},
         )
         assert created.status_code == 201, created.text
+
+
+@pytest.mark.asyncio
+async def test_status_reports_env_configured_database(
+    tmp_octop_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``OCTOP_DATABASE_*`` wins over config.json, so the wizard must not offer a switch."""
+    monkeypatch.setenv("OCTOP_DATABASE_SQLITE_PATH", "env.db")
+    async with octop_client(tmp_octop_home) as (client, _srv):
+        body = (await client.get("/api/setup/status")).json()
+    assert body["database_bound"] is True
+    assert body["database_driver"] == "sqlite"
+    assert body["database_from_env"] is True
 
 
 @pytest.mark.asyncio

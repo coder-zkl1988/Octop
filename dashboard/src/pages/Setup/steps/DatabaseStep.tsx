@@ -38,6 +38,7 @@ export default function DatabaseStep({
   const [testedOk, setTestedOk] = useState(false);
   const [alreadyBound, setAlreadyBound] = useState(false);
   const [boundDriver, setBoundDriver] = useState<string | null>(null);
+  const [boundFromEnv, setBoundFromEnv] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testMsg, setTestMsg] = useState<string | null>(null);
 
@@ -50,6 +51,7 @@ export default function DatabaseStep({
         if (s.database_bound) {
           setAlreadyBound(true);
           setBoundDriver(s.database_driver ?? null);
+          setBoundFromEnv(s.database_from_env);
         }
       })
       .catch(() => {
@@ -59,6 +61,12 @@ export default function DatabaseStep({
       cancelled = true;
     };
   }, []);
+
+  const driverLabel = (driver: string): string => {
+    if (driver === "postgresql") return t("wizard.database.postgresql");
+    if (driver === "sqlite") return t("wizard.database.sqlite");
+    return driver;
+  };
 
   const resetProbeState = () => {
     setTestedOk(false);
@@ -175,9 +183,18 @@ export default function DatabaseStep({
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message={t("wizard.database.alreadyBound", {
-            driver: boundDriver || "sqlite",
-          })}
+          message={
+            boundDriver
+              ? t("wizard.database.boundTitle", {
+                  driver: driverLabel(boundDriver),
+                })
+              : t("wizard.database.boundReady")
+          }
+          description={
+            boundFromEnv
+              ? t("wizard.database.boundFromEnv")
+              : t("wizard.database.boundHint")
+          }
         />
       ) : null}
 
@@ -192,43 +209,63 @@ export default function DatabaseStep({
           user: "octop",
         }}
       >
-        <Form.Item
-          label={t("wizard.database.sqlite")}
-          name="sqlite_path"
-          rules={[
-            {
-              required: true,
-              message: t("wizard.database.sqlitePathRequired"),
-            },
-          ]}
-          extra={t("wizard.database.sqlitePathHint")}
-        >
-          <Input prefix={<Database size={14} />} placeholder="octop.db" />
-        </Form.Item>
+        {/* The bound DB is kept as-is on continue, so a SQLite path here would be ignored. */}
+        {alreadyBound ? null : (
+          <Form.Item
+            label={t("wizard.database.sqlite")}
+            name="sqlite_path"
+            rules={[
+              {
+                required: true,
+                message: t("wizard.database.sqlitePathRequired"),
+              },
+            ]}
+            extra={t("wizard.database.sqlitePathHint")}
+          >
+            <Input prefix={<Database size={14} />} placeholder="octop.db" />
+          </Form.Item>
+        )}
 
-        <Button
-          type="link"
-          size="small"
-          className={setupStyles.dbExpandToggle}
-          onClick={() => {
-            setShowAdvanced((v) => !v);
-            setError(null);
-            setTestMsg(null);
-          }}
-        >
-          <span className={setupStyles.dbExpandToggleInner}>
-            {showAdvanced
-              ? t("wizard.database.hideAdvanced")
-              : t("wizard.database.showAdvanced")}
-            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </span>
-        </Button>
+        {/* Env vars override config.json, so switching from the wizard would have no effect. */}
+        {boundFromEnv ? null : (
+          <Button
+            type="link"
+            size="small"
+            className={setupStyles.dbExpandToggle}
+            onClick={() => {
+              setShowAdvanced((v) => !v);
+              setError(null);
+              setTestMsg(null);
+            }}
+          >
+            <span className={setupStyles.dbExpandToggleInner}>
+              {showAdvanced
+                ? t("wizard.database.hideAdvanced")
+                : alreadyBound
+                ? t("wizard.database.switchDatabase")
+                : t("wizard.database.showAdvanced")}
+              {showAdvanced ? (
+                <ChevronUp size={14} />
+              ) : (
+                <ChevronDown size={14} />
+              )}
+            </span>
+          </Button>
+        )}
 
-        {showAdvanced ? (
+        {showAdvanced && !boundFromEnv ? (
           <div className={setupStyles.dbAdvancedPanel}>
             <div className={setupStyles.dbAdvancedTitle}>
               {t("wizard.database.postgresql")}
             </div>
+            {alreadyBound ? (
+              <Text
+                type="secondary"
+                style={{ display: "block", fontSize: 13, marginBottom: 12 }}
+              >
+                {t("wizard.database.switchHint")}
+              </Text>
+            ) : null}
             <Alert
               type="warning"
               showIcon
@@ -322,7 +359,9 @@ export default function DatabaseStep({
             loading={submitting}
             onClick={() => void onContinueSqlite()}
           >
-            {t("wizard.database.continue")}
+            {alreadyBound
+              ? t("wizard.database.continueBound")
+              : t("wizard.database.continue")}
           </Button>
         </Space>
       </Form>

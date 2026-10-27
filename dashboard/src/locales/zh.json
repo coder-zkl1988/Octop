@@ -5449,7 +5449,13 @@
       "testOk": "连接成功。",
       "testFailed": "数据库连接测试失败。",
       "applyFailed": "无法保存数据库配置。",
-      "alreadyBound": "控制面数据库已绑定（{{driver}}）。可直接继续；若要在创建管理员前更换引擎，请展开高级选项。",
+      "boundTitle": "当前数据库：{{driver}}",
+      "boundReady": "控制面数据库已就绪",
+      "boundHint": "继续后将沿用该数据库。如需在创建管理员前换用其他数据库，请点击下方「更换数据库」。",
+      "boundFromEnv": "该数据库由 OCTOP_DATABASE_* 环境变量指定，无法在向导中更换。如需更换，请修改这些环境变量后重启 Octop。",
+      "switchDatabase": "更换数据库",
+      "switchHint": "使用下方的 PostgreSQL 连接替换当前数据库，目标数据库必须为空。",
+      "continueBound": "使用当前数据库继续",
       "continue": "保存并继续"
     },
     "password": {
