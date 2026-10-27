@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Modal, Popover, Spin, Typography } from "antd";
+import { Alert, Button, Modal, Popover, Space, Spin, Typography } from "antd";
 import { QRCodeSVG } from "qrcode.react";
 import { Download, QrCode, RefreshCw, Smartphone } from "lucide-react";
 import { message } from "@/utils/antdMessage";
@@ -185,7 +185,7 @@ export default function CompanionPhonesPanel({
         </div>
       }
     >
-      <Button size="small" icon={<Download size={12} />}>
+      <Button icon={<Download size={14} />}>
         {t("companionPhone.download", "下载 Tabby")}
       </Button>
     </Popover>
@@ -201,31 +201,24 @@ export default function CompanionPhonesPanel({
               "在手机上安装 Tabby App 并扫码配对后，Agent 可以把整段任务交给手机自主完成，无需 USB 或 ADB。",
             )}
           </Typography.Text>
-          <div className={styles.toolbarActions}>
+          <Space size={8} wrap>
             {downloadButton}
             <Button
-              size="small"
-              className={styles.accentButton}
-              icon={<QrCode size={12} />}
+              icon={<RefreshCw size={14} />}
+              onClick={refresh}
+              loading={refreshing}
+            >
+              {t("companionPhone.refresh", "刷新")}
+            </Button>
+            <Button
+              type="primary"
+              icon={<QrCode size={14} />}
               loading={pairingBusy}
               onClick={() => void startPairing()}
             >
               {t("companionPhone.addPhone", "扫码连接")}
             </Button>
-            <Button
-              size="small"
-              icon={
-                <RefreshCw
-                  size={12}
-                  className={refreshing ? styles.spinning : undefined}
-                />
-              }
-              onClick={refresh}
-              disabled={refreshing}
-            >
-              {t("companionPhone.refresh", "刷新")}
-            </Button>
-          </div>
+          </Space>
         </div>
 
         {settings && !settings.ready ? (
@@ -240,6 +233,7 @@ export default function CompanionPhonesPanel({
               isAdmin ? (
                 <Button
                   size="small"
+                  type="primary"
                   onClick={() => navigate("/admin/models?tab=phone")}
                 >
                   {t("companionPhone.configureModel", "前往配置")}
@@ -273,7 +267,7 @@ export default function CompanionPhonesPanel({
               )}
             </div>
             <Button
-              className={styles.accentButton}
+              type="primary"
               icon={<QrCode size={14} />}
               loading={pairingBusy}
               onClick={() => void startPairing()}

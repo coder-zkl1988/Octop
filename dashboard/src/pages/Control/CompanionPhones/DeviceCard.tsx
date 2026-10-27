@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Popconfirm, Tooltip } from "antd";
-import { Pencil, Smartphone, Unlink } from "lucide-react";
+import {
+  MonitorSmartphone,
+  OctagonX,
+  Pencil,
+  Smartphone,
+  Unlink,
+} from "lucide-react";
 import type { CompanionDevice } from "../../../api/modules/mobile";
 import { useDeviceThumbnail } from "./useDeviceThumbnail";
 import styles from "./DeviceCard.module.less";
@@ -173,18 +179,16 @@ export default function DeviceCard({
         <div className={styles.actions}>
           {/* Always rendered, disabled when idle, so the control has a fixed spot. */}
           <Button
-            size="small"
-            danger={status === "busy"}
-            type={status === "busy" ? "primary" : "default"}
-            disabled={status !== "busy" || stopping}
+            danger
+            icon={<OctagonX size={14} />}
+            disabled={status !== "busy"}
+            loading={stopping}
             onClick={() => void stop()}
           >
-            {stopping
-              ? t("companionPhone.stopping", "停止中…")
-              : t("companionPhone.emergencyStop", "紧急停止")}
+            {t("companionPhone.emergencyStop", "紧急停止")}
           </Button>
           <Button
-            size="small"
+            icon={<MonitorSmartphone size={14} />}
             disabled={!device.online}
             onClick={() => onViewScreen(device)}
           >
