@@ -138,6 +138,8 @@ export const mobileApi = {
 /** A phone paired through the companion app (phone dials Octop, no adb). */
 export interface CompanionDevice {
   device_id: string;
+  /** User-chosen display name; empty means use the model. */
+  name: string;
   model: string;
   manufacturer: string;
   online: boolean;
@@ -182,6 +184,11 @@ export const companionApi = {
     }),
   createPairing: () =>
     request<CompanionPairing>("/mobile/companion/pairings", { method: "POST" }),
+  rename: (deviceId: string, name: string) =>
+    request<CompanionDevice>(
+      `/mobile/companion/devices/${encodeURIComponent(deviceId)}`,
+      { method: "PATCH", body: JSON.stringify({ name }) },
+    ),
   unpair: (deviceId: string) =>
     request<void>(`/mobile/companion/devices/${encodeURIComponent(deviceId)}`, {
       method: "DELETE",

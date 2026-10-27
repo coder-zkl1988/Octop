@@ -249,3 +249,42 @@ def cancel_message(task_id: str) -> dict[str, Any]:
 
 def result_ack_message(task_id: str) -> dict[str, Any]:
     return {"channel": "task", "method": "agent.result_ack", "params": {"taskId": task_id}}
+
+
+# Live mirror. ``fps > 5`` asks the phone for an H.264 stream (it prompts for
+# screen-capture consent); ``fps <= 5`` keeps the low-rate JPEG preview.
+LIVE_MIRROR_FPS = 30
+IDLE_MIRROR_FPS = 3
+H264_FRAME_TYPE = 0x01
+CLIPBOARD_FRAME_TYPE = 0x00
+H264_HEADER_BYTES = 14
+
+# Viewer actions the phone understands as ``{"channel":"mirror","type":…,"params":…}``.
+MIRROR_ACTIONS = frozenset(
+    {
+        "click",
+        "swipe",
+        "long_press",
+        "scroll",
+        "input_text",
+        "press_key",
+        "set_clipboard",
+        "get_clipboard",
+    }
+)
+
+
+def mirror_start_message(device_id: str, fps: int) -> dict[str, Any]:
+    return {"channel": "mirror", "type": "start", "deviceId": device_id, "fps": fps}
+
+
+def mirror_action_message(device_id: str, action: dict[str, Any]) -> dict[str, Any] | None:
+    """Wrap a viewer action for the phone; ``None`` for unknown action types."""
+    kind = action.get("type")
+    if kind not in MIRROR_ACTIONS:
+        return None
+    return {"channel": "mirror", "type": kind, "deviceId": device_id, "params": action}
+
+
+def is_h264_keyframe(frame: bytes) -> bool:
+    return len(frame) > H264_HEADER_BYTES and frame[0] == H264_FRAME_TYPE and frame[1] == 0x01

@@ -43,6 +43,8 @@ class PairedDevice:
     device_id: str | None = None
     claimed_at: int | None = None
     model: str = ""
+    name: str = ""
+    """User-chosen display name; empty means show the model."""
 
     @property
     def claimed(self) -> bool:
@@ -62,6 +64,7 @@ def _from_dict(raw: dict[str, Any]) -> PairedDevice | None:
             device_id=str(raw["device_id"]) if raw.get("device_id") else None,
             claimed_at=int(raw["claimed_at"]) if raw.get("claimed_at") else None,
             model=str(raw.get("model") or ""),
+            name=str(raw.get("name") or ""),
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -155,6 +158,16 @@ class PairingStore:
             return [
                 r for r in self._load() if r.claimed and (user_id is None or r.user_id == user_id)
             ]
+
+    def rename(self, device_id: str, name: str) -> PairedDevice | None:
+        with self._lock:
+            records = self._load()
+            target = next((r for r in records if r.device_id == device_id), None)
+            if target is None:
+                return None
+            renamed = replace(target, name=name.strip())
+            self._save([renamed if r is target else r for r in records])
+            return renamed
 
     def remove(self, device_id: str) -> PairedDevice | None:
         with self._lock:

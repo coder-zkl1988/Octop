@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 from typing import Any
 
 JPEG_BYTES = b"\xff\xd8\xff\xe0fake-jpeg"
@@ -26,10 +27,14 @@ class FakePhone:
 
     def __init__(self) -> None:
         self.sent: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self.sent_bytes: list[bytes] = []
         self.closed: tuple[int, str] | None = None
 
     async def send_json(self, payload: dict[str, Any]) -> None:
         await self.sent.put(payload)
+
+    async def send_bytes(self, data: bytes) -> None:
+        self.sent_bytes.append(data)
 
     async def close(self, code: int, reason: str) -> None:
         self.closed = (code, reason)
@@ -115,3 +120,30 @@ def mirror_frame(*, current_app: str = "com.android.settings") -> dict[str, Any]
         "currentApp": current_app,
         "deviceStatus": "idle",
     }
+
+
+class FakeViewer:
+    """``MirrorViewer`` that records what the hub fans out."""
+
+    def __init__(self) -> None:
+        self.texts: list[dict[str, Any]] = []
+        self.binary: list[bytes] = []
+        self.closed: tuple[int, str] | None = None
+
+    async def send_text(self, text: str) -> None:
+        self.texts.append(json.loads(text))
+
+    async def send_bytes(self, data: bytes) -> None:
+        self.binary.append(data)
+
+    async def close(self, code: int, reason: str) -> None:
+        self.closed = (code, reason)
+
+
+def h264_frame(*, keyframe: bool, payload: bytes = b"\x00\x00\x00\x01\x67nal") -> bytes:
+    """Binary mirror frame: 14-byte little-endian header + Annex-B NAL data."""
+    header = bytes([0x01, 0x01 if keyframe else 0x00])
+    header += (720).to_bytes(2, "little") + (1600).to_bytes(2, "little")
+    header += (1080).to_bytes(2, "little") + (2400).to_bytes(2, "little")
+    header += (1234).to_bytes(4, "little")
+    return header + payload

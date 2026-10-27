@@ -19,11 +19,17 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from octop.api.deps import extract_raw_token, get_server, require_permission
+from octop.api.deps import (
+    extract_raw_token,
+    get_server,
+    require_permission,
+    resolve_user_from_token,
+)
 from octop.infra.control.mobile.companion import vlm
 from octop.infra.control.mobile.companion.hub import CompanionError, CompanionHub, DeviceView
 from octop.infra.control.mobile.companion.pairing import PAIRING_TTL_S, PairingError
 from octop.infra.control.mobile.companion.protocol import (
+    LIVE_MIRROR_FPS,
     TaskResult,
     auth_error_message,
     parse_auth,
@@ -31,6 +37,7 @@ from octop.infra.control.mobile.companion.protocol import (
 from octop.infra.control.mobile.companion.urls import lan_ipv4, pairing_address, public_base_url
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.identity import User
+from octop.infra.users.permissions import user_has_permission
 
 logger = logging.getLogger(__name__)
 
@@ -60,16 +67,24 @@ def _loads(raw: str) -> dict[str, Any] | None:
 
 
 class _WsPhone:
-    """:class:`PhoneConnection` over a Starlette WebSocket (sends serialized)."""
+    """Phone connection or mirror viewer over a Starlette WebSocket (sends serialized)."""
 
     def __init__(self, ws: WebSocket) -> None:
         self._ws = ws
         self._lock = asyncio.Lock()
 
     async def send_json(self, payload: dict[str, Any]) -> None:
+        await self.send_text(json.dumps(payload, ensure_ascii=False))
+
+    async def send_text(self, text: str) -> None:
         async with self._lock:
             if self._ws.application_state == WebSocketState.CONNECTED:
-                await self._ws.send_text(json.dumps(payload, ensure_ascii=False))
+                await self._ws.send_text(text)
+
+    async def send_bytes(self, data: bytes) -> None:
+        async with self._lock:
+            if self._ws.application_state == WebSocketState.CONNECTED:
+                await self._ws.send_bytes(data)
 
     async def close(self, code: int, reason: str) -> None:
         async with self._lock:
@@ -119,19 +134,75 @@ async def companion_phone_ws(
             if message["type"] == "websocket.disconnect":
                 break
             raw = message.get("text")
-            if raw is None:
-                continue  # binary H.264 / clipboard frames: not requested, dropped
-            msg = _loads(raw)
-            if msg is None:
-                continue
             try:
-                await hub.handle_message(hello.device_id, conn, msg)
+                if raw is None:
+                    data = message.get("bytes")
+                    if data:  # H.264 mirror / clipboard frames
+                        await hub.handle_binary(hello.device_id, conn, data)
+                    continue
+                msg = _loads(raw)
+                if msg is not None:
+                    await hub.handle_message(hello.device_id, conn, msg)
             except Exception:
                 logger.exception("companion message from %s failed", hello.device_id)
     except WebSocketDisconnect:
         pass
     finally:
         hub.detach(hello.device_id, conn)
+
+
+@router.websocket("/mobile/companion/devices/{device_id}/mirror")
+async def companion_mirror_ws(
+    websocket: WebSocket,
+    device_id: str,
+    token: str = Query(default="", description="Dashboard access token."),
+    fps: int = Query(default=LIVE_MIRROR_FPS, ge=1, le=60),
+) -> None:
+    """Live mirror for the dashboard.
+
+    Server → client: the phone's JSON JPEG frames and binary H.264 / clipboard
+    frames, verbatim. Client → server: JSON actions (``click``, ``swipe``,
+    ``input_text``, ``press_key``, …) and binary scrcpy-style control frames.
+    """
+    server = websocket.app.state.octop_server
+    hub = _hub_or_none(server)
+    await websocket.accept()
+    viewer = _WsPhone(websocket)
+    try:
+        user = resolve_user_from_token(server, token)
+    except Exception:
+        await viewer.close(4001, "auth failed")
+        return
+    owner = hub.owner_of(device_id) if hub is not None else None
+    if (
+        hub is None
+        or not user_has_permission(user, "mobile")
+        or owner is None
+        or (not user.is_admin and owner != user.id)
+    ):
+        await viewer.close(4003, "forbidden")
+        return
+    try:
+        await hub.add_viewer(device_id, viewer, fps=fps)
+    except CompanionError:
+        await viewer.send_text(json.dumps({"channel": "mirror", "type": "device_disconnected"}))
+        await viewer.close(4404, "phone offline")
+        return
+    try:
+        while True:
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                break
+            if message.get("bytes"):
+                await hub.mirror_action(device_id, message["bytes"])
+            elif message.get("text"):
+                action = _loads(message["text"])
+                if action is not None:
+                    await hub.mirror_action(device_id, action)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await hub.remove_viewer(device_id, viewer)
 
 
 def _openai_error(status: int, message: str) -> JSONResponse:
@@ -181,6 +252,7 @@ async def companion_vlm_proxy(
 
 class CompanionDeviceItem(BaseModel):
     device_id: str = Field(description="Phone id reported by the app (MODEL-ANDROID_ID).")
+    name: str = Field(description="User-chosen display name (empty = use the model).")
     model: str
     manufacturer: str
     online: bool
@@ -209,6 +281,10 @@ class CompanionPairingResponse(BaseModel):
         description="False when Octop only listens on loopback, so phones on Wi-Fi cannot "
         "reach the URL (USB `adb reverse` still can)."
     )
+
+
+class CompanionRenameBody(BaseModel):
+    name: str = Field(max_length=64, description="Display name; empty resets to the model.")
 
 
 class CompanionSnapshotResponse(BaseModel):
@@ -322,6 +398,24 @@ async def unpair_companion_device(
     _require_device(hub, device_id, user)
     await hub.unpair(device_id)
     return Response(status_code=204)
+
+
+@router.patch(
+    "/mobile/companion/devices/{device_id}",
+    summary="Rename a companion phone",
+    response_model=CompanionDeviceItem,
+)
+async def rename_companion_device(
+    device_id: str,
+    body: CompanionRenameBody,
+    server: Any = Depends(get_server),
+    user: User = Depends(require_permission("mobile")),
+) -> CompanionDeviceItem:
+    hub = _hub(server)
+    _require_device(hub, device_id, user)
+    await hub.rename(device_id, body.name)
+    view = next(v for v in hub.list_devices() if v.device_id == device_id)
+    return _device_item(view)
 
 
 @router.post(

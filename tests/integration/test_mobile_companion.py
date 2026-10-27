@@ -272,3 +272,86 @@ async def test_capabilities_advertise_companion(env: Env) -> None:
     client, _srv, auth = env
     caps = (await client.get("/api/settings/capabilities", headers=auth)).json()
     assert caps["mobile"]["companion"] is True
+
+
+async def _next_raw(session: ASGIWebSocketSession) -> dict[str, Any]:
+    return await session._next_event(5)  # noqa: SLF001 - binary frames need the raw event
+
+
+async def test_live_mirror_relays_frames_and_actions(env: Env) -> None:
+    from tests.support.companion import h264_frame
+    from tests.support.http import ws_token
+
+    client, _srv, auth = env
+    token = await _pair(client, auth)
+    app = client._octop_app  # type: ignore[attr-defined]
+    phone, _ = await _phone_connect(app, token)
+    viewer = ASGIWebSocketSession(
+        app, f"/api/mobile/companion/devices/Pixel-1/mirror?token={ws_token(auth)}"
+    )
+    try:
+        await viewer.connect()
+        start = await phone.receive_json()
+        assert start == {"channel": "mirror", "type": "start", "deviceId": "Pixel-1", "fps": 30}
+
+        await phone.send_json(mirror_frame(current_app="com.android.settings"))
+        assert (await viewer.receive_json())["currentApp"] == "com.android.settings"
+        key = h264_frame(keyframe=True)
+        await phone.send_bytes(key)
+        assert (await _next_raw(viewer))["bytes"] == key
+
+        await viewer.send_json({"type": "input_text", "text": "你好"})
+        assert await phone.receive_json() == {
+            "channel": "mirror",
+            "type": "input_text",
+            "deviceId": "Pixel-1",
+            "params": {"type": "input_text", "text": "你好"},
+        }
+        touch = bytes([0x03]) + b"\x00" * 35
+        await viewer.send_bytes(touch)
+        assert (await _next_raw(phone))["bytes"] == touch
+    finally:
+        await viewer.close()
+    # Closing the only viewer drops the phone back to the low-rate preview.
+    assert (await phone.receive_json())["fps"] == 3
+    await phone.close()
+
+
+async def test_live_mirror_requires_owner_and_valid_token(env: Env) -> None:
+    from tests.support.http import ws_token
+
+    client, _srv, auth = env
+    token = await _pair(client, auth)
+    app = client._octop_app  # type: ignore[attr-defined]
+    phone, _ = await _phone_connect(app, token)
+    bob = await create_user(client, auth, username="bob", permissions=["mobile"])
+    try:
+        for credential, code in (("bogus", 4001), (ws_token(bob), 4003)):
+            session = ASGIWebSocketSession(
+                app, f"/api/mobile/companion/devices/Pixel-1/mirror?token={credential}"
+            )
+            await session.connect()
+            with pytest.raises(WebSocketDisconnect) as exc:
+                await session.receive_json()
+            assert exc.value.code == code
+            await session.close()
+    finally:
+        await phone.close()
+
+
+async def test_rename_device(env: Env) -> None:
+    client, _srv, auth = env
+    token = await _pair(client, auth)
+    app = client._octop_app  # type: ignore[attr-defined]
+    phone, _ = await _phone_connect(app, token)
+    await phone.close()
+    r = await client.patch(
+        "/api/mobile/companion/devices/Pixel-1", headers=auth, json={"name": "测试机"}
+    )
+    assert r.status_code == 200 and r.json()["name"] == "测试机"
+    devices = (await client.get("/api/mobile/companion/devices", headers=auth)).json()
+    assert devices["devices"][0]["name"] == "测试机"
+    missing = await client.patch(
+        "/api/mobile/companion/devices/Ghost", headers=auth, json={"name": "x"}
+    )
+    assert missing.status_code == 404

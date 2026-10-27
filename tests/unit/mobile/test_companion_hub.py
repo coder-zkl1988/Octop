@@ -277,3 +277,103 @@ async def test_listing_is_scoped_by_owner() -> None:
     assert {v.device_id for v in hub.list_devices()} == {"A", "B"}
     assert hub.owner_of("B") == 2
     assert hub.owner_of("nope") is None
+
+
+# ----- live mirror -----
+
+
+async def test_first_viewer_starts_live_stream_and_gets_replay() -> None:
+    from tests.support.companion import FakeViewer, h264_frame
+
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    await phone.next()  # connected
+    await hub.handle_message("Pixel-1", phone, mirror_frame())
+    key = h264_frame(keyframe=True)
+    await hub.handle_binary("Pixel-1", phone, key)
+    await hub.handle_binary("Pixel-1", phone, h264_frame(keyframe=False))
+
+    viewer = FakeViewer()
+    await hub.add_viewer("Pixel-1", viewer)
+    start = await phone.next()
+    assert start == {"channel": "mirror", "type": "start", "deviceId": "Pixel-1", "fps": 30}
+    assert viewer.texts[0]["type"] == "realtime"
+    assert viewer.binary == [key]  # latest keyframe only, not the delta
+
+
+async def test_frames_fan_out_and_unknown_binary_is_dropped() -> None:
+    from tests.support.companion import FakeViewer, h264_frame
+
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    viewer = FakeViewer()
+    await hub.add_viewer("Pixel-1", viewer)
+    delta = h264_frame(keyframe=False)
+    clipboard = bytes([0x00]) + b"\x00" * 13
+    await hub.handle_binary("Pixel-1", phone, delta)
+    await hub.handle_binary("Pixel-1", phone, clipboard)
+    await hub.handle_binary("Pixel-1", phone, bytes([0x7F, 1, 2]))
+    await hub.handle_message("Pixel-1", phone, mirror_frame(current_app="com.x"))
+    assert viewer.binary == [delta, clipboard]
+    assert viewer.texts[-1]["currentApp"] == "com.x"
+    # A frame from a replaced socket is ignored.
+    await hub.handle_binary("Pixel-1", FakePhone(), delta)
+    assert len(viewer.binary) == 2
+
+
+async def test_viewer_actions_are_wrapped_or_forwarded() -> None:
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    await phone.next()
+    assert await hub.mirror_action("Pixel-1", {"type": "click", "x": 10, "y": 20})
+    assert await phone.next() == {
+        "channel": "mirror",
+        "type": "click",
+        "deviceId": "Pixel-1",
+        "params": {"type": "click", "x": 10, "y": 20},
+    }
+    assert not await hub.mirror_action("Pixel-1", {"type": "rm -rf"})
+    touch = bytes([0x03]) + b"\x00" * 35
+    assert await hub.mirror_action("Pixel-1", touch)
+    assert phone.sent_bytes == [touch]
+    assert not await hub.mirror_action("Ghost", {"type": "click"})
+
+
+async def test_last_viewer_leaving_returns_to_idle_preview() -> None:
+    from tests.support.companion import FakeViewer
+
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    await phone.next()
+    first, second = FakeViewer(), FakeViewer()
+    await hub.add_viewer("Pixel-1", first)
+    await hub.add_viewer("Pixel-1", second)
+    await phone.next()
+    await phone.next()
+    await hub.remove_viewer("Pixel-1", first)
+    assert phone.sent.empty()
+    await hub.remove_viewer("Pixel-1", second)
+    assert (await phone.next())["fps"] == 3
+
+
+async def test_viewers_are_told_when_the_phone_goes_away() -> None:
+    from tests.support.companion import FakeViewer
+
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    viewer = FakeViewer()
+    await hub.add_viewer("Pixel-1", viewer)
+    hub.detach("Pixel-1", phone)
+    await asyncio.sleep(0.05)
+    assert viewer.texts[-1] == {"channel": "mirror", "type": "device_disconnected"}
+    assert viewer.closed is not None
+    with pytest.raises(CompanionError):
+        await hub.add_viewer("Pixel-1", FakeViewer())
+
+
+async def test_rename_shows_in_listing() -> None:
+    hub = _hub()
+    await _pair(hub)
+    assert await hub.rename("Pixel-1", "  测试机 A ")
+    assert hub.list_devices()[0].name == "测试机 A"
+    assert not await hub.rename("Ghost", "x")

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import secrets
 import time
@@ -39,6 +40,18 @@ RECENT_RESULT_TTL_S = 6 * 3600
 
 class PhoneConnection(Protocol):
     async def send_json(self, payload: dict[str, Any]) -> None: ...
+
+    async def send_bytes(self, data: bytes) -> None: ...
+
+    async def close(self, code: int, reason: str) -> None: ...
+
+
+class MirrorViewer(Protocol):
+    """A dashboard live-mirror socket: gets the phone's frames, sends actions."""
+
+    async def send_text(self, text: str) -> None: ...
+
+    async def send_bytes(self, data: bytes) -> None: ...
 
     async def close(self, code: int, reason: str) -> None: ...
 
@@ -70,6 +83,7 @@ class DeviceView:
     user_id: int
     model: str
     online: bool
+    name: str = ""
     manufacturer: str = ""
     android_sdk: int | None = None
     screen_width: int | None = None
@@ -87,6 +101,7 @@ class DeviceView:
     def to_dict(self) -> dict[str, Any]:
         return {
             "device_id": self.device_id,
+            "name": self.name,
             "model": self.model,
             "manufacturer": self.manufacturer,
             "online": self.online,
@@ -116,6 +131,10 @@ class _LiveDevice:
     last_seen: float
     frame: bytes | None = None
     frame_at: float | None = None
+    frame_msg: dict[str, Any] | None = None
+    """Latest mirror JSON frame, replayed to a viewer that just joined."""
+    keyframe: bytes | None = None
+    """Latest binary H.264 keyframe, so a new viewer can start decoding at once."""
 
 
 @dataclass
@@ -154,6 +173,7 @@ class CompanionHub:
         self._running: dict[str, _RunningTask] = {}
         self._recent: dict[str, deque[TaskResult]] = {}
         self._background: set[asyncio.Task[None]] = set()
+        self._viewers: dict[str, set[MirrorViewer]] = {}
 
     # ----- connection lifecycle -----
 
@@ -201,6 +221,8 @@ class CompanionHub:
         if live is not None and live.conn is conn:
             del self._live[device_id]
             logger.info("companion phone disconnected: %s", device_id)
+            if self._viewers.get(device_id):
+                self._spawn(self._drop_viewers(device_id))
 
     async def refresh_credentials(self) -> None:
         """Re-send ``connected`` so phones pick up a changed VLM model."""
@@ -231,8 +253,10 @@ class CompanionHub:
         frame = protocol.parse_mirror_frame(msg)
         if frame is not None:
             live.frame, live.frame_at = frame.jpeg, live.last_seen
+            live.frame_msg = msg
             if frame.current_app:
                 live.info = replace(live.info, current_app=frame.current_app)
+            await self._broadcast(device_id, text=json.dumps(msg, ensure_ascii=False))
             return
         if msg.get("channel") == "control" and msg.get("event") == "device_info":
             self._on_device_info(live, msg)
@@ -364,9 +388,7 @@ class CompanionHub:
         except asyncio.CancelledError:
             # The caller (an agent turn) was stopped: stop the phone too.
             if not running.done.is_set():
-                task = asyncio.create_task(self._cancel_quietly(running))
-                self._background.add(task)
-                task.add_done_callback(self._background.discard)
+                self._spawn(self._cancel_quietly(running))
             raise
 
     async def _cancel_quietly(self, running: _RunningTask) -> None:
@@ -446,6 +468,89 @@ class CompanionHub:
                 return
         bucket.append(result)
 
+    # ----- live mirror -----
+
+    def _spawn(self, coro: Any) -> None:
+        task = asyncio.create_task(coro)
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+
+    async def handle_binary(self, device_id: str, conn: PhoneConnection, data: bytes) -> None:
+        """Fan H.264 (``0x01``) and clipboard (``0x00``) frames out to viewers."""
+        live = self._live.get(device_id)
+        if live is None or live.conn is not conn or not data:
+            return
+        live.last_seen = time.time()
+        if data[0] == protocol.H264_FRAME_TYPE:
+            if protocol.is_h264_keyframe(data):
+                live.keyframe = data
+        elif data[0] != protocol.CLIPBOARD_FRAME_TYPE:
+            return
+        await self._broadcast(device_id, data=data)
+
+    async def add_viewer(
+        self, device_id: str, viewer: MirrorViewer, *, fps: int = protocol.LIVE_MIRROR_FPS
+    ) -> None:
+        """Start the phone's live stream and replay the latest frames to *viewer*."""
+        live = self._live.get(device_id)
+        if live is None:
+            raise CompanionError("DEVICE_OFFLINE", f"phone {device_id} is not connected")
+        self._viewers.setdefault(device_id, set()).add(viewer)
+        await live.conn.send_json(protocol.mirror_start_message(device_id, fps))
+        if live.frame_msg is not None:
+            await viewer.send_text(json.dumps(live.frame_msg, ensure_ascii=False))
+        if live.keyframe is not None:
+            await viewer.send_bytes(live.keyframe)
+
+    async def remove_viewer(self, device_id: str, viewer: MirrorViewer) -> None:
+        viewers = self._viewers.get(device_id)
+        if viewers is None:
+            return
+        viewers.discard(viewer)
+        if viewers:
+            return
+        del self._viewers[device_id]
+        live = self._live.get(device_id)
+        if live is not None:
+            # Back to the low-rate preview the device cards' thumbnails rely on.
+            with contextlib.suppress(Exception):
+                await live.conn.send_json(
+                    protocol.mirror_start_message(device_id, protocol.IDLE_MIRROR_FPS)
+                )
+
+    async def mirror_action(self, device_id: str, action: dict[str, Any] | bytes) -> bool:
+        """Forward a viewer action: JSON is wrapped, binary control frames pass as-is."""
+        live = self._live.get(device_id)
+        if live is None:
+            return False
+        if isinstance(action, bytes):
+            await live.conn.send_bytes(action)
+            return True
+        message = protocol.mirror_action_message(device_id, action)
+        if message is None:
+            return False
+        await live.conn.send_json(message)
+        return True
+
+    async def _broadcast(
+        self, device_id: str, *, text: str | None = None, data: bytes | None = None
+    ) -> None:
+        for viewer in list(self._viewers.get(device_id, ())):
+            try:
+                if text is not None:
+                    await viewer.send_text(text)
+                if data is not None:
+                    await viewer.send_bytes(data)
+            except Exception:
+                self._viewers.get(device_id, set()).discard(viewer)
+
+    async def _drop_viewers(self, device_id: str) -> None:
+        notice = json.dumps({"channel": "mirror", "type": "device_disconnected"})
+        for viewer in list(self._viewers.pop(device_id, ())):
+            with contextlib.suppress(Exception):
+                await viewer.send_text(notice)
+                await viewer.close(1000, "phone disconnected")
+
     # ----- queries -----
 
     def find_result(self, task_id: str) -> TaskResult | None:
@@ -487,6 +592,7 @@ class CompanionHub:
                 DeviceView(
                     device_id=device_id,
                     user_id=record.user_id,
+                    name=record.name,
                     model=info.model or record.model,
                     online=live is not None,
                     manufacturer=info.manufacturer,
@@ -525,7 +631,12 @@ class CompanionHub:
         if live is not None:
             with contextlib.suppress(Exception):
                 await live.conn.close(4003, "unpaired")
+        await self._drop_viewers(device_id)
         return removed is not None
+
+    async def rename(self, device_id: str, name: str) -> bool:
+        record = await asyncio.to_thread(self.pairing.rename, device_id, name)
+        return record is not None
 
     async def shutdown(self) -> None:
         for running in list(self._running.values()):
@@ -533,6 +644,8 @@ class CompanionHub:
                 running.watchdog.cancel()
         for task in list(self._background):
             task.cancel()
+        for device_id in list(self._viewers):
+            await self._drop_viewers(device_id)
         for live in list(self._live.values()):
             with contextlib.suppress(Exception):
                 await live.conn.close(1001, "server shutting down")
