@@ -4127,8 +4127,6 @@
       "slate": "Slate",
       "custom": "Custom color"
     },
-    "currentVersion": "Current version v{{version}}",
-    "currentVersionAdmin": "Current version v{{version}}. Click to open Updates.",
     "versionUpdateAvailable": "v{{current}} installed — v{{latest}} is available. Click to open Updates.",
     "versionUpdateAvailableReadonly": "v{{current}} installed — v{{latest}} is available",
     "newVersionBadge": "New version",

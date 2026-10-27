@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import AvatarDropdown from "../components/AvatarDropdown";
 import AppVersionBadge from "../components/AppVersionBadge";
-import CurrentVersionBadge from "../components/CurrentVersionBadge";
 import { ArrowRightLeft, ChevronDown, X } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useLayoutMode } from "../context/LayoutModeContext";
@@ -520,23 +519,18 @@ export default function Sidebar({
         src={isRailCollapsed ? markSrc : wordmarkSrc}
         alt="HappyTabby"
         style={{
-          // The HappyTabby wordmark is ~4.5:1, so keep it short on desktop
-          // to leave room for the version badges beside it.
-          height: isRailCollapsed ? 32 : isMobile ? 38 : 26,
+          // The HappyTabby wordmark is ~4.5:1; the desktop size still leaves
+          // room for the update-available icon that can appear beside it.
+          height: isRailCollapsed ? 32 : isMobile ? 38 : 32,
           width: isRailCollapsed ? 32 : "auto",
-          maxWidth: isRailCollapsed ? 32 : isMobile ? 190 : 118,
+          maxWidth: isRailCollapsed ? 32 : isMobile ? 190 : 148,
           objectFit: "contain",
           display: "block",
           flexShrink: 0,
           borderRadius: isRailCollapsed ? 8 : undefined,
         }}
       />
-      {!isRailCollapsed && !isMobile && (
-        <>
-          <CurrentVersionBadge isMobile={isMobile} />
-          <AppVersionBadge isMobile={isMobile} />
-        </>
-      )}
+      {!isRailCollapsed && !isMobile && <AppVersionBadge isMobile={isMobile} />}
     </>
   );
 

@@ -4127,8 +4127,6 @@
       "slate": "石墨",
       "custom": "自定义颜色"
     },
-    "currentVersion": "当前版本 v{{version}}",
-    "currentVersionAdmin": "当前版本 v{{version}}，点击查看更新",
     "versionUpdateAvailable": "当前 v{{current}}，新版本 v{{latest}} 可用，点击前往更新",
     "versionUpdateAvailableReadonly": "当前 v{{current}}，新版本 v{{latest}} 可用",
     "newVersionBadge": "有新版本",
