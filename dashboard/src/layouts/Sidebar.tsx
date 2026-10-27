@@ -400,13 +400,17 @@ export default function Sidebar({
   const user = useCurrentUser();
   const setUser = useSetCurrentUser();
   const { hasUpdate } = useUpdateStatus();
-  const { mobileEnabled } = useServerCapabilities();
+  const { mobileEnabled, companionEnabled } = useServerCapabilities();
   const { layoutMode, minimalPane, setMinimalPane } = useLayoutMode();
   const isMinimal = layoutMode === "minimal";
   const onChatPath = isChatPath(location.pathname);
   const catalog = useMemo(
-    () => buildNavSections(user, { mobileEnabled }),
-    [user, mobileEnabled],
+    // The phone tabs share the remote-desktop entry: adb or companion app.
+    () =>
+      buildNavSections(user, {
+        mobileEnabled: mobileEnabled || companionEnabled,
+      }),
+    [user, mobileEnabled, companionEnabled],
   );
   const [savedLayout, setSavedLayout] = useState<SidebarNavLayout | null>(null);
   const [customizerOpen, setCustomizerOpen] = useState(false);

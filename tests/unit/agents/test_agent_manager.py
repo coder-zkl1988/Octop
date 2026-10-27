@@ -887,6 +887,36 @@ def test_build_harness_config_includes_cronjob_tools_when_cron_manager_set(
     }
 
 
+@pytest.mark.parametrize(("permissions", "mounted"), [(["mobile"], True), ([], False)])
+def test_build_harness_config_mounts_phone_tools_for_mobile_owners(
+    manager: AgentManager, permissions: list[str], mounted: bool
+) -> None:
+    from dataclasses import replace
+
+    from octop.infra.control.mobile.companion.hub import CompanionHub
+    from octop.infra.control.mobile.companion.pairing import PairingStore
+
+    owner_id = manager._repos.user_repo.create(
+        username="phone-owner", role="user", permissions=permissions
+    )
+    manager.set_companion_hub(
+        CompanionHub(PairingStore(manager._repos.settings_repo), lambda _b, _k: None)
+    )
+    row = replace(_row(agent_id="AGT001"), user_id=owner_id)
+
+    cfg = manager._build_harness_config(row)
+
+    names = {t.name for t in cfg.tools or []}
+    phone_tools = {
+        "phone_list_devices",
+        "phone_run_task",
+        "phone_cancel_task",
+        "phone_get_task_result",
+    }
+    assert (phone_tools <= names) is mounted
+    assert not (phone_tools & names) or mounted
+
+
 def test_build_harness_config_includes_search_knowledge_without_cron(
     manager: AgentManager,
 ) -> None:

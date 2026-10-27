@@ -37,6 +37,9 @@ _JWT_EXEMPT_PREFIXES = (
     "/api/internal/mcp/",
     # Short-lived download links: the unguessable token is the credential.
     "/api/downloads/link/",
+    # Companion phones authenticate with their pairing key, not a JWT.
+    "/api/mobile/companion/ws",
+    "/api/mobile/companion/vlm/",
 )
 _JWT_EXEMPT_EXACT = (
     "/api/health",

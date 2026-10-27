@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Monitor, Smartphone } from "lucide-react";
+import { Monitor, QrCode, Smartphone } from "lucide-react";
 import PageShell from "../../../layouts/PageShell";
 import { usePathTabs } from "../../../hooks/usePathTabs";
 import { useCurrentUser } from "../../../hooks/useCurrentUser";
@@ -8,36 +8,43 @@ import { useServerCapabilities } from "../../../hooks/useServerCapabilities";
 import { userCan } from "../../../utils/permissions";
 import DesktopPanel from "./DesktopPanel";
 import RemoteAndroidPage from "../RemoteAndroid";
+import CompanionPhonesPanel from "../CompanionPhones";
 import styles from "./index.module.less";
 
-export type RemoteDesktopTab = "desktop" | "phone";
+export type RemoteDesktopTab = "desktop" | "phone" | "companion";
 
 const REMOTE_DESKTOP_TABS = [
   "desktop",
   "phone",
+  "companion",
 ] as const satisfies readonly RemoteDesktopTab[];
 
 const TAB_ICONS = {
   desktop: Monitor,
   phone: Smartphone,
+  companion: QrCode,
 } as const;
 
 export default function RemoteDesktopPage() {
   const { t } = useTranslation();
   const user = useCurrentUser();
-  const { mobileEnabled } = useServerCapabilities();
+  const { mobileEnabled, companionEnabled } = useServerCapabilities();
 
   const isAllowed = useCallback(
     (tab: RemoteDesktopTab) => {
       if (tab === "desktop") return userCan(user, "desktop");
+      if (tab === "companion")
+        return companionEnabled && userCan(user, "mobile");
       return mobileEnabled && userCan(user, "mobile");
     },
-    [user, mobileEnabled],
+    [user, mobileEnabled, companionEnabled],
   );
 
   const defaultTab: RemoteDesktopTab = userCan(user, "desktop")
     ? "desktop"
-    : "phone";
+    : mobileEnabled
+    ? "phone"
+    : "companion";
 
   const { activeTab, handleTabChange, isMounted } = usePathTabs({
     basePath: "/remote-desktop",
@@ -67,6 +74,7 @@ export default function RemoteDesktopPage() {
 
   const desktopVisible = activeTab === "desktop";
   const phoneVisible = activeTab === "phone";
+  const companionVisible = activeTab === "companion";
   const pageTitle = `${t("remoteDesktopHub.title")} / ${t(
     `remoteDesktopHub.tabs.${activeTab}`,
   )}`;
@@ -95,6 +103,15 @@ export default function RemoteDesktopPage() {
             aria-hidden={activeTab !== "phone"}
           >
             <RemoteAndroidPage embedded isVisible={phoneVisible} />
+          </div>
+        )}
+        {isMounted("companion") && (
+          <div
+            className={styles.panel}
+            style={{ display: companionVisible ? "flex" : "none" }}
+            aria-hidden={!companionVisible}
+          >
+            <CompanionPhonesPanel isVisible={companionVisible} />
           </div>
         )}
       </div>

@@ -16,7 +16,8 @@ export interface OctopHitlSettings {
 }
 
 export interface OctopCapabilitiesSettings {
-  mobile: { enabled: boolean; backend: string };
+  /** ``companion``: phones paired through the companion app (no host adb). */
+  mobile: { enabled: boolean; backend: string; companion?: boolean };
 }
 
 export interface CaptchaPairView {

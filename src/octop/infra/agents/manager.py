@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     from octop.config import OctopConfig
     from octop.infra.agents.experts.catalog import ExpertCatalog
     from octop.infra.agents.plugins.manager import PluginManager
+    from octop.infra.control.mobile.companion.hub import CompanionHub
     from octop.infra.cron.manager import CronManager
     from octop.infra.db.repos.agents import AgentRow
     from octop.infra.db.services import RepoBundle
@@ -490,6 +491,7 @@ class AgentManager:
         self._expert_catalog = expert_catalog
         self._plugin_manager = plugin_manager
         self._cron_manager: CronManager | None = None
+        self._companion_hub: CompanionHub | None = None
         self._proactive_scheduler: ProactiveCareScheduler | None = None
         self._team_processor: Any | None = None
         self._hitl_session_store: HitlSessionPolicyStore | None = None
@@ -598,6 +600,10 @@ class AgentManager:
     def set_cron_manager(self, cron_manager: CronManager) -> None:
         """Attach the process-wide CronManager (must be set before boot())."""
         self._cron_manager = cron_manager
+
+    def set_companion_hub(self, hub: CompanionHub) -> None:
+        """Attach the companion-phone hub (must be set before boot())."""
+        self._companion_hub = hub
 
     def set_proactive_scheduler(self, scheduler: ProactiveCareScheduler) -> None:
         """Attach the process-wide proactive-care scheduler (optional; used after create/delete)."""
@@ -3973,24 +3979,43 @@ class AgentManager:
                 )
             )
 
+        def _mobile_workspace_for(agent_id: str) -> Any:
+            # Prefer the running agent's workspace — authoritative for
+            # docker / ephemeral remote sandboxes; ws is the start-time
+            # fallback for the agent being configured here.
+            if self._harness_manager is not None:
+                with suppress(Exception):
+                    return self._harness_manager.get_agent(agent_id).agent.workspace
+            return ws if agent_id == row.agent_id else None
+
         mobile_tools: list[Any] = []
         if not team_host and self._config.capabilities.mobile.enabled:
             from octop.infra.control.mobile.tools import build_mobile_tools  # noqa: PLC0415
-
-            def _mobile_workspace_for(agent_id: str) -> Any:
-                # Prefer the running agent's workspace — authoritative for
-                # docker / ephemeral remote sandboxes; ws is the start-time
-                # fallback for the agent being configured here.
-                if self._harness_manager is not None:
-                    with suppress(Exception):
-                        return self._harness_manager.get_agent(agent_id).agent.workspace
-                return ws if agent_id == row.agent_id else None
 
             mobile_tools = build_mobile_tools(
                 self._config,
                 user_repo=self._repos.user_repo,
                 workspace_for=_mobile_workspace_for,
             )
+
+        phone_tools: list[Any] = []
+        if not team_host and self._companion_hub is not None and row.user_id is not None:
+            from octop.infra.control.mobile.companion.tools import (  # noqa: PLC0415
+                build_phone_tools,
+            )
+            from octop.infra.users.permissions import (  # noqa: PLC0415
+                stored_user_has_permission,
+            )
+
+            owner = self._repos.user_repo.get(int(row.user_id))
+            if owner is not None and stored_user_has_permission(
+                owner.role, owner.permissions, "mobile"
+            ):
+                phone_tools = build_phone_tools(
+                    self._companion_hub,
+                    user_repo=self._repos.user_repo,
+                    workspace_for=_mobile_workspace_for,
+                )
 
         from octop_harness.plugins import PluginRegistry, build_plugin_tools  # noqa: PLC0415
 
@@ -4036,7 +4061,7 @@ class AgentManager:
             plugin_tools,
             reserved={
                 str(getattr(t, "name", ""))
-                for t in [*(cron_tools or []), *knowledge_tools, *mobile_tools]
+                for t in [*(cron_tools or []), *knowledge_tools, *mobile_tools, *phone_tools]
             },
         )
         self._plugin_tool_labels[row.agent_id] = {
@@ -4098,6 +4123,7 @@ class AgentManager:
             merged_tools.extend(cron_tools)
         merged_tools.extend(knowledge_tools)
         merged_tools.extend(mobile_tools)
+        merged_tools.extend(phone_tools)
         merged_tools.extend(plugin_tools)
         # agent_list / ask_agent: PeerAgentMiddleware (team_enabled=True), not config.tools.
 
