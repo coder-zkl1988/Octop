@@ -96,6 +96,12 @@ def _str(value: object) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
+def _app(value: object) -> str:
+    """Foreground package; the app reports ``unknown`` when it cannot tell."""
+    name = _str(value)
+    return "" if name.lower() == "unknown" else name
+
+
 def decode_image(value: object) -> bytes | None:
     """Decode a base64 screenshot field (``data:`` prefixes tolerated)."""
     if not isinstance(value, str) or not value:
@@ -119,7 +125,7 @@ def parse_phone_info(raw: object) -> PhoneInfo:
         screen_height=_int_or_none(caps.get("screenHeight")),
         battery_level=_int_or_none(caps.get("batteryLevel")),
         is_charging=charging if isinstance(charging, bool) else None,
-        current_app=_str(caps.get("currentApp")),
+        current_app=_app(caps.get("currentApp")),
     )
 
 
@@ -199,7 +205,7 @@ def parse_mirror_frame(msg: dict[str, Any]) -> MirrorFrame | None:
         jpeg=jpeg,
         width=_int_or_none(msg.get("width")),
         height=_int_or_none(msg.get("height")),
-        current_app=_str(msg.get("currentApp")),
+        current_app=_app(msg.get("currentApp")),
         device_status=_str(msg.get("deviceStatus")),
     )
 
@@ -252,9 +258,9 @@ def result_ack_message(task_id: str) -> dict[str, Any]:
 
 
 # Live mirror. ``fps > 5`` asks the phone for an H.264 stream (it prompts for
-# screen-capture consent); ``fps <= 5`` keeps the low-rate JPEG preview.
+# screen-capture consent); ``fps <= 5`` is the JPEG preview — unless capture
+# was already granted, in which case the phone keeps streaming H.264.
 LIVE_MIRROR_FPS = 30
-IDLE_MIRROR_FPS = 3
 H264_FRAME_TYPE = 0x01
 CLIPBOARD_FRAME_TYPE = 0x00
 H264_HEADER_BYTES = 14
@@ -276,6 +282,10 @@ MIRROR_ACTIONS = frozenset(
 
 def mirror_start_message(device_id: str, fps: int) -> dict[str, Any]:
     return {"channel": "mirror", "type": "start", "deviceId": device_id, "fps": fps}
+
+
+def mirror_stop_message(device_id: str) -> dict[str, Any]:
+    return {"channel": "mirror", "type": "stop", "deviceId": device_id}
 
 
 def mirror_action_message(device_id: str, action: dict[str, Any]) -> dict[str, Any] | None:

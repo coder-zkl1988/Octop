@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -25,7 +25,6 @@ import MirrorPanel from "./MirrorPanel";
 import styles from "./index.module.less";
 
 const DEVICES_POLL_MS = 3000;
-const SNAPSHOT_POLL_MS = 5000;
 /** Where tabby publishes the companion app (same link as its devices page). */
 const APP_DOWNLOAD_URL =
   "https://downloads.happywork.today/releases/app-release.apk";
@@ -48,7 +47,6 @@ export default function CompanionPhonesPanel({
   const [settings, setSettings] = useState<CompanionSettings | null>(null);
   const [modelChoice, setModelChoice] = useState<string | undefined>();
   const [savingModel, setSavingModel] = useState(false);
-  const [snapshots, setSnapshots] = useState<Record<string, string>>({});
   const [pairing, setPairing] = useState<CompanionPairing | null>(null);
   const [pairingBusy, setPairingBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,47 +90,6 @@ export default function CompanionPhonesPanel({
     const timer = window.setInterval(() => void loadDevices(), DEVICES_POLL_MS);
     return () => window.clearInterval(timer);
   }, [isVisible, loadDevices]);
-
-  const snapshotIds = useMemo(
-    () =>
-      (devices ?? [])
-        .filter((d) => d.online && d.has_snapshot)
-        .map((d) => d.device_id)
-        .join("\n"),
-    [devices],
-  );
-
-  useEffect(() => {
-    if (!isVisible || !snapshotIds) return;
-    const ids = snapshotIds.split("\n");
-    let cancelled = false;
-    const refresh = async () => {
-      const entries = await Promise.all(
-        ids.map(async (id) => {
-          try {
-            const snap = await companionApi.snapshot(id);
-            return [id, `data:image/jpeg;base64,${snap.jpeg_base64}`] as const;
-          } catch {
-            return null;
-          }
-        }),
-      );
-      if (cancelled) return;
-      setSnapshots((prev) => {
-        const next = { ...prev };
-        for (const entry of entries) {
-          if (entry) next[entry[0]] = entry[1];
-        }
-        return next;
-      });
-    };
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), SNAPSHOT_POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [isVisible, snapshotIds]);
 
   // Close the QR dialog once a phone that was not paired before shows up.
   useEffect(() => {
@@ -229,11 +186,6 @@ export default function CompanionPhonesPanel({
   const unpair = async (deviceId: string) => {
     try {
       await companionApi.unpair(deviceId);
-      setSnapshots((prev) => {
-        const next = { ...prev };
-        delete next[deviceId];
-        return next;
-      });
       message.success(t("companionPhone.unpaired", "已解绑"));
     } catch {
       message.error(t("companionPhone.unpairFailed", "解绑失败"));
@@ -416,7 +368,7 @@ export default function CompanionPhonesPanel({
               <DeviceCard
                 key={device.device_id}
                 device={device}
-                snapshot={snapshots[device.device_id]}
+                liveThumbnail={isVisible}
                 onStop={stopTask}
                 onViewScreen={viewScreen}
                 onRename={renameDevice}

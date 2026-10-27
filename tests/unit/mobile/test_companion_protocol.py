@@ -96,3 +96,9 @@ def test_outbound_frames() -> None:
     connected = protocol.connected_message("d", None)
     assert connected["type"] == "connected" and "vlm" not in connected
     assert protocol.connected_message("d", {"model": "m"})["vlm"] == {"model": "m"}
+
+
+def test_unknown_foreground_app_is_treated_as_empty() -> None:
+    frame = protocol.parse_mirror_frame(mirror_frame(current_app="unknown"))
+    assert frame is not None and frame.current_app == ""
+    assert protocol.parse_phone_info({"currentApp": "Unknown"}).current_app == ""

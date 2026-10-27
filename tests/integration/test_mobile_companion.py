@@ -312,8 +312,8 @@ async def test_live_mirror_relays_frames_and_actions(env: Env) -> None:
         assert (await _next_raw(phone))["bytes"] == touch
     finally:
         await viewer.close()
-    # Closing the only viewer drops the phone back to the low-rate preview.
-    assert (await phone.receive_json())["fps"] == 3
+    # Closing the only viewer stops the phone's stream.
+    assert (await phone.receive_json())["type"] == "stop"
     await phone.close()
 
 

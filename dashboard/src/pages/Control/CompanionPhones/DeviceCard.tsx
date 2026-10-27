@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Popconfirm, Tooltip } from "antd";
 import { Pencil, Smartphone, Unlink } from "lucide-react";
 import type { CompanionDevice } from "../../../api/modules/mobile";
+import { useDeviceThumbnail } from "./useDeviceThumbnail";
 import styles from "./DeviceCard.module.less";
 
 type CardStatus = "idle" | "busy" | "offline";
@@ -14,7 +15,8 @@ function cardStatus(device: CompanionDevice): CardStatus {
 
 interface Props {
   device: CompanionDevice;
-  snapshot?: string;
+  /** Stream a live thumbnail (only while the page is visible). */
+  liveThumbnail: boolean;
   onStop: (deviceId: string) => Promise<void>;
   onViewScreen: (device: CompanionDevice) => void;
   onRename: (deviceId: string, name: string) => Promise<void>;
@@ -24,7 +26,7 @@ interface Props {
 /** Companion phone card, laid out like tabby's device card. */
 export default function DeviceCard({
   device,
-  snapshot,
+  liveThumbnail,
   onStop,
   onViewScreen,
   onRename,
@@ -35,6 +37,10 @@ export default function DeviceCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const status = cardStatus(device);
+  const snapshot = useDeviceThumbnail(
+    device.device_id,
+    liveThumbnail && device.online,
+  );
   const displayName = device.name || device.model || device.device_id;
   const statusLabel = {
     idle: t("companionPhone.status.idle", "空闲"),
@@ -60,7 +66,7 @@ export default function DeviceCard({
   return (
     <article className={styles.card}>
       <div className={styles.thumb}>
-        {snapshot && device.online ? (
+        {snapshot ? (
           <img src={snapshot} alt="" />
         ) : (
           <Smartphone size={32} strokeWidth={1.25} />

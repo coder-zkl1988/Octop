@@ -173,7 +173,8 @@ class CompanionHub:
         self._running: dict[str, _RunningTask] = {}
         self._recent: dict[str, deque[TaskResult]] = {}
         self._background: set[asyncio.Task[None]] = set()
-        self._viewers: dict[str, set[MirrorViewer]] = {}
+        # device_id -> {viewer: requested fps}; the phone streams at the max.
+        self._viewers: dict[str, dict[MirrorViewer, int]] = {}
 
     # ----- connection lifecycle -----
 
@@ -491,12 +492,18 @@ class CompanionHub:
     async def add_viewer(
         self, device_id: str, viewer: MirrorViewer, *, fps: int = protocol.LIVE_MIRROR_FPS
     ) -> None:
-        """Start the phone's live stream and replay the latest frames to *viewer*."""
+        """Subscribe *viewer* (live view ~30 fps, card thumbnail ~1 fps).
+
+        Every join re-sends ``start`` at the highest fps any viewer wants: it
+        never downgrades a live view, and in H.264 mode it makes the phone emit
+        a fresh keyframe so the new viewer can decode at once.
+        """
         live = self._live.get(device_id)
         if live is None:
             raise CompanionError("DEVICE_OFFLINE", f"phone {device_id} is not connected")
-        self._viewers.setdefault(device_id, set()).add(viewer)
-        await live.conn.send_json(protocol.mirror_start_message(device_id, fps))
+        viewers = self._viewers.setdefault(device_id, {})
+        viewers[viewer] = fps
+        await live.conn.send_json(protocol.mirror_start_message(device_id, max(viewers.values())))
         if live.frame_msg is not None:
             await viewer.send_text(json.dumps(live.frame_msg, ensure_ascii=False))
         if live.keyframe is not None:
@@ -504,19 +511,19 @@ class CompanionHub:
 
     async def remove_viewer(self, device_id: str, viewer: MirrorViewer) -> None:
         viewers = self._viewers.get(device_id)
-        if viewers is None:
+        if viewers is None or viewers.pop(viewer, None) is None:
             return
-        viewers.discard(viewer)
-        if viewers:
-            return
-        del self._viewers[device_id]
         live = self._live.get(device_id)
+        if not viewers:
+            del self._viewers[device_id]
+            # Nobody is watching: stop the stream. Once screen capture is granted
+            # the phone would otherwise keep pushing H.264 indefinitely.
+            message = protocol.mirror_stop_message(device_id)
+        else:
+            message = protocol.mirror_start_message(device_id, max(viewers.values()))
         if live is not None:
-            # Back to the low-rate preview the device cards' thumbnails rely on.
             with contextlib.suppress(Exception):
-                await live.conn.send_json(
-                    protocol.mirror_start_message(device_id, protocol.IDLE_MIRROR_FPS)
-                )
+                await live.conn.send_json(message)
 
     async def mirror_action(self, device_id: str, action: dict[str, Any] | bytes) -> bool:
         """Forward a viewer action: JSON is wrapped, binary control frames pass as-is."""
@@ -542,7 +549,7 @@ class CompanionHub:
                 if data is not None:
                     await viewer.send_bytes(data)
             except Exception:
-                self._viewers.get(device_id, set()).discard(viewer)
+                self._viewers.get(device_id, {}).pop(viewer, None)
 
     async def _drop_viewers(self, device_id: str) -> None:
         notice = json.dumps({"channel": "mirror", "type": "device_disconnected"})

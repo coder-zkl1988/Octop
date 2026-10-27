@@ -339,21 +339,29 @@ async def test_viewer_actions_are_wrapped_or_forwarded() -> None:
     assert not await hub.mirror_action("Ghost", {"type": "click"})
 
 
-async def test_last_viewer_leaving_returns_to_idle_preview() -> None:
+async def test_stream_runs_at_highest_fps_and_stops_when_unwatched() -> None:
     from tests.support.companion import FakeViewer
 
     hub = _hub()
     phone, _ = await _pair(hub)
     await phone.next()
-    first, second = FakeViewer(), FakeViewer()
-    await hub.add_viewer("Pixel-1", first)
-    await hub.add_viewer("Pixel-1", second)
-    await phone.next()
-    await phone.next()
-    await hub.remove_viewer("Pixel-1", first)
+    live, thumb = FakeViewer(), FakeViewer()
+    await hub.add_viewer("Pixel-1", live, fps=30)
+    assert (await phone.next())["fps"] == 30
+    # A thumbnail joining later must not downgrade the live view.
+    await hub.add_viewer("Pixel-1", thumb, fps=1)
+    assert (await phone.next())["fps"] == 30
+    await hub.remove_viewer("Pixel-1", live)
+    assert (await phone.next()) == {
+        "channel": "mirror",
+        "type": "start",
+        "deviceId": "Pixel-1",
+        "fps": 1,
+    }
+    await hub.remove_viewer("Pixel-1", thumb)
+    assert (await phone.next()) == {"channel": "mirror", "type": "stop", "deviceId": "Pixel-1"}
+    await hub.remove_viewer("Pixel-1", thumb)  # idempotent
     assert phone.sent.empty()
-    await hub.remove_viewer("Pixel-1", second)
-    assert (await phone.next())["fps"] == 3
 
 
 async def test_viewers_are_told_when_the_phone_goes_away() -> None:

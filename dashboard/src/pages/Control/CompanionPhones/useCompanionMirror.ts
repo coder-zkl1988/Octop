@@ -52,6 +52,7 @@ export function useCompanionMirror(
   deviceId: string | null,
   canvas: HTMLCanvasElement | null,
   onClipboard?: (text: string) => void,
+  fps = 30,
 ) {
   const [status, setStatus] = useState<MirrorStatus>("closed");
   const [frame, setFrame] = useState<MirrorFrameInfo | null>(null);
@@ -71,7 +72,7 @@ export function useCompanionMirror(
     }
     const url = `${getWsUrl(
       `/mobile/companion/devices/${encodeURIComponent(deviceId)}/mirror`,
-    )}?token=${encodeURIComponent(getAuthToken())}`;
+    )}?fps=${fps}&token=${encodeURIComponent(getAuthToken())}`;
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
@@ -199,7 +200,7 @@ export function useCompanionMirror(
       ws.close();
       wsRef.current = null;
     };
-  }, [deviceId, reconnectKey]);
+  }, [deviceId, fps, reconnectKey]);
 
   const send = useCallback((payload: string | Uint8Array) => {
     const ws = wsRef.current;

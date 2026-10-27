@@ -21,6 +21,12 @@ vi.mock("../../../api/modules/mobile", () => ({
   },
 }));
 
+// Live thumbnails stream over WebSocket + WebCodecs; return a fixed image here.
+vi.mock("./useDeviceThumbnail", () => ({
+  useDeviceThumbnail: (_id: string, enabled: boolean) =>
+    enabled ? "data:image/jpeg;base64,aGk=" : null,
+}));
+
 // The live mirror needs WebSocket + WebCodecs; the panel itself is not under test here.
 vi.mock("./MirrorPanel", () => ({
   default: ({ device }: { device: { device_id: string } }) => (
@@ -88,6 +94,9 @@ describe("<CompanionPhonesPanel />", () => {
     expect(screen.getByText("com.android.settings")).toBeInTheDocument();
     expect(screen.getByText("76%")).toBeInTheDocument();
     expect(screen.getByText("⚡")).toBeInTheDocument();
+    expect(
+      document.querySelector("img[src^='data:image/jpeg']"),
+    ).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /紧急停止/ }));
     await waitFor(() =>
