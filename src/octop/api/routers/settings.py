@@ -189,6 +189,10 @@ async def open_download_link(
 class MobileCapabilitiesResponse(BaseModel):
     enabled: bool = Field(description="Whether Remote Android is enabled on this host.")
     backend: str = Field(description="Host backend: physical, redroid, emulator, or none.")
+    companion: bool = Field(
+        default=True,
+        description="Companion-app phones (no host adb needed) are available on every host.",
+    )
 
 
 class CapabilitiesResponse(BaseModel):

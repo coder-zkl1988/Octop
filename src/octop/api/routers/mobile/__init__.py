@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from octop.api.routers.mobile.companion import router as companion_router
 from octop.api.routers.mobile.install import router as install_router
 from octop.api.routers.mobile.shell_ws import router as shell_router
 from octop.api.routers.mobile.status import router as status_router
@@ -15,4 +16,6 @@ router.include_router(install_router)
 router.include_router(stream_router)
 router.include_router(shell_router)
 
-__all__ = ["router"]
+# Companion phones need no adb/binder on the host, so app.py mounts this one
+# unconditionally instead of behind ``capabilities.mobile``.
+__all__ = ["companion_router", "router"]

@@ -106,7 +106,8 @@ export const NAV_PERMISSIONS = {
   "knowledge-bases": PERM.knowledgeBasesPage,
   bridge: PERM.bridge,
   workbench: PERM.workbench,
-  "remote-desktop": ["desktop", "mobile"],
+  "remote-desktop": PERM.desktop,
+  phone: PERM.mobile,
   "remote-phone": PERM.mobile,
   acp: "admin",
   "admin-users": PERM.usersPage,
@@ -283,7 +284,11 @@ export function pathPermissionKeys(pathname: string): PermissionKeys | null {
     return PERM.desktop;
   }
   if (
+    pathname === "/phone" ||
+    pathname.startsWith("/phone/") ||
     pathname === "/remote-desktop/phone" ||
+    pathname.startsWith("/remote-desktop/phone/") ||
+    pathname === "/remote-desktop/companion" ||
     pathname === "/remote-phone" ||
     pathname.startsWith("/remote-phone/") ||
     pathname === "/remote-android" ||
@@ -295,7 +300,7 @@ export function pathPermissionKeys(pathname: string): PermissionKeys | null {
     pathname === "/remote-desktop" ||
     pathname.startsWith("/remote-desktop/")
   ) {
-    return ["desktop", "mobile"];
+    return PERM.desktop;
   }
   if (pathname === "/workbench/terminal" || pathname === "/terminal") {
     return PERM.terminal;

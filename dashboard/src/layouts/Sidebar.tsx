@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import AvatarDropdown from "../components/AvatarDropdown";
 import AppVersionBadge from "../components/AppVersionBadge";
-import CurrentVersionBadge from "../components/CurrentVersionBadge";
 import { ArrowRightLeft, ChevronDown, X } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useLayoutMode } from "../context/LayoutModeContext";
@@ -400,13 +399,17 @@ export default function Sidebar({
   const user = useCurrentUser();
   const setUser = useSetCurrentUser();
   const { hasUpdate } = useUpdateStatus();
-  const { mobileEnabled } = useServerCapabilities();
+  const { mobileEnabled, companionEnabled } = useServerCapabilities();
   const { layoutMode, minimalPane, setMinimalPane } = useLayoutMode();
   const isMinimal = layoutMode === "minimal";
   const onChatPath = isChatPath(location.pathname);
   const catalog = useMemo(
-    () => buildNavSections(user, { mobileEnabled }),
-    [user, mobileEnabled],
+    // The phone tabs share the remote-desktop entry: adb or companion app.
+    () =>
+      buildNavSections(user, {
+        mobileEnabled: mobileEnabled || companionEnabled,
+      }),
+    [user, mobileEnabled, companionEnabled],
   );
   const [savedLayout, setSavedLayout] = useState<SidebarNavLayout | null>(null);
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -441,8 +444,11 @@ export default function Sidebar({
 
   const isRailCollapsed = collapsed && !isMobile;
   const wordmarkSrc = isDark
-    ? publicUrl("logo_horizontal_white.png")
-    : publicUrl("logo_horizontal_dark.png");
+    ? publicUrl("happytabby-logo-white.png")
+    : publicUrl("happytabby-logo.png");
+  const markSrc = isDark
+    ? publicUrl("happytabby-mark-white.png")
+    : publicUrl("happytabby-mark.png");
 
   const selectMinimalPane = useCallback(
     (pane: MinimalNavPane, opts?: { expand?: boolean }) => {
@@ -510,24 +516,21 @@ export default function Sidebar({
   const brandInner = (
     <>
       <img
-        src={isRailCollapsed ? "/pwa-192.png" : wordmarkSrc}
-        alt="Octop"
+        src={isRailCollapsed ? markSrc : wordmarkSrc}
+        alt="HappyTabby"
         style={{
-          height: isRailCollapsed ? 32 : isMobile ? 38 : 36,
+          // The HappyTabby wordmark is ~4.5:1; the desktop size still leaves
+          // room for the update-available icon that can appear beside it.
+          height: isRailCollapsed ? 32 : isMobile ? 38 : 32,
           width: isRailCollapsed ? 32 : "auto",
-          maxWidth: isRailCollapsed ? 32 : isMobile ? 190 : 160,
+          maxWidth: isRailCollapsed ? 32 : isMobile ? 190 : 148,
           objectFit: "contain",
           display: "block",
           flexShrink: 0,
           borderRadius: isRailCollapsed ? 8 : undefined,
         }}
       />
-      {!isRailCollapsed && !isMobile && (
-        <>
-          <CurrentVersionBadge isMobile={isMobile} />
-          <AppVersionBadge isMobile={isMobile} />
-        </>
-      )}
+      {!isRailCollapsed && !isMobile && <AppVersionBadge isMobile={isMobile} />}
     </>
   );
 

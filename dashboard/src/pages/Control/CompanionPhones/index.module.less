@@ -1,0 +1,152 @@
+.page {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px 24px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.intro {
+  max-width: 640px;
+  font-size: 13px;
+}
+
+.downloadPopover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--fn-text-secondary);
+}
+
+.qrBox {
+  padding: 8px;
+  border: 1px solid var(--fn-border-secondary);
+  border-radius: 8px;
+  background: #fff;
+  line-height: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 64px 0;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px 0;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--fn-text-primary) 5%, transparent);
+  color: var(--fn-text-secondary);
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fn-text-primary);
+}
+
+.emptyHint {
+  max-width: 320px;
+  margin: 4px 0 16px;
+  font-size: 12px;
+  color: var(--fn-text-secondary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+.mirrorColumn {
+  flex-shrink: 0;
+  width: 360px;
+  min-height: 0;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+.pairBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.qr {
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  line-height: 0;
+}
+
+.qrExpired {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: normal;
+  color: var(--fn-text-secondary);
+}
+
+.expiry {
+  font-size: 12px;
+}
+
+.pairUrl {
+  max-width: 100%;
+  margin-bottom: 0 !important;
+  font-family: var(--fn-font-mono, monospace);
+  font-size: 12px;
+  word-break: break-all;
+  text-align: center;
+}
+
+.steps {
+  align-self: stretch;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--fn-text-secondary);
+  font-size: 13px;
+
+  li + li {
+    margin-top: 4px;
+  }
+}

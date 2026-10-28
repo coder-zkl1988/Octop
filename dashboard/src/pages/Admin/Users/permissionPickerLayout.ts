@@ -66,7 +66,12 @@ const NAV_PERMISSION_CHIPS: readonly {
   {
     key: "remote-desktop",
     labelKey: "nav.remoteDesktop",
-    permissions: ["desktop", "mobile"],
+    permissions: ["desktop"],
+  },
+  {
+    key: "phone",
+    labelKey: "nav.phone",
+    permissions: ["mobile"],
   },
   {
     key: "admin-users",
@@ -145,7 +150,7 @@ const DEFAULT_GROUPS: readonly { id: string; items: readonly string[] }[] = [
       "bridge",
     ],
   },
-  { id: "control", items: ["workbench", "remote-desktop"] },
+  { id: "control", items: ["workbench", "remote-desktop", "phone"] },
   {
     id: "admin",
     items: [

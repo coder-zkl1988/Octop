@@ -1151,7 +1151,7 @@ async def test_instance(
     creds = await svc.ensure_fresh_credentials(instance_id, inst.kind)
     if not creds:
         raise OctopError(ErrorCode.CONNECTOR_INVALID_CREDENTIALS, "missing credentials")
-    if inst.kind == "agently-cli":
+    if inst.kind in {"agently-cli", "ragflow"}:
         creds["_locale"] = resolve_request_locale(request)
 
     try:
@@ -1192,7 +1192,7 @@ async def test_credentials(
             str(exc),
             details={"reason": str(exc)},
         ) from exc
-    if body.kind == "agently-cli":
+    if body.kind in {"agently-cli", "ragflow"}:
         cred_payload["_locale"] = resolve_request_locale(request)
     try:
         return await probe_connector(

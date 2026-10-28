@@ -23,6 +23,7 @@ from octop.infra.agents.experts.catalog import ExpertCatalog, default_library_ro
 from octop.infra.agents.manager import AgentManager
 from octop.infra.agents.plugins.manager import PluginManager
 from octop.infra.agents.subagents.catalog import SubagentCatalog, default_package_root
+from octop.infra.control.mobile.companion.hub import CompanionHub
 from octop.infra.control.mobile.config_probe import ensure_mobile_capabilities_probed
 from octop.infra.cron.manager import CronManager
 from octop.infra.db.factory import open_database, should_defer_control_plane_db
@@ -325,6 +326,7 @@ class AppRuntime:
     trajectory_service: TrajectoryService | None = None
     history_archive: Any | None = None
     bridge_manager: Any | None = None
+    companion_hub: CompanionHub | None = None
 
     def replace_services(self, services: SharedServices, config: OctopConfig) -> None:
         """Retarget all runtime singletons onto a new SharedServices / config.
@@ -337,6 +339,8 @@ class AppRuntime:
         self.agent_registry.replace_persistence(services.repos, config)
         self.gateway.replace_repos(services.repos)
         self.cron_manager.replace_repos(services.repos)
+        if self.companion_hub is not None:
+            self.companion_hub.pairing.replace_settings(services.settings_repo)
         self.proactive_scheduler.replace_persistence(
             config_repo=services.repos.proactive_care_config_repo,
             session_repo=services.repos.session_repo,
@@ -613,6 +617,8 @@ class OctopServer:
         install_auto_backup_job(cron_mgr, server=self)
 
         registry.set_cron_manager(cron_mgr)
+        companion_hub = self._build_companion_hub()
+        registry.set_companion_hub(companion_hub)
         registry.set_team_processor(gateway.processor.teams)
         hitl_session_store = gateway.processor.hitl_coordinator.session_policies
         hitl_session_store.replace_repo(self.services.repos.thread_repo)
@@ -691,6 +697,7 @@ class OctopServer:
             trajectory_service=trajectory_service,
             history_archive=history_archive,
             bridge_manager=bridge_mgr,
+            companion_hub=companion_hub,
         )
         from octop.infra.knowledge.gate import (  # noqa: PLC0415
             warn_if_local_embedding_deps_missing,
@@ -714,6 +721,22 @@ class OctopServer:
                 await bridge_mgr.resume_auto_connections()
 
         asyncio.create_task(_resume_bridges(), name="bridge-auto-resume")
+
+    def _build_companion_hub(self) -> CompanionHub:
+        from octop.infra.control.mobile.companion import vlm  # noqa: PLC0415
+        from octop.infra.control.mobile.companion.pairing import PairingStore  # noqa: PLC0415
+
+        assert self.services is not None
+
+        def _vlm_payload(public_base_url: str, device_key: str) -> dict[str, Any] | None:
+            # Resolved per handshake so a rebound DB or new model is picked up.
+            services = self.services
+            if services is None:
+                return None
+            target = vlm.resolve_target(services.settings_repo, services.provider_repo)
+            return vlm.phone_vlm_payload(public_base_url, device_key, target)
+
+        return CompanionHub(PairingStore(self.services.settings_repo), _vlm_payload)
 
     async def refresh_plugin_channels(self) -> None:
         """Reconcile only changed kinds and report registration failures to callers."""
@@ -811,6 +834,8 @@ class OctopServer:
                 rt = self.app_runtime
                 if rt.bridge_manager is not None:
                     await _shutdown_step("bridge", rt.bridge_manager.shutdown)
+                if rt.companion_hub is not None:
+                    await _shutdown_step("companion phones", rt.companion_hub.shutdown)
                 await _shutdown_step("proactive scheduler", rt.proactive_scheduler.shutdown)
                 await _shutdown_step("cron", rt.cron_manager.shutdown)
                 await _shutdown_step("gateway", rt.gateway.shutdown)

@@ -98,6 +98,10 @@ BUILTIN_TOOL_CATALOG: tuple[BuiltinToolEntry, ...] = (
     BuiltinToolEntry("mobile_launch_app", "mobile"),
     BuiltinToolEntry("mobile_ui_dump", "mobile"),
     BuiltinToolEntry("mobile_handoff_to_user", "mobile"),
+    BuiltinToolEntry("phone_list_devices", "mobile"),
+    BuiltinToolEntry("phone_run_task", "mobile"),
+    BuiltinToolEntry("phone_cancel_task", "mobile"),
+    BuiltinToolEntry("phone_get_task_result", "mobile"),
     BuiltinToolEntry("agent_list", "teams"),
     BuiltinToolEntry("ask_agent", "teams"),
 )

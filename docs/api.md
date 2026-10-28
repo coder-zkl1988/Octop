@@ -34,7 +34,9 @@ admin can clear the lockout with `POST /api/users/{id}/unlock-login`.
 `/api/auth/oidc/callback`, `/api/auth/oidc/exchange`, `/api/auth/oauth/status`,
 `/api/auth/oauth/start`, `/api/auth/oauth/callback`, `/api/auth/oauth/exchange`,
 `/api/auth/ldap/status`,
-`/api/connectors/oauth/callback`, and `/api/internal/mcp/*`. All other routes are JWT-gated by
+`/api/connectors/oauth/callback`, `/api/internal/mcp/*`, and the companion-phone endpoints
+`/api/mobile/companion/ws` and `/api/mobile/companion/vlm/*` (the pairing key is the
+credential). All other routes are JWT-gated by
 `api/middleware/jwt_auth.py`; the setup lockdown middleware
 (`api/middleware/setup_lockdown.py`) additionally blocks non-setup
 routes until the wizard finishes.
@@ -623,6 +625,25 @@ endpoint (public, mounted directly in `api/app.py`).
 | `GET`  | `/agents/{aid}/files/{path}` | owner | read an inbound file |
 | `POST` | `/downloads/link` | user | multipart `file` → `{url, filename, expires_in}`: short-lived link for in-app browsers (WeChat, …) that cannot save `blob:` downloads; capped at `max_upload_mb` |
 | `GET`  | `/downloads/link/{token}` | public (token) | serve that file as an attachment until it expires (10 min); the token is the only credential |
+
+## Companion phones
+
+Phones running the TabbyApp companion (`com.tabby.agent`) dial Octop over WebSocket — no
+adb, USB or host capability probe is needed, so these routes are mounted on every host. The
+phone runs its own vision agent loop; agents hand it whole tasks through the
+`phone_list_devices` / `phone_run_task` / `phone_cancel_task` / `phone_get_task_result` tools.
+Pairing records live in the `settings` KV (`mobile.companion.devices`, key hashes only).
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| `POST` | `/mobile/companion/pairings` | user (`mobile`) | mint a one-time device key → `{url, expires_at, reachable_from_lan}`; the first phone that connects with it is paired to the caller, an unscanned code expires after 10 min |
+| `WS`   | `/mobile/companion/ws?token=<key>` | public (key) | phone endpoint: `auth` → `connected` (+ `vlm`), then `task` / `mirror` frames; one running task per phone, every result is acked |
+| `POST` | `/mobile/companion/vlm/v1/chat/completions` | public (Bearer device key) | OpenAI-compatible proxy the phone calls; forwards to the configured provider with the server-side key and pins `model` |
+| `GET`  | `/mobile/companion/devices` | user (`mobile`) | the caller's paired phones (admin: all) with online state, battery, foreground app, running task |
+| `DELETE` | `/mobile/companion/devices/{device_id}` | owner | unpair and disconnect; the phone's stored URL stops working |
+| `POST` | `/mobile/companion/devices/{device_id}/cancel` | owner | stop the running task |
+| `GET`  | `/mobile/companion/devices/{device_id}/snapshot` | owner | latest screen frame as base64 JPEG |
+| `GET`/`PUT` | `/mobile/companion/settings` | user / admin (`PUT`) | phone-side vision model (`provider`, `model`, optional `max_tokens`) and the OpenAI-compatible candidates |
 
 ## Updates, ollama, i18n, plugins, slash, preferences
 

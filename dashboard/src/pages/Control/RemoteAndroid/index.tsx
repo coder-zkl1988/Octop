@@ -141,7 +141,7 @@ export default function RemoteAndroidPage({
     handleTabChange: handlePhoneTabChange,
     isMounted: isPhoneTabMounted,
   } = usePathTabs({
-    basePath: "/remote-desktop/phone",
+    basePath: "/phone/adb",
     tabs: REMOTE_PHONE_VIEW_TABS,
     storageKey: "octop:remote-phone:view-tab",
     defaultTab: "screen",

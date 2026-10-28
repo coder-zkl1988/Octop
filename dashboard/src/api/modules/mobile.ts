@@ -134,3 +134,87 @@ export const mobileApi = {
     onDone: (ok: boolean, error?: string) => void,
   ) => streamMobileSse("/mobile/install", onLog, onDone),
 };
+
+/** A phone paired through the companion app (phone dials Octop, no adb). */
+export interface CompanionDevice {
+  device_id: string;
+  /** User-chosen display name; empty means use the model. */
+  name: string;
+  model: string;
+  manufacturer: string;
+  online: boolean;
+  android_sdk: number | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  battery_level: number | null;
+  is_charging: boolean | null;
+  current_app: string;
+  paired_at: number | null;
+  last_seen: number | null;
+  has_snapshot: boolean;
+  running_task_id: string | null;
+  running_task: string | null;
+  running_step: number | null;
+}
+
+export interface CompanionPairing {
+  url: string;
+  expires_at: number;
+  reachable_from_lan: boolean;
+}
+
+export interface CompanionVlmCandidate {
+  provider: string;
+  model: string;
+  vision: boolean;
+}
+
+export interface CompanionSettings {
+  provider: string;
+  model: string;
+  max_tokens: number | null;
+  ready: boolean;
+  candidates: CompanionVlmCandidate[];
+}
+
+export const companionApi = {
+  devices: () =>
+    request<{ devices: CompanionDevice[] }>("/mobile/companion/devices", {
+      cache: "no-store",
+    }),
+  createPairing: () =>
+    request<CompanionPairing>("/mobile/companion/pairings", { method: "POST" }),
+  rename: (deviceId: string, name: string) =>
+    request<CompanionDevice>(
+      `/mobile/companion/devices/${encodeURIComponent(deviceId)}`,
+      { method: "PATCH", body: JSON.stringify({ name }) },
+    ),
+  unpair: (deviceId: string) =>
+    request<void>(`/mobile/companion/devices/${encodeURIComponent(deviceId)}`, {
+      method: "DELETE",
+    }),
+  cancelTask: (deviceId: string) =>
+    request<unknown>(
+      `/mobile/companion/devices/${encodeURIComponent(deviceId)}/cancel`,
+      { method: "POST" },
+    ),
+  snapshot: (deviceId: string) =>
+    request<{ jpeg_base64: string }>(
+      `/mobile/companion/devices/${encodeURIComponent(deviceId)}/snapshot`,
+      { cache: "no-store" },
+    ),
+  settings: () =>
+    request<CompanionSettings>("/mobile/companion/settings", {
+      cache: "no-store",
+    }),
+  saveSettings: (body: {
+    provider: string;
+    model: string;
+    max_tokens?: number | null;
+  }) =>
+    request<CompanionSettings>("/mobile/companion/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+};
