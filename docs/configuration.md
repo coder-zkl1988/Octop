@@ -105,6 +105,7 @@ on each start. Schema (`OctopConfig` in `octop/config.py`):
   "default_timezone": "Asia/Shanghai",
   "enable_dashboard": true,
   "enable_api_docs": false,
+  "enable_lan_pairing": true,
   "require_setup_password": true,
   "max_upload_mb": 100,
   "database": {
@@ -145,6 +146,12 @@ Notes:
   same-named setting in the file.
 - `enable_api_docs=false` keeps `/api/docs` (Scalar) off in production
   while still serving `/api/openapi.json` to the dashboard.
+- `enable_lan_pairing=true` advertises `_itabby._tcp` over mDNS and accepts
+  iTabby LAN pairing requests at `/api/mobile/companion/pair/` — only while
+  Octop listens on a LAN-reachable address (not the default `127.0.0.1`).
+  Every request still needs a signed-in user with the `mobile` permission to
+  compare the 6-digit code and approve it in the dashboard. Set `false` to
+  turn both off; QR pairing is unaffected.
 - `require_setup_password=true` adds the wizard password gate to the
   first-run setup flow; set `false` for unattended bootstraps via
   `OCTOP_ADMIN_USERNAME` / `OCTOP_ADMIN_PASSWORD`.
@@ -187,6 +194,7 @@ Each variable, when set, takes precedence over the matching key in
 | `OCTOP_CORS_ORIGINS` | comma-sep list | empty | Permitted CORS origins for the dashboard / external callers |
 | `OCTOP_ENABLE_DASHBOARD` | bool | `true` | Serve the built React SPA at `/` |
 | `OCTOP_ENABLE_API_DOCS` | bool | `false` | Expose Scalar API docs at `/api/docs` |
+| `OCTOP_ENABLE_LAN_PAIRING` | bool | `true` | mDNS discovery + LAN pairing requests for iTabby phones (needs a LAN bind) |
 | `OCTOP_REQUIRE_SETUP_PASSWORD` | bool | `true` | Require wizard password during initial setup |
 | `OCTOP_MAX_UPLOAD_MB` | int | `100` | Max upload size in MiB for chat attachments, IM inbound, and knowledge documents (1–1024) |
 | `OCTOP_DATABASE_URL` | string | empty | Full DSN — overrides the `OCTOP_DATABASE_*` fields below |

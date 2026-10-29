@@ -25,6 +25,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from octop.infra.control.mobile.companion import protocol
+from octop.infra.control.mobile.companion.lan_pairing import PairRequestStore
 from octop.infra.control.mobile.companion.pairing import PairedDevice, PairingStore
 from octop.infra.control.mobile.companion.protocol import AuthHello, PhoneInfo, TaskResult
 
@@ -166,6 +167,8 @@ class CompanionHub:
         cancel_confirm_s: float = CANCEL_CONFIRM_S,
     ) -> None:
         self.pairing = pairing
+        self.pair_requests = PairRequestStore()
+        """Pending LAN pairing requests (in memory; see ``lan_pairing``)."""
         self._vlm_payload = vlm_payload
         self._first_step_timeout_s = first_step_timeout_s
         self._cancel_confirm_s = cancel_confirm_s

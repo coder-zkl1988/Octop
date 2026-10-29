@@ -827,7 +827,14 @@
     "docker_restart_ready": "Docker 守护进程已就绪并正常响应。",
     "docker_restart_failed": "Docker 重启失败（可能无 systemd/service 管理器，或服务未能恢复）。镜像加速配置将在下次 Docker 重启后生效——必要时请手动启动（systemctl restart docker 或 service docker restart）。",
     "handoff_message": "请在设备上完成此步骤：{reason}",
-    "handoff_default": "需要在设备上手动操作"
+    "handoff_default": "需要在设备上手动操作",
+    "lan_pairing": {
+      "disabled": "此 Octop 已关闭局域网配对，请在网页控制台扫码连接。",
+      "loopback_only": "此 Octop 只监听本机，手机无法通过 Wi-Fi 连接。请用 OCTOP_BIND_HOST=0.0.0.0 启动 Octop。",
+      "not_ready": "此 Octop 还没有完成初始化设置。",
+      "rate_limited": "配对请求太频繁，请稍后再试。",
+      "not_found": "配对请求已过期。"
+    }
   },
   "usage_export": {
     "sheet_detail": "明细",

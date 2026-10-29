@@ -7287,6 +7287,18 @@
     "modelHint": "The agent on the phone uses this image-capable model to operate the screen. Requests go through Octop, so the model key never reaches the phone.",
     "modelPlaceholder": "Choose an OpenAI-compatible vision model",
     "noCandidates": "No OpenAI-compatible model yet. Add one in model settings first.",
-    "saveModel": "Save"
+    "saveModel": "Save",
+    "lanPair": {
+      "title": "iTabby wants to pair",
+      "device": "Device",
+      "code": "Code",
+      "codeHint": "Make sure this code matches the one on the phone before allowing. Once allowed, the phone connects to Octop as your account.",
+      "reject": "Reject",
+      "approve": "Allow",
+      "approved": "{{device}} is allowed to pair",
+      "gone": "This pairing request has expired or was already handled",
+      "failed": "Something went wrong, please try again",
+      "more": "{{count}} more request(s) waiting"
+    }
   }
 }

@@ -99,3 +99,15 @@ def test_corrupt_settings_value_is_treated_as_empty() -> None:
     assert store.list_claimed() == []
     key, _ = store.create(1)
     assert store.authenticate(key, "A").claimed
+
+
+def test_device_bound_key_only_claims_for_that_device() -> None:
+    store, settings, _clock = _store()
+    key, record = store.create(3, device_id="Pixel-1")
+    assert not record.claimed and record.bound_device_id == "Pixel-1"
+    with pytest.raises(PairingError) as exc:
+        store.authenticate(key, "Other-2")
+    assert exc.value.code == "AUTH_FAILED"
+    assert store.authenticate(key, "Pixel-1").user_id == 3
+    [saved] = json.loads(settings.data[SETTINGS_KEY])
+    assert saved["bound_device_id"] == "Pixel-1"

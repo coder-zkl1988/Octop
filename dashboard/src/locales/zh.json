@@ -7287,6 +7287,18 @@
     "modelHint": "手机上的 Agent 用这个支持看图的模型操作屏幕。请求经 Octop 转发，模型密钥不会下发到手机。",
     "modelPlaceholder": "选择 OpenAI 兼容的视觉模型",
     "noCandidates": "没有可用的 OpenAI 兼容模型，请先在模型设置中添加",
-    "saveModel": "保存"
+    "saveModel": "保存",
+    "lanPair": {
+      "title": "iTabby 请求配对",
+      "device": "设备",
+      "code": "核对码",
+      "codeHint": "请确认与手机上显示的核对码一致后再允许。允许后这台手机将以你的账号连接 Octop。",
+      "reject": "拒绝",
+      "approve": "允许",
+      "approved": "已允许 {{device}} 配对",
+      "gone": "该配对请求已过期或已被处理",
+      "failed": "操作失败，请重试",
+      "more": "还有 {{count}} 个请求等待处理"
+    }
   }
 }

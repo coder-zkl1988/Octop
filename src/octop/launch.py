@@ -208,7 +208,20 @@ async def run_foreground(
         servers.append(_Server(single_config))
 
     from octop.infra.agents.memory.slim_control import MemorySlimControl
+    from octop.infra.control.mobile.companion.discovery import start_lan_advertiser
 
+    # Greenfield deferral (no DB yet) skips mDNS: pairing needs a signed-in user.
+    lan_advertiser = (
+        await start_lan_advertiser(
+            srv.services.settings_repo,
+            enabled=cfg.enable_lan_pairing,
+            bind_host=plan.bind_host,
+            port=(plan.https_port if plan.dual_listeners else plan.http_port) or bind_port,
+            tls=plan.ssl_certfile is not None,
+        )
+        if srv.services is not None
+        else None
+    )
     memory_control = MemorySlimControl(srv)
     with coalesce_accept_errors(asyncio.get_running_loop()):
         try:
@@ -217,6 +230,8 @@ async def run_foreground(
                 await asyncio.gather(*(_serve(s) for s in servers))
         finally:
             await memory_control.close()
+            if lan_advertiser is not None:
+                await lan_advertiser.stop()
             await _cancel_background_task(bwrap_task)
             await srv.stop()
 

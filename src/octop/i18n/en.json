@@ -827,7 +827,14 @@
     "docker_restart_ready": "Docker daemon is up and responding.",
     "docker_restart_failed": "Failed to restart Docker (no systemd/service manager, or the service did not come back). The mirror config takes effect after the next Docker restart — start it manually if needed (systemctl restart docker or service docker restart).",
     "handoff_message": "Please complete this step on the device: {reason}",
-    "handoff_default": "manual action required on the device"
+    "handoff_default": "manual action required on the device",
+    "lan_pairing": {
+      "disabled": "LAN pairing is turned off on this Octop. Scan the QR code from the dashboard instead.",
+      "loopback_only": "This Octop only listens on its own machine, so phones on Wi-Fi cannot connect. Start Octop with OCTOP_BIND_HOST=0.0.0.0.",
+      "not_ready": "This Octop has not finished its setup yet.",
+      "rate_limited": "Too many pairing requests. Please try again in a minute.",
+      "not_found": "This pairing request has expired."
+    }
   },
   "usage_export": {
     "sheet_detail": "Detail",

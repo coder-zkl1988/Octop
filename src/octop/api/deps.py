@@ -40,6 +40,9 @@ _JWT_EXEMPT_PREFIXES = (
     # Companion phones authenticate with their pairing key, not a JWT.
     "/api/mobile/companion/ws",
     "/api/mobile/companion/vlm/",
+    # iTabby LAN pairing: the phone has no session yet; a signed-in user
+    # approves every request in the dashboard before any key is issued.
+    "/api/mobile/companion/pair/",
 )
 _JWT_EXEMPT_EXACT = (
     "/api/health",

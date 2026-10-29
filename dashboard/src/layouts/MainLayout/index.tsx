@@ -9,6 +9,7 @@ import { ServiceRestartProvider } from "../../context/ServiceRestartContext";
 import { BackupOperationProvider } from "../../context/BackupOperationContext";
 import PwaUpdatePrompt from "../../components/PwaUpdatePrompt";
 import { PwaAutoPrompt } from "../../components/PwaInstallPrompt";
+import LanPairingPrompt from "../../components/LanPairingPrompt";
 import {
   routeConfigs,
   resolveSelectedKey,
@@ -305,6 +306,7 @@ export default function MainLayout() {
               >
                 <PwaUpdatePrompt />
                 <PwaAutoPrompt />
+                <LanPairingPrompt />
 
                 {workbenchMounted && (
                   <div

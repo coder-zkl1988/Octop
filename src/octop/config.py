@@ -133,6 +133,9 @@ class OctopConfig:
     default_timezone: str = "Asia/Shanghai"
     enable_dashboard: bool = True
     enable_api_docs: bool = False
+    # Advertise over mDNS and accept iTabby LAN pairing requests (only when the
+    # bind address is reachable from the LAN; every pairing still needs approval).
+    enable_lan_pairing: bool = True
     history_v2_enabled: bool = False
     require_setup_password: bool = True
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
@@ -491,6 +494,10 @@ def load_config(path: Path) -> OctopConfig:
         merged["enable_api_docs"] = _coerce_bool(
             "OCTOP_ENABLE_API_DOCS", v, bool(merged["enable_api_docs"])
         )
+    if v := os.environ.get("OCTOP_ENABLE_LAN_PAIRING"):
+        merged["enable_lan_pairing"] = _coerce_bool(
+            "OCTOP_ENABLE_LAN_PAIRING", v, bool(merged["enable_lan_pairing"])
+        )
     if v := os.environ.get("OCTOP_REQUIRE_SETUP_PASSWORD"):
         merged["require_setup_password"] = _coerce_bool(
             "OCTOP_REQUIRE_SETUP_PASSWORD", v, bool(merged["require_setup_password"])
@@ -607,6 +614,7 @@ def load_config(path: Path) -> OctopConfig:
         default_timezone=str(merged.get("default_timezone") or "Asia/Shanghai"),
         enable_dashboard=bool(merged["enable_dashboard"]),
         enable_api_docs=bool(merged["enable_api_docs"]),
+        enable_lan_pairing=bool(merged["enable_lan_pairing"]),
         history_v2_enabled=_coerce_bool(
             "OCTOP_HISTORY_V2_ENABLED",
             os.environ.get(
