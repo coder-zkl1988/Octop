@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -61,7 +62,6 @@ async def test_setup_database_sqlite_bind(patched_app_client) -> None:
     status = await client.get("/api/setup/status")
     assert status.json()["database_driver"] == "sqlite"
     assert status.json()["database_bound"] is True
-    assert status.json()["database_from_env"] is False
 
     # Runtime stores must use the live pool (not a closed previous sqlite).
     assert srv.app_runtime is not None
@@ -124,30 +124,26 @@ async def test_deferred_verify_password_then_bind(tmp_octop_home: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_status_reports_env_configured_database(
-    tmp_octop_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """``OCTOP_DATABASE_*`` wins over config.json, so the wizard must not offer a switch."""
-    monkeypatch.setenv("OCTOP_DATABASE_SQLITE_PATH", "env.db")
-    async with octop_client(tmp_octop_home) as (client, _srv):
-        body = (await client.get("/api/setup/status")).json()
-    assert body["database_bound"] is True
-    assert body["database_driver"] == "sqlite"
-    assert body["database_from_env"] is True
-
-
-@pytest.mark.asyncio
 async def test_setup_database_refuses_nonempty_target(patched_app_client) -> None:
     """Greenfield setup must not rebind onto a control-plane DB that already has users."""
     client, srv, home = patched_app_client
     _seed_occupied_sqlite(home)
     before = load_config(home / "config.json")
     tok = await wizard_token(client, home)
+    wizard = {"Authorization": f"Bearer {tok}"}
+
+    probed = await client.post(
+        "/api/setup/test-database",
+        json={"driver": "sqlite", "sqlite_path": "occupied.db"},
+        headers=wizard,
+    )
+    assert probed.status_code == 200, probed.text
+    assert probed.json()["user_count"] == 1
 
     r = await client.post(
         "/api/setup/database",
-        json={"driver": "sqlite", "sqlite_path": "occupied.db"},
-        headers={"Authorization": f"Bearer {tok}"},
+        json={"driver": "sqlite", "sqlite_path": "occupied.db", "adopt_existing": True},
+        headers=wizard,
     )
     assert r.status_code == 409, r.text
     assert r.json()["error"]["code"] == "DATABASE_NOT_EMPTY"
@@ -173,3 +169,124 @@ async def test_setup_database_refused_after_admin(patched_app_client) -> None:
         json={"driver": "sqlite", "sqlite_path": "octop.db"},
     )
     assert r.status_code == 410
+
+
+_ADOPT_DB = "octop_wizard_adopt"
+_DATABASE_ENV = (
+    "OCTOP_DATABASE_URL",
+    "OCTOP_DATABASE_DRIVER",
+    "OCTOP_DATABASE_SQLITE_PATH",
+    "OCTOP_DATABASE_HOST",
+    "OCTOP_DATABASE_PORT",
+    "OCTOP_DATABASE_NAME",
+    "OCTOP_DATABASE_USER",
+    "OCTOP_DATABASE_PASSWORD",
+)
+
+
+def _recreate_adopt_database(url: str) -> str:
+    """Create a throwaway database on the same server. Does not touch ``url``'s database."""
+    import psycopg
+    from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+    info = conninfo_to_dict(url)
+    info["dbname"] = "postgres"
+    with psycopg.connect(make_conninfo(**info), autocommit=True) as conn:
+        conn.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = %s AND pid <> pg_backend_pid()",
+            (_ADOPT_DB,),
+        )
+        conn.execute(f"DROP DATABASE IF EXISTS {_ADOPT_DB}")
+        conn.execute(f"CREATE DATABASE {_ADOPT_DB}")
+    info["dbname"] = _ADOPT_DB
+    return make_conninfo(**info)
+
+
+def _drop_adopt_database(url: str) -> None:
+    import psycopg
+    from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+    info = conninfo_to_dict(url)
+    info["dbname"] = "postgres"
+    with psycopg.connect(make_conninfo(**info), autocommit=True) as conn:
+        conn.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = %s AND pid <> pg_backend_pid()",
+            (_ADOPT_DB,),
+        )
+        conn.execute(f"DROP DATABASE IF EXISTS {_ADOPT_DB}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.postgresql
+async def test_setup_postgresql_adopts_existing_users(tmp_octop_home: Path, monkeypatch) -> None:
+    """PostgreSQL setup can keep an existing admin after confirmation. SQLite cannot."""
+    url = os.environ.get("OCTOP_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("set OCTOP_TEST_DATABASE_URL to run PostgreSQL tests")
+    for key in _DATABASE_ENV:
+        monkeypatch.delenv(key, raising=False)
+
+    from psycopg.conninfo import conninfo_to_dict
+
+    from octop.infra.db.pool import PostgresPool
+    from octop.infra.users.password import hash_password
+
+    try:
+        adopt_url = _recreate_adopt_database(url)
+    except Exception as exc:
+        pytest.skip(f"cannot create throwaway database {_ADOPT_DB}: {exc}")
+
+    try:
+        pool = PostgresPool(adopt_url)
+        try:
+            run_migrations(pool)
+            UserRepo(pool).create(
+                username="existing",
+                password_hash=hash_password("TestPass12"),
+                role="admin",
+            )
+        finally:
+            pool.close()
+
+        info = conninfo_to_dict(adopt_url)
+        body = {
+            "driver": "postgresql",
+            "host": info.get("host") or "127.0.0.1",
+            "port": int(info.get("port") or 5432),
+            "database": info["dbname"],
+            "user": info.get("user") or "postgres",
+            "password": info.get("password") or "",
+        }
+        async with octop_client(tmp_octop_home) as (client, _srv):
+            wizard = {"Authorization": f"Bearer {await wizard_token(client, tmp_octop_home)}"}
+            probed = await client.post("/api/setup/test-database", json=body, headers=wizard)
+            assert probed.status_code == 200, probed.text
+            assert probed.json()["user_count"] == 1
+
+            refused = await client.post("/api/setup/database", json=body, headers=wizard)
+            assert refused.status_code == 409, refused.text
+            assert refused.json()["error"]["code"] == "DATABASE_NOT_EMPTY"
+            assert load_config(tmp_octop_home / "config.json").database.is_sqlite
+
+            adopted = await client.post(
+                "/api/setup/database",
+                json={**body, "adopt_existing": True},
+                headers=wizard,
+            )
+            assert adopted.status_code == 200, adopted.text
+            assert adopted.json()["adopted"] is True
+            assert adopted.json()["driver"] == "postgresql"
+
+            status = await client.get("/api/setup/status")
+            assert status.json()["setup_required"] is False
+            assert status.json()["database_driver"] == "postgresql"
+
+            login = await client.post(
+                "/api/auth/login",
+                json={"username": "existing", "password": "TestPass12"},
+            )
+            assert login.status_code == 200, login.text
+    finally:
+        _drop_adopt_database(url)

@@ -7,13 +7,14 @@ import {
   Typography,
   InputNumber,
   Space,
+  Modal,
 } from "antd";
 import { Database, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { authApi } from "../../../api/modules/auth";
 import { wizardApi, type DatabaseSetupBody } from "../wizardClient";
-import { apiErrorMessage } from "../../../utils/apiError";
+import { apiErrorMessage, parseApiError } from "../../../utils/apiError";
 import setupStyles from "../setup.module.less";
 
 const { Text } = Typography;
@@ -22,12 +23,15 @@ interface Props {
   onContinue: () => void;
   /** Wizard token for the database calls (issued by the password / begin step). */
   ensureWizardToken: () => Promise<string>;
+  /** PostgreSQL target already had users; setup is finished, go to login. */
+  onAdopted?: () => void;
   onBack?: () => void;
 }
 
 export default function DatabaseStep({
   onContinue,
   ensureWizardToken,
+  onAdopted,
   onBack,
 }: Props) {
   const { t } = useTranslation();
@@ -38,9 +42,9 @@ export default function DatabaseStep({
   const [testedOk, setTestedOk] = useState(false);
   const [alreadyBound, setAlreadyBound] = useState(false);
   const [boundDriver, setBoundDriver] = useState<string | null>(null);
-  const [boundFromEnv, setBoundFromEnv] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [existingUsers, setExistingUsers] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +55,6 @@ export default function DatabaseStep({
         if (s.database_bound) {
           setAlreadyBound(true);
           setBoundDriver(s.database_driver ?? null);
-          setBoundFromEnv(s.database_from_env);
         }
       })
       .catch(() => {
@@ -62,17 +65,40 @@ export default function DatabaseStep({
     };
   }, []);
 
-  const driverLabel = (driver: string): string => {
-    if (driver === "postgresql") return t("wizard.database.postgresql");
-    if (driver === "sqlite") return t("wizard.database.sqlite");
-    return driver;
-  };
-
   const resetProbeState = () => {
     setTestedOk(false);
     setTestMsg(null);
     setError(null);
+    setExistingUsers(0);
   };
+
+  const noteProbe = (userCount: number) => {
+    setExistingUsers(userCount);
+    setTestedOk(true);
+    setTestMsg(
+      userCount > 0
+        ? t("wizard.database.testOkExisting", { count: userCount })
+        : t("wizard.database.testOk"),
+    );
+  };
+
+  const confirmAdopt = (count: number) =>
+    new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (value: boolean) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      Modal.confirm({
+        title: t("wizard.database.adoptTitle"),
+        content: t("wizard.database.adoptBody", { count }),
+        okText: t("wizard.database.adoptOk"),
+        cancelText: t("wizard.database.adoptCancel"),
+        onOk: () => finish(true),
+        onCancel: () => finish(false),
+      });
+    });
 
   const buildSqliteBody = (values: DatabaseSetupBody): DatabaseSetupBody => ({
     driver: "sqlite",
@@ -93,6 +119,33 @@ export default function DatabaseStep({
     onContinue();
   };
 
+  const applyPostgres = async (body: DatabaseSetupBody, userCount: number) => {
+    let payload = body;
+    if (userCount > 0) {
+      const confirmed = await confirmAdopt(userCount);
+      if (!confirmed) return;
+      payload = { ...body, adopt_existing: true };
+    }
+    try {
+      const applied = await wizardApi.applyDatabase(
+        payload,
+        await ensureWizardToken(),
+      );
+      if (applied.adopted) onAdopted?.();
+      else onContinue();
+    } catch (e) {
+      if (parseApiError(e)?.code !== "DATABASE_NOT_EMPTY") throw e;
+      const confirmed = await confirmAdopt(userCount);
+      if (!confirmed) return;
+      const applied = await wizardApi.applyDatabase(
+        { ...body, adopt_existing: true },
+        await ensureWizardToken(),
+      );
+      if (applied.adopted) onAdopted?.();
+      else onContinue();
+    }
+  };
+
   const onTestPostgres = async () => {
     setError(null);
     setTestMsg(null);
@@ -105,12 +158,11 @@ export default function DatabaseStep({
         "user",
         "password",
       ]);
-      await wizardApi.testDatabase(
+      const probed = await wizardApi.testDatabase(
         buildPostgresBody(values),
         await ensureWizardToken(),
       );
-      setTestedOk(true);
-      setTestMsg(t("wizard.database.testOk"));
+      noteProbe(probed.user_count ?? 0);
     } catch (e) {
       setTestedOk(false);
       setError(apiErrorMessage(e, t("wizard.database.testFailed"), t));
@@ -148,11 +200,16 @@ export default function DatabaseStep({
         "password",
       ]);
       const body = buildPostgresBody(values);
+      let userCount = existingUsers;
       if (!testedOk) {
-        await wizardApi.testDatabase(body, await ensureWizardToken());
-        setTestedOk(true);
+        const probed = await wizardApi.testDatabase(
+          body,
+          await ensureWizardToken(),
+        );
+        userCount = probed.user_count ?? 0;
+        noteProbe(userCount);
       }
-      await applyAndContinue(body);
+      await applyPostgres(body, userCount);
     } catch (e) {
       setError(apiErrorMessage(e, t("wizard.database.applyFailed"), t));
     } finally {
@@ -183,18 +240,9 @@ export default function DatabaseStep({
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message={
-            boundDriver
-              ? t("wizard.database.boundTitle", {
-                  driver: driverLabel(boundDriver),
-                })
-              : t("wizard.database.boundReady")
-          }
-          description={
-            boundFromEnv
-              ? t("wizard.database.boundFromEnv")
-              : t("wizard.database.boundHint")
-          }
+          message={t("wizard.database.alreadyBound", {
+            driver: boundDriver || "sqlite",
+          })}
         />
       ) : null}
 
@@ -209,63 +257,43 @@ export default function DatabaseStep({
           user: "octop",
         }}
       >
-        {/* The bound DB is kept as-is on continue, so a SQLite path here would be ignored. */}
-        {alreadyBound ? null : (
-          <Form.Item
-            label={t("wizard.database.sqlite")}
-            name="sqlite_path"
-            rules={[
-              {
-                required: true,
-                message: t("wizard.database.sqlitePathRequired"),
-              },
-            ]}
-            extra={t("wizard.database.sqlitePathHint")}
-          >
-            <Input prefix={<Database size={14} />} placeholder="octop.db" />
-          </Form.Item>
-        )}
+        <Form.Item
+          label={t("wizard.database.sqlite")}
+          name="sqlite_path"
+          rules={[
+            {
+              required: true,
+              message: t("wizard.database.sqlitePathRequired"),
+            },
+          ]}
+          extra={t("wizard.database.sqlitePathHint")}
+        >
+          <Input prefix={<Database size={14} />} placeholder="octop.db" />
+        </Form.Item>
 
-        {/* Env vars override config.json, so switching from the wizard would have no effect. */}
-        {boundFromEnv ? null : (
-          <Button
-            type="link"
-            size="small"
-            className={setupStyles.dbExpandToggle}
-            onClick={() => {
-              setShowAdvanced((v) => !v);
-              setError(null);
-              setTestMsg(null);
-            }}
-          >
-            <span className={setupStyles.dbExpandToggleInner}>
-              {showAdvanced
-                ? t("wizard.database.hideAdvanced")
-                : alreadyBound
-                ? t("wizard.database.switchDatabase")
-                : t("wizard.database.showAdvanced")}
-              {showAdvanced ? (
-                <ChevronUp size={14} />
-              ) : (
-                <ChevronDown size={14} />
-              )}
-            </span>
-          </Button>
-        )}
+        <Button
+          type="link"
+          size="small"
+          className={setupStyles.dbExpandToggle}
+          onClick={() => {
+            setShowAdvanced((v) => !v);
+            setError(null);
+            setTestMsg(null);
+          }}
+        >
+          <span className={setupStyles.dbExpandToggleInner}>
+            {showAdvanced
+              ? t("wizard.database.hideAdvanced")
+              : t("wizard.database.showAdvanced")}
+            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </span>
+        </Button>
 
-        {showAdvanced && !boundFromEnv ? (
+        {showAdvanced ? (
           <div className={setupStyles.dbAdvancedPanel}>
             <div className={setupStyles.dbAdvancedTitle}>
               {t("wizard.database.postgresql")}
             </div>
-            {alreadyBound ? (
-              <Text
-                type="secondary"
-                style={{ display: "block", fontSize: 13, marginBottom: 12 }}
-              >
-                {t("wizard.database.switchHint")}
-              </Text>
-            ) : null}
             <Alert
               type="warning"
               showIcon
@@ -359,9 +387,7 @@ export default function DatabaseStep({
             loading={submitting}
             onClick={() => void onContinueSqlite()}
           >
-            {alreadyBound
-              ? t("wizard.database.continueBound")
-              : t("wizard.database.continue")}
+            {t("wizard.database.continue")}
           </Button>
         </Space>
       </Form>

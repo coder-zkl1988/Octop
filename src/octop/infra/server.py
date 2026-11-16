@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import time
+import uuid
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import suppress
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ from octop.config import OctopConfig, load_config
 from octop.infra.agents.experts.catalog import ExpertCatalog, default_library_root
 from octop.infra.agents.manager import AgentManager
 from octop.infra.agents.plugins.manager import PluginManager
+from octop.infra.agents.providers.store import sync_provider_preset_models
 from octop.infra.agents.subagents.catalog import SubagentCatalog, default_package_root
 from octop.infra.control.mobile.companion.hub import CompanionHub
 from octop.infra.control.mobile.config_probe import ensure_mobile_capabilities_probed
@@ -275,12 +277,6 @@ _SECRET_QUERY_RE = re.compile(r"([?&](?:access_token|token)=)[^&\s\"]*", re.IGNO
 
 
 class _RedactQueryTokenFilter(logging.Filter):
-    """Mask ``token`` / ``access_token`` query values in uvicorn request lines.
-
-    WebSocket, SSE and media URLs carry the JWT as a query parameter (browsers
-    cannot set headers there); uvicorn would otherwise write it to ``octop.log``.
-    """
-
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.args, tuple) and record.args:
             record.args = tuple(
@@ -293,7 +289,6 @@ class _RedactQueryTokenFilter(logging.Filter):
 
 
 async def _shutdown_step(name: str, step: Callable[[], Awaitable[Any]]) -> None:
-    """Run one ``OctopServer.stop`` step; log a failure so later steps still run."""
     try:
         await step()
     except Exception:
@@ -324,7 +319,6 @@ class AppRuntime:
     user_manager: UserManager
     proactive_scheduler: ProactiveCareScheduler
     trajectory_service: TrajectoryService | None = None
-    history_archive: Any | None = None
     bridge_manager: Any | None = None
     companion_hub: CompanionHub | None = None
 
@@ -333,20 +327,18 @@ class AppRuntime:
 
         Used when the setup wizard hot-swaps the control-plane DB while empty.
         """
-        if self.history_archive is not None:
-            raise ValueError("Restart the server to rebind a database with versioned history")
         self.user_manager.replace_services(services)
         self.agent_registry.replace_persistence(services.repos, config)
         self.gateway.replace_repos(services.repos)
         self.cron_manager.replace_repos(services.repos)
-        if self.companion_hub is not None:
-            self.companion_hub.pairing.replace_settings(services.settings_repo)
         self.proactive_scheduler.replace_persistence(
             config_repo=services.repos.proactive_care_config_repo,
             session_repo=services.repos.session_repo,
             care_push_repo=services.repos.care_push_repo,
             thread_repo=services.repos.thread_repo,
         )
+        if self.companion_hub is not None:
+            self.companion_hub.pairing.replace_settings(services.settings_repo)
         if self.trajectory_service is not None:
             from octop.infra.history.trajectory.store import TrajectoryStore  # noqa: PLC0415
 
@@ -366,6 +358,8 @@ class OctopServer:
         self.wizard_tokens = WizardTokenStore(ttl_seconds=300)
         self._started = False
         self._started_at: int | None = None
+        self.instance_id = uuid.uuid4().hex
+        self._serve_background = True
         self._sso_service: SsoService | None = None
         self._ldap_service: LdapAuthService | None = None
         self._ldap_bind_throttle: LdapBindThrottle | None = None
@@ -432,9 +426,10 @@ class OctopServer:
     def database_bound(self) -> bool:
         return self.services is not None and self.app_runtime is not None
 
-    async def start(self) -> None:
+    async def start(self, *, serve_background: bool = True) -> None:
         if self._started:
             return
+        self._serve_background = serve_background
         self.paths.ensure_root()
         # fnOS/容器内非 root 用户场景：把用户级 npm 全局 bin 目录（~/.npm-global）
         # 纳入进程 PATH，保证连接器 CLI（wecom-cli / lark-cli）可被检测与调用。
@@ -475,6 +470,12 @@ class OctopServer:
         self._started_at = int(time.time())
 
         if should_defer_control_plane_db(config, self.paths):
+            from octop.infra.history.retire_v2 import has_history_v2  # noqa: PLC0415
+
+            if has_history_v2(self.paths):
+                raise ValueError(
+                    "Cannot migrate history v2 without its original control-plane database"
+                )
             self._started = True
             self._emit_wizard_password(user_count=0)
             logger.info("control-plane database deferred until setup wizard chooses a backend")
@@ -525,6 +526,34 @@ class OctopServer:
         assert self.expert_catalog is not None
         assert self.plugin_manager is not None
 
+        added = await asyncio.get_running_loop().run_in_executor(
+            None, sync_provider_preset_models, self.services.provider_repo
+        )
+        if added:
+            logger.info("Added %d newly bundled provider models", added)
+
+        from octop.infra.agents.experts.snapshot_store import (  # noqa: PLC0415
+            adopt_local_snapshots,
+        )
+        from octop.infra.users.profile_avatar import adopt_local_avatars  # noqa: PLC0415
+
+        adopt_local_avatars(
+            self.services.profile_avatar_repo,
+            self.services.settings_repo,
+            self.paths,
+        )
+        adopt_local_snapshots(
+            self.services.control_file_repo,
+            self.services.settings_repo,
+            self.paths.published_experts_dir,
+        )
+        self.plugin_manager.attach_control_plane(
+            self.services.control_file_repo,
+            self.services.settings_repo,
+        )
+        self.plugin_manager.seed_bundled()
+        self.plugin_manager.load_installed(install_deps=True)
+
         from octop.infra.utils.browser_media import (  # noqa: PLC0415
             configure_browser_idle_timeout,
         )
@@ -539,36 +568,21 @@ class OctopServer:
             plugin_manager=self.plugin_manager,
         )
 
+        from octop.infra.history.retire_v2 import migrate_history_v2  # noqa: PLC0415
+
+        try:
+            await asyncio.to_thread(migrate_history_v2, self.paths, self.services.db, registry)
+        except Exception:
+            self.services.db.close()
+            self.services = None
+            raise
+
         from octop.infra.history.trajectory.live import TrajectoryLiveBus  # noqa: PLC0415
         from octop.infra.history.trajectory.service import TrajectoryService  # noqa: PLC0415
         from octop.infra.history.trajectory.store import TrajectoryStore  # noqa: PLC0415
 
-        history_archive = None
-        trajectory_store = TrajectoryStore(self.services.trajectory_event_repo)
-        archive_path = self.paths.root / "history_v2.sqlite"
-        if (
-            config.history_v2_enabled
-            or archive_path.exists()
-            or archive_path.with_suffix(".required").exists()
-        ):
-            from octop.infra.history.service import HistoryArchive  # noqa: PLC0415
-            from octop.infra.history.store import HistoryStore  # noqa: PLC0415
-            from octop.infra.history.trajectory_compat import (
-                ArchiveTrajectoryStore,  # noqa: PLC0415
-            )
-
-            identity = str(config.database.resolve_sqlite_path(self.paths.root).resolve())
-            if not config.database.is_sqlite:
-                raise ValueError("Versioned history currently requires the SQLite control plane")
-            history_archive = HistoryArchive(
-                HistoryStore(archive_path, identity=identity),
-                self.services.thread_message_repo,
-                self.services.trajectory_event_repo,
-                enabled=config.history_v2_enabled,
-            )
-            trajectory_store = ArchiveTrajectoryStore(history_archive)
         trajectory_service = TrajectoryService(
-            trajectory_store,
+            TrajectoryStore(self.services.trajectory_event_repo),
             TrajectoryLiveBus(),
         )
 
@@ -576,9 +590,9 @@ class OctopServer:
             agent_manager=registry,
             repos=self.services.repos,
             trajectory_service=trajectory_service,
-            history_archive=history_archive,
+            instance_id=self.instance_id,
         )
-        await gateway.boot()
+        await gateway.boot(serve_background=self._serve_background)
 
         from octop import __version__  # noqa: PLC0415
 
@@ -602,19 +616,16 @@ class OctopServer:
             delivery_service=cron_delivery,
             repos=self.services.repos,
             timezone=config.default_timezone,
+            instance_id=self.instance_id,
         )
-        # Jobs may be registered now, but the scheduler starts only after
-        # ``registry.boot()``: a one-shot that fell due during downtime would
-        # otherwise fire before its agent is registered, fail with
-        # AGENT_NOT_RUNNING, and be disabled for good.
+        if self._serve_background:
+            from octop.infra.setup.tls.renewal import install_auto_renewal_job
 
-        from octop.infra.setup.tls.renewal import install_auto_renewal_job
+            install_auto_renewal_job(cron_mgr, paths=self.paths)
 
-        install_auto_renewal_job(cron_mgr, paths=self.paths)
+            from octop.infra.backup.auto import install_auto_backup_job
 
-        from octop.infra.backup.auto import install_auto_backup_job
-
-        install_auto_backup_job(cron_mgr, server=self)
+            install_auto_backup_job(cron_mgr, server=self)
 
         registry.set_cron_manager(cron_mgr)
         companion_hub = self._build_companion_hub()
@@ -644,7 +655,8 @@ class OctopServer:
         registry.set_proactive_scheduler(proactive_scheduler)
 
         await registry.boot()
-        await cron_mgr.boot()
+        # Start cron only after agents are registered so due one-shot jobs can execute safely.
+        await cron_mgr.boot(serve_background=self._serve_background)
         registry.schedule_idle_reclaim_sweep()
         await gateway.refresh_media_backends()
 
@@ -652,7 +664,11 @@ class OctopServer:
         await user_mgr.boot()
         await proactive_scheduler.start_all()
 
-        from octop.infra.auth.tokens import credential_fingerprint, sign_token
+        from octop.infra.auth.mfa import MfaService
+
+        MfaService(self.services).prune()
+
+        from octop.infra.auth.tokens import PURPOSE_ACCESS, credential_fingerprint, sign_token
         from octop.infra.bridge.manager import BridgeManager, public_base_url_from_config
 
         services = self.services
@@ -664,19 +680,19 @@ class OctopServer:
             if secret is None:
                 raise RuntimeError("jwt secret missing")
             ttl = services.config.access_token_ttl_seconds
-            manager = self.user_manager
-            if manager is not None:
-                pwv = manager.credential_version(int(user.id))
-            else:
-                row = services.user_repo.get(int(user.id))
-                pwv = credential_fingerprint(row.password_hash if row is not None else None)
+            row = services.user_repo.get(int(user.id))
+            mfa_version = int(row.mfa_version) if row is not None else 0
+            password_version = int(row.password_version) if row is not None else 0
             return sign_token(
                 secret,
                 sub=int(user.id),
                 uname=str(user.username),
                 role=str(user.role),
+                purpose=PURPOSE_ACCESS,
                 ttl_seconds=ttl,
-                pwv=pwv,
+                mfa_version=mfa_version,
+                password_version=password_version,
+                pwv=credential_fingerprint(row.password_hash if row is not None else None),
             )
 
         advertise = public_base_url_from_config(config.bind_host, config.port)
@@ -695,13 +711,13 @@ class OctopServer:
             user_manager=user_mgr,
             proactive_scheduler=proactive_scheduler,
             trajectory_service=trajectory_service,
-            history_archive=history_archive,
             bridge_manager=bridge_mgr,
             companion_hub=companion_hub,
         )
         from octop.infra.knowledge.gate import (  # noqa: PLC0415
             warn_if_local_embedding_deps_missing,
         )
+        from octop.infra.knowledge.graph import resume_pending_graph_jobs  # noqa: PLC0415
         from octop.infra.knowledge.jobs import resume_pending_index_jobs  # noqa: PLC0415
         from octop.infra.knowledge.ocr import warn_if_local_ocr_deps_missing  # noqa: PLC0415
 
@@ -714,6 +730,7 @@ class OctopServer:
             self.services.provider_repo,
         )
         resume_pending_index_jobs(self.services)
+        resume_pending_graph_jobs(self.services)
 
         # Resume Bridge links that opted into auto-reconnect (best-effort).
         async def _resume_bridges() -> None:
@@ -729,7 +746,6 @@ class OctopServer:
         assert self.services is not None
 
         def _vlm_payload(public_base_url: str, device_key: str) -> dict[str, Any] | None:
-            # Resolved per handshake so a rebound DB or new model is picked up.
             services = self.services
             if services is None:
                 return None
@@ -827,8 +843,6 @@ class OctopServer:
         try:
             from octop.infra.connectors.gateway import agently_auth
 
-            # Each step is isolated: one failing shutdown must not skip the
-            # harness drain or the DB close that follow it.
             await _shutdown_step("agently auth", agently_auth.close)
             if self.app_runtime is not None:
                 rt = self.app_runtime
@@ -841,11 +855,6 @@ class OctopServer:
                 await _shutdown_step("gateway", rt.gateway.shutdown)
                 await _shutdown_step("agent registry", rt.agent_registry.shutdown)
                 await _shutdown_step("user manager", rt.user_manager.shutdown_all)
-                if rt.history_archive is not None:
-                    try:
-                        rt.history_archive.store.close()
-                    except Exception:
-                        logger.exception("shutdown step history archive failed")
             from octop.infra.backend.browse import dispose_all_browse_sessions
 
             try:

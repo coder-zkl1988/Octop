@@ -17,7 +17,8 @@ export interface CreateAdminBody {
   username: string;
   display_name: string | null;
   email?: string | null;
-  password: string;
+  /** Omitted when the build runs without a password gate (see wizard_password_required). */
+  password?: string;
   /** UI locale for the initial admin (zh|en). */
   locale?: string;
 }
@@ -60,6 +61,8 @@ export interface DatabaseSetupBody {
   user?: string;
   password?: string;
   url?: string;
+  /** PostgreSQL only: bind a database that already has users. */
+  adopt_existing?: boolean;
 }
 
 export const wizardSession = {
@@ -123,19 +126,25 @@ export const wizardApi = {
       method: "POST",
     }),
 
-  testDatabase: (body: DatabaseSetupBody, wizardToken: string) =>
-    request<{ ok: boolean; driver: string }>("/setup/test-database", {
-      method: "POST",
-      body: JSON.stringify(body),
-      headers: bearer(wizardToken),
-    }),
+  testDatabase: (body: DatabaseSetupBody, wizardToken?: string) =>
+    request<{ ok: boolean; driver: string; user_count: number }>(
+      "/setup/test-database",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+        ...(wizardToken ? { headers: bearer(wizardToken) } : {}),
+      },
+    ),
 
-  applyDatabase: (body: DatabaseSetupBody, wizardToken: string) =>
-    request<{ ok: boolean; driver: string }>("/setup/database", {
-      method: "POST",
-      body: JSON.stringify(body),
-      headers: bearer(wizardToken),
-    }),
+  applyDatabase: (body: DatabaseSetupBody, wizardToken?: string) =>
+    request<{ ok: boolean; driver: string; adopted: boolean }>(
+      "/setup/database",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+        ...(wizardToken ? { headers: bearer(wizardToken) } : {}),
+      },
+    ),
 
   verifyPassword: (password: string) =>
     request<VerifyResponse>("/setup/verify-password", {

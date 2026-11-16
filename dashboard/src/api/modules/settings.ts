@@ -47,6 +47,18 @@ export interface CaptchaSettingsPut {
   providers?: Record<string, CaptchaPairBody>;
 }
 
+export interface WebauthnSettings {
+  rp_id: string | null;
+  origins: string[];
+  passwordless_login: boolean;
+}
+
+export interface WebauthnSettingsPut {
+  rp_id?: string | null;
+  origins?: string[];
+  passwordless_login?: boolean;
+}
+
 export const octopSettingsApi = {
   timezone: () => request<OctopTimezoneSettings>("/settings/timezone"),
   upload: () => request<OctopUploadSettings>("/settings/upload"),
@@ -61,6 +73,12 @@ export const octopSettingsApi = {
   captcha: () => request<CaptchaSettings>("/settings/captcha"),
   putCaptcha: (body: CaptchaSettingsPut) =>
     request<CaptchaSettings>("/settings/captcha", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  webauthn: () => request<WebauthnSettings>("/settings/webauthn"),
+  putWebauthn: (body: WebauthnSettingsPut) =>
+    request<WebauthnSettings>("/settings/webauthn", {
       method: "PUT",
       body: JSON.stringify(body),
     }),
