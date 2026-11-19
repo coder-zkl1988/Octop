@@ -45,6 +45,8 @@ class PairedDevice:
     model: str = ""
     name: str = ""
     """User-chosen display name; empty means show the model."""
+    bound_device_id: str | None = None
+    """Set for LAN-paired keys: only this ``deviceId`` may claim the key."""
 
     @property
     def claimed(self) -> bool:
@@ -65,6 +67,7 @@ def _from_dict(raw: dict[str, Any]) -> PairedDevice | None:
             claimed_at=int(raw["claimed_at"]) if raw.get("claimed_at") else None,
             model=str(raw.get("model") or ""),
             name=str(raw.get("name") or ""),
+            bound_device_id=str(raw["bound_device_id"]) if raw.get("bound_device_id") else None,
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -111,10 +114,18 @@ class PairingStore:
     def _save(self, records: list[PairedDevice]) -> None:
         self._settings.set(SETTINGS_KEY, json.dumps([asdict(r) for r in records]))
 
-    def create(self, user_id: int) -> tuple[str, PairedDevice]:
-        """Mint a key for *user_id*; returns ``(plaintext_key, record)``."""
+    def create(self, user_id: int, *, device_id: str | None = None) -> tuple[str, PairedDevice]:
+        """Mint a key for *user_id*; returns ``(plaintext_key, record)``.
+
+        With *device_id* (LAN pairing) only that phone may claim the key.
+        """
         key = secrets.token_urlsafe(32)
-        record = PairedDevice(key_sha256=hash_key(key), user_id=user_id, created_at=self._now())
+        record = PairedDevice(
+            key_sha256=hash_key(key),
+            user_id=user_id,
+            created_at=self._now(),
+            bound_device_id=device_id,
+        )
         with self._lock:
             records = self._load()
             records.append(record)
@@ -133,6 +144,8 @@ class PairingStore:
                 if match.device_id != device_id:
                     raise PairingError("AUTH_FAILED", "pairing key belongs to another device")
                 return match
+            if match.bound_device_id is not None and match.bound_device_id != device_id:
+                raise PairingError("AUTH_FAILED", "pairing key belongs to another device")
             # A phone re-scanning a new QR replaces its previous pairing.
             claimed = replace(match, device_id=device_id, claimed_at=self._now(), model=model)
             records = [claimed if r is match else r for r in records if r.device_id != device_id]

@@ -163,6 +163,18 @@ export interface CompanionPairing {
   reachable_from_lan: boolean;
 }
 
+/** An iTabby phone on the LAN asking to pair; a signed-in user approves it. */
+export interface CompanionPairRequest {
+  request_id: string;
+  /** 6-digit code the phone shows too; the user compares them before approving. */
+  code: string;
+  device_id: string;
+  model: string;
+  manufacturer: string;
+  /** Unix seconds. */
+  expires_at: number;
+}
+
 export interface CompanionVlmCandidate {
   provider: string;
   model: string;
@@ -202,6 +214,23 @@ export const companionApi = {
     request<{ jpeg_base64: string }>(
       `/mobile/companion/devices/${encodeURIComponent(deviceId)}/snapshot`,
       { cache: "no-store" },
+    ),
+  pairRequests: () =>
+    request<{ requests: CompanionPairRequest[] }>(
+      "/mobile/companion/pair-requests",
+      { cache: "no-store" },
+    ),
+  approvePairRequest: (requestId: string) =>
+    request<void>(
+      `/mobile/companion/pair-requests/${encodeURIComponent(
+        requestId,
+      )}/approve`,
+      { method: "POST" },
+    ),
+  rejectPairRequest: (requestId: string) =>
+    request<void>(
+      `/mobile/companion/pair-requests/${encodeURIComponent(requestId)}/reject`,
+      { method: "POST" },
     ),
   settings: () =>
     request<CompanionSettings>("/mobile/companion/settings", {

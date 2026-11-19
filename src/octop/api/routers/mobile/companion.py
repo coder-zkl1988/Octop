@@ -25,8 +25,17 @@ from octop.api.deps import (
     require_permission,
     resolve_user_from_token,
 )
+from octop.i18n import tr
 from octop.infra.control.mobile.companion import vlm
 from octop.infra.control.mobile.companion.hub import CompanionError, CompanionHub, DeviceView
+from octop.infra.control.mobile.companion.lan_pairing import (
+    POLL_INTERVAL_MS,
+    REQUEST_TTL_S,
+    PairOrigin,
+    PairRateLimited,
+    PairRequest,
+    approve_request,
+)
 from octop.infra.control.mobile.companion.pairing import PAIRING_TTL_S, PairingError
 from octop.infra.control.mobile.companion.protocol import (
     LIVE_MIRROR_FPS,
@@ -38,6 +47,7 @@ from octop.infra.control.mobile.companion.urls import lan_ipv4, pairing_address,
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.identity import User
 from octop.infra.users.permissions import user_has_permission
+from octop.infra.utils.locale import resolve_request_locale
 
 logger = logging.getLogger(__name__)
 
@@ -512,3 +522,225 @@ async def put_companion_settings(
     )
     await hub.refresh_credentials()
     return await asyncio.to_thread(_settings_response, server)
+
+
+# ----- iTabby LAN pairing (docs: TabbyApp lan-pairing-protocol.md) -----
+#
+# Phone-facing endpoints under ``/mobile/companion/pair/`` are unauthenticated
+# (the phone has no Octop session) and JWT-exempt; they only open, poll and
+# cancel a request. A key is minted solely when a signed-in user with the
+# ``mobile`` permission approves through ``/mobile/companion/pair-requests``.
+
+
+class PhonePairRequestBody(BaseModel):
+    deviceId: str = Field(  # noqa: N815 - protocol field name
+        min_length=1, max_length=128, description="Same id the phone sends in its WS auth."
+    )
+    model: str = Field(default="", max_length=64)
+    manufacturer: str = Field(default="", max_length=64)
+
+
+class PhonePairCreatedResponse(BaseModel):
+    requestId: str  # noqa: N815
+    code: str = Field(description="6-digit code shown on both the phone and the dashboard.")
+    expiresInSec: int  # noqa: N815
+    pollIntervalMs: int  # noqa: N815
+
+
+class PhonePairStatusResponse(BaseModel):
+    status: str = Field(description="pending | approved | rejected | expired")
+    wsUrl: str | None = Field(  # noqa: N815
+        default=None, description="Only when approved: the URL a QR code would carry."
+    )
+
+
+class PairRequestItem(BaseModel):
+    request_id: str
+    code: str
+    device_id: str
+    model: str
+    manufacturer: str
+    expires_at: int = Field(description="Unix seconds.")
+
+
+class PairRequestsResponse(BaseModel):
+    requests: list[PairRequestItem]
+
+
+def _phone_error(request: Request, status: int, key: str) -> JSONResponse:
+    # The iTabby app is Chinese and sends no Accept-Language.
+    has_lang = request.headers.get("accept-language")
+    locale = resolve_request_locale(request) if has_lang else "zh"
+    return JSONResponse(
+        status_code=status, content={"message": tr(f"mobile.lan_pairing.{key}", locale)}
+    )
+
+
+def _request_origin(request: Request) -> PairOrigin:
+    """Where the phone reached us: the local socket address, not its Host header.
+
+    The local address is the interface the phone demonstrably reached; the
+    ``Host`` header is whatever the client chose to send, and ``lan_ipv4()``
+    may name a different interface on a multi-homed host.
+    """
+    local = request.scope.get("server")
+    if local:
+        return PairOrigin(scheme=request.url.scheme, host=str(local[0]), port=local[1])
+    return PairOrigin(
+        scheme=request.url.scheme,
+        host=request.url.hostname or "127.0.0.1",
+        port=request.url.port,
+    )
+
+
+@router.post(
+    "/mobile/companion/pair/requests",
+    summary="iTabby phone: ask to pair over the LAN",
+    description="Unauthenticated, called by the phone after mDNS discovery. Opens a request "
+    f"that a signed-in user must approve within {REQUEST_TTL_S} s. 403 when LAN pairing is "
+    "off or Octop only listens on loopback; 429 when rate-limited. Errors carry `{message}`.",
+    status_code=201,
+    response_model=PhonePairCreatedResponse,
+    responses={403: {"description": "Not accepting requests"}, 429: {"description": "Too many"}},
+)
+async def phone_create_pair_request(
+    body: PhonePairRequestBody,
+    request: Request,
+    server: Any = Depends(get_server),
+) -> Any:
+    hub = _hub_or_none(server)
+    if hub is None:
+        return _phone_error(request, 403, "not_ready")
+    config = server.services.config
+    if not config.enable_lan_pairing:
+        return _phone_error(request, 403, "disabled")
+    origin = _request_origin(request)
+    reachable = pairing_address(
+        scheme=origin.scheme,
+        host=origin.host,
+        port=origin.port,
+        bind_host=config.bind_host,
+        key="",
+        lan_ip=lan_ipv4(),
+    ).reachable_from_lan
+    if not reachable:
+        return _phone_error(request, 403, "loopback_only")
+    try:
+        created = hub.pair_requests.create(
+            device_id=body.deviceId,
+            model=body.model,
+            manufacturer=body.manufacturer,
+            source_ip=request.client.host if request.client else "",
+            origin=origin,
+        )
+    except PairRateLimited:
+        return _phone_error(request, 429, "rate_limited")
+    logger.info("LAN pairing request %s from %s", created.request_id, body.deviceId)
+    return PhonePairCreatedResponse(
+        requestId=created.request_id,
+        code=created.code,
+        expiresInSec=REQUEST_TTL_S,
+        pollIntervalMs=POLL_INTERVAL_MS,
+    )
+
+
+@router.get(
+    "/mobile/companion/pair/requests/{request_id}",
+    summary="iTabby phone: poll a pairing request",
+    description="Unauthenticated. `approved` carries `wsUrl`; 404 means the request is gone "
+    "(the phone treats it as expired).",
+    response_model=PhonePairStatusResponse,
+    response_model_exclude_none=True,
+)
+async def phone_pair_request_status(
+    request_id: str, request: Request, server: Any = Depends(get_server)
+) -> Any:
+    hub = _hub_or_none(server)
+    found = hub.pair_requests.get(request_id) if hub is not None else None
+    if found is None:
+        return _phone_error(request, 404, "not_found")
+    return PhonePairStatusResponse(status=found.status, wsUrl=found.ws_url)
+
+
+@router.delete(
+    "/mobile/companion/pair/requests/{request_id}",
+    summary="iTabby phone: cancel a pairing request",
+    description="Unauthenticated. Removes the request so dashboards close its prompt.",
+    status_code=204,
+)
+async def phone_cancel_pair_request(request_id: str, server: Any = Depends(get_server)) -> Response:
+    hub = _hub_or_none(server)
+    if hub is not None:
+        hub.pair_requests.cancel(request_id)
+    return Response(status_code=204)
+
+
+def _pair_item(req: PairRequest) -> PairRequestItem:
+    return PairRequestItem(
+        request_id=req.request_id,
+        code=req.code,
+        device_id=req.device_id,
+        model=req.model,
+        manufacturer=req.manufacturer,
+        expires_at=int(req.expires_at),
+    )
+
+
+@router.get(
+    "/mobile/companion/pair-requests",
+    summary="Pending iTabby LAN pairing requests",
+    description="Visible to every user with the `mobile` permission, like the QR pairing "
+    "button; whoever approves owns the phone.",
+    response_model=PairRequestsResponse,
+)
+async def list_pair_requests(
+    server: Any = Depends(get_server),
+    _user: User = Depends(require_permission("mobile")),
+) -> PairRequestsResponse:
+    hub = _hub(server)
+    return PairRequestsResponse(requests=[_pair_item(r) for r in hub.pair_requests.pending()])
+
+
+@router.post(
+    "/mobile/companion/pair-requests/{request_id}/approve",
+    summary="Approve an iTabby LAN pairing request",
+    description="Mints a device key owned by the caller and bound to the requesting phone's "
+    "deviceId; the phone receives its `wsUrl` on its next poll. 404 when the request "
+    "expired, was cancelled or was already decided.",
+    status_code=204,
+)
+async def approve_pair_request(
+    request_id: str,
+    server: Any = Depends(get_server),
+    user: User = Depends(require_permission("mobile")),
+) -> Response:
+    hub = _hub(server)
+    approved = await asyncio.to_thread(
+        approve_request,
+        hub.pair_requests,
+        hub.pairing,
+        request_id,
+        user_id=user.id,
+        bind_host=server.services.config.bind_host,
+        lan_ip=lan_ipv4(),
+    )
+    if approved is None:
+        raise OctopError(ErrorCode.NOT_FOUND, f"pairing request {request_id} not found")
+    logger.info("LAN pairing request %s approved by user %s", request_id, user.id)
+    return Response(status_code=204)
+
+
+@router.post(
+    "/mobile/companion/pair-requests/{request_id}/reject",
+    summary="Reject an iTabby LAN pairing request",
+    status_code=204,
+)
+async def reject_pair_request(
+    request_id: str,
+    server: Any = Depends(get_server),
+    _user: User = Depends(require_permission("mobile")),
+) -> Response:
+    hub = _hub(server)
+    if hub.pair_requests.reject(request_id) is None:
+        raise OctopError(ErrorCode.NOT_FOUND, f"pairing request {request_id} not found")
+    return Response(status_code=204)
