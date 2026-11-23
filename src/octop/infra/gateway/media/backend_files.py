@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING
 from octop.infra.gateway.media.attachment_hints import is_preview_media_type
 from octop.infra.gateway.media.constants import OUTBOUND_DIR
 from octop.infra.utils.browser_media import legacy_harness_screenshots_dir
+from octop.infra.utils.paths import PathLayout
 
 if TYPE_CHECKING:
     from octop_harness.backends.workspace import BackendWorkspace
@@ -166,16 +167,25 @@ def resolve_media_agent_id(chat_agent_id: str, raw_url: str) -> str:
     return agent_id_from_workspace_path(raw_url) or chat_agent_id
 
 
+def _has_parent_segment(path: str) -> bool:
+    return any(part == ".." for part in path.replace("\\", "/").split("/"))
+
+
 def extract_workspace_rel(path: str) -> str | None:
     """Return ``outbound/…`` or ``inbound/…`` when present in *path* (any common shape)."""
     raw = path.strip()
     fs_path = file_url_to_abs_path(raw) if raw.startswith("file://") else raw.lstrip("/")
     normalized = fs_path.replace("\\", "/")
+    if _has_parent_segment(normalized):
+        return None
     if normalized.startswith(("outbound/", "inbound/")):
         return normalized
     for marker in ("/outbound/", "/inbound/"):
         if marker in normalized:
-            return normalized[normalized.index(marker) + 1 :]
+            rel = normalized[normalized.index(marker) + 1 :]
+            if _has_parent_segment(rel):
+                return None
+            return rel
     return None
 
 
@@ -361,12 +371,22 @@ def is_allowed_host_download_abs_path(path: str, *, workspace: Path) -> bool:
     norm = str(resolved).replace("\\", "/").lower()
     if _contains_denied_browser_home(norm):
         return False
+    if resolved == Path(resolved.anchor):
+        return False
 
     try:
         resolved.relative_to(workspace.resolve())
         return True
     except ValueError:
         pass
+
+    try:
+        resolved.relative_to(PathLayout.from_env().root.resolve())
+        return False
+    except ValueError:
+        pass
+    except OSError:
+        return False
 
     if is_allowed_host_temp_path(resolved):
         return True
@@ -615,6 +635,8 @@ async def ensure_workspace_media_path(
 
     if not _is_host_absolute(abs_path):
         return existing
+    if not is_allowed_host_download_abs_path(abs_path, workspace=workspace.workspace_dir):
+        return None
 
     dest = _outbound_dest_rel(filename=filename, abs_path=abs_path, mime=mime)
     data = await _download_via_workspace(workspace, abs_path)

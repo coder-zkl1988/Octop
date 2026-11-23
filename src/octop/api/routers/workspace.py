@@ -32,6 +32,7 @@ from octop.infra.gateway.media.backend_files import (
     HostPathDeniedError,
     backend_workspace_path,
     check_workspace_host_path,
+    is_allowed_host_download_abs_path,
     is_host_absolute_path,
     resolve_preview_payload,
 )
@@ -46,11 +47,17 @@ logger = logging.getLogger(__name__)
 _PROTECTED_PREFIX = "_builtin_skills"
 
 
+def _reject_parent_segments(path: str) -> None:
+    if any(part == ".." for part in path.replace("\\", "/").split("/")):
+        raise OctopError(ErrorCode.FORBIDDEN, "path escapes workspace")
+
+
 def _assert_workspace_mutable(path: str) -> str:
     """Mutating ops always treat paths as workspace-relative (``from_workspace=true``)."""
     rel = _workspace_io_path(path, from_workspace=True)
-    if rel.startswith("~"):
+    if rel.startswith("~") or is_host_absolute_path(rel):
         raise OctopError(ErrorCode.FORBIDDEN, f"cannot modify {path!r}: path not allowed")
+    _reject_parent_segments(rel)
     if rel == ".":
         raise OctopError(ErrorCode.FORBIDDEN, "cannot modify workspace root")
     posix = rel.replace("\\", "/").strip("/")
@@ -62,6 +69,20 @@ def _assert_workspace_mutable(path: str) -> str:
     ):
         raise OctopError(ErrorCode.FORBIDDEN, f"cannot modify {_PROTECTED_PREFIX!r} paths")
     return rel
+
+
+def _guard_workspace_read(io_path: str, workspace: Path) -> None:
+    """Validate a workspace-relative or host-absolute read path.
+
+    The route handlers use ``_guarded_io_path`` for the user-specific jail and
+    cross-agent checks. This helper remains the small path guard used by unit
+    tests and callers that only have a workspace path available.
+    """
+    if is_host_absolute_path(io_path):
+        if not is_allowed_host_download_abs_path(io_path, workspace=workspace):
+            raise OctopError(ErrorCode.FORBIDDEN, "host path not allowed")
+        return
+    _reject_parent_segments(io_path)
 
 
 def _map_workspace_fs_error(exc: Exception, *, operation: str, path: str) -> OctopError:
@@ -153,6 +174,7 @@ def _guarded_io_path(
     """
     io_path = _workspace_io_path(path, from_workspace=from_workspace)
     if not io_path.startswith("~") and not is_host_absolute_path(io_path):
+        _reject_parent_segments(io_path)
         return io_path
 
     def may_access_agent(agent_id: str) -> bool:
@@ -259,6 +281,8 @@ async def write_file(
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Overwrite ``path`` with ``body.content`` (text)."""
+    _ = from_workspace  # Mutations always use workspace-relative paths.
+    rel = _assert_workspace_mutable(path)
     ws = await require_running_workspace(
         agent_id, user=user, as_user=as_user, server=server, owner_only=True
     )
@@ -277,9 +301,8 @@ async def write_file(
             ) from exc
     else:
         data = body.content.encode("utf-8")
-    io_path = _guarded_io_path(path, from_workspace=from_workspace, ws=ws, user=user, server=server)
     try:
-        await ws.aupload_bytes(io_path, data)
+        await ws.aupload_bytes(rel, data)
     except Exception as exc:
         raise OctopError(ErrorCode.NOT_FOUND, f"cannot write {path!r}: {exc}") from exc
     return {"path": path, "size": len(data)}
@@ -391,13 +414,12 @@ async def upload_file(
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Upload a binary file via multipart ``file=@...``."""
+    _ = from_workspace  # Mutations always use workspace-relative paths.
     ws = await require_running_workspace(
         agent_id, user=user, as_user=as_user, server=server, owner_only=True
     )
     target = path or f"/{file.filename or 'upload.bin'}"
-    io_path = _guarded_io_path(
-        target, from_workspace=from_workspace, ws=ws, user=user, server=server
-    )
+    io_path = _assert_workspace_mutable(target)
     data = await file.read()
     try:
         await ws.aupload_bytes(io_path, data)

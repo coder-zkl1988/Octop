@@ -10,7 +10,6 @@ from fastapi import Depends, Header, Query, Request
 
 from octop.infra.auth.tokens import (
     PURPOSE_ACCESS,
-    credential_fingerprint,
     token_mfa_version,
     token_password_version,
     token_purpose,
@@ -52,6 +51,8 @@ _JWT_EXEMPT_PREFIXES = (
     # iTabby LAN pairing: the phone has no session yet; a signed-in user
     # approves every request in the dashboard before any key is issued.
     "/api/mobile/companion/pair/",
+    # Read-only conversation links: the unguessable token is the credential.
+    "/api/shares/",
 )
 _JWT_EXEMPT_EXACT = (
     "/api/health",
@@ -196,6 +197,9 @@ def maybe_sliding_renew_token(server: OctopServer, token: str, user: User) -> st
     row = server.services.user_repo.get(user.id)
     mfa_version = int(row.mfa_version) if row is not None else 0
     password_version = int(row.password_version) if row is not None else 0
+    user_manager = server.user_manager
+    if user_manager is None:
+        raise OctopError(ErrorCode.INTERNAL_ERROR, "user manager unavailable")
     return sign_token(
         secret,
         sub=user.id,
@@ -205,7 +209,7 @@ def maybe_sliding_renew_token(server: OctopServer, token: str, user: User) -> st
         ttl_seconds=ttl,
         mfa_version=mfa_version,
         password_version=password_version,
-        pwv=server.user_manager.credential_version(user.id),
+        pwv=user_manager.credential_version(user.id),
     )
 
 
@@ -215,7 +219,7 @@ def authenticate_request(request: Request, server: OctopServer) -> User:
         access_token=request.query_params.get("access_token"),
     )
     if not raw:
-        raise OctopError(ErrorCode.AUTH_FAILED, "missing credentials")
+        raise OctopError(ErrorCode.MISSING_CREDENTIALS, "missing credentials")
     return resolve_user_from_token(server, raw)
 
 
@@ -230,7 +234,7 @@ async def current_user(
         return cast("User", cached)
     raw = extract_raw_token(authorization=authorization, access_token=access_token)
     if not raw:
-        raise OctopError(ErrorCode.AUTH_FAILED, "missing credentials")
+        raise OctopError(ErrorCode.MISSING_CREDENTIALS, "missing credentials")
     return resolve_user_from_token(server, raw)
 
 

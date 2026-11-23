@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, field, replace
 from functools import cache
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote, unquote, urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -70,8 +70,8 @@ class DatabaseConfig:
             raise ValueError("postgresql_conninfo() requires driver=postgresql")
         if self.url:
             return self.url
-        user = quote_plus(self.user)
-        auth = user if not self.password else f"{user}:{quote_plus(self.password)}"
+        user = quote(self.user, safe="")
+        auth = user if not self.password else f"{user}:{quote(self.password, safe='')}"
         return f"postgresql://{auth}@{self.host}:{self.port}/{self.database}"
 
 
@@ -103,6 +103,8 @@ class BackupConfig:
     include_plugins: bool = True
     include_knowledge: bool = True
     include_chats: bool = False
+    remote_enabled: bool = False
+    remote_backend_id: int | None = None
 
 
 _VALID_MOBILE_BACKENDS = frozenset({"physical", "redroid", "emulator", "none"})
@@ -133,12 +135,14 @@ class OctopConfig:
     login_lockout_seconds: int = 900
     cors_origins: list[str] = field(default_factory=list)
     default_timezone: str = "Asia/Shanghai"
+    # Optional explicit git executable for self-hosted installs whose service
+    # PATH does not include it (Homebrew / Git for Windows / NixOS).
+    git_binary: str = ""
     enable_dashboard: bool = True
     enable_api_docs: bool = False
     # Advertise over mDNS and accept iTabby LAN pairing requests (only when the
     # bind address is reachable from the LAN; every pairing still needs approval).
     enable_lan_pairing: bool = True
-    history_v2_enabled: bool = False
     require_setup_password: bool = True
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     # False when config.json omits ``database`` (use PathLayout.db unless env overrides).
@@ -148,6 +152,9 @@ class OctopConfig:
     capabilities: CapabilitiesConfig = field(default_factory=CapabilitiesConfig)
     max_upload_mb: int = DEFAULT_MAX_UPLOAD_MB
     browser_idle_timeout_minutes: int = DEFAULT_BROWSER_IDLE_TIMEOUT_MINUTES
+    # External origin when a TLS-terminating proxy omits X-Forwarded-Proto.
+    # Empty means "use the request". No path, query, or fragment.
+    public_base_url: str = ""
 
     @property
     def max_upload_bytes(self) -> int:
@@ -227,6 +234,15 @@ def _parse_backup_section(raw: object) -> BackupConfig:
         raise ValueError("config.backup.retention_count must be an integer") from exc
     if retention < 1:
         raise ValueError("config.backup.retention_count must be >= 1")
+    remote_backend_id = parse_optional_int(
+        raw.get("remote_backend_id", defaults.remote_backend_id),
+        field="config.backup.remote_backend_id",
+    )
+    if remote_backend_id is not None and remote_backend_id < 1:
+        raise ValueError("config.backup.remote_backend_id must be >= 1 when set")
+    remote_enabled = bool(raw.get("remote_enabled", defaults.remote_enabled))
+    if remote_enabled and remote_backend_id is None:
+        raise ValueError("config.backup.remote_enabled requires remote_backend_id to be set")
     return BackupConfig(
         auto_enabled=bool(raw.get("auto_enabled", defaults.auto_enabled)),
         schedule=schedule,
@@ -239,6 +255,8 @@ def _parse_backup_section(raw: object) -> BackupConfig:
         include_plugins=bool(raw.get("include_plugins", defaults.include_plugins)),
         include_knowledge=bool(raw.get("include_knowledge", defaults.include_knowledge)),
         include_chats=bool(raw.get("include_chats", defaults.include_chats)),
+        remote_enabled=remote_enabled,
+        remote_backend_id=remote_backend_id,
     )
 
 
@@ -297,6 +315,25 @@ def _coerce_bool(name: str, value: str, default: bool) -> bool:
     return default
 
 
+def parse_optional_int(raw: object, *, field: str) -> int | None:
+    """Parse an optional JSON integer; empty string / null → None."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        raise ValueError(f"{field} must be an integer or null")
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            return None
+        try:
+            return int(text)
+        except ValueError as exc:
+            raise ValueError(f"{field} must be an integer or null") from exc
+    raise ValueError(f"{field} must be an integer or null")
+
+
 def _parse_database_url(url: str) -> dict[str, Any]:
     parsed = urlparse(url)
     if parsed.scheme not in ("postgresql", "postgres"):
@@ -314,9 +351,9 @@ def _parse_database_url(url: str) -> dict[str, Any]:
         "url": url,
     }
     if parsed.username:
-        out["user"] = parsed.username
+        out["user"] = unquote(parsed.username)
     if parsed.password:
-        out["password"] = parsed.password
+        out["password"] = unquote(parsed.password)
     return out
 
 
@@ -345,7 +382,7 @@ def parse_database_config(merged: dict[str, Any]) -> DatabaseConfig:
 
     host = str(merged.get("host", "")).strip()
     database = str(merged.get("database", "")).strip()
-    user = str(merged.get("user", "")).strip()
+    user = str(merged.get("user", ""))
     port = int(merged.get("port", 5432))
     if not host:
         raise ValueError("database.host is required for postgresql")
@@ -457,6 +494,26 @@ def _optional_str(raw: dict[str, Any], key: str) -> str | None:
     return value
 
 
+def normalize_public_base_url(raw: object) -> str:
+    """Return an ``http(s)`` origin, or ``""`` when unset.
+
+    Raises ``ValueError`` for a non-string or a URL that is not just an origin.
+    """
+    if raw is None:
+        return ""
+    if not isinstance(raw, str):
+        raise ValueError("public_base_url must be a string")
+    text = raw.strip()
+    if not text:
+        return ""
+    parts = urlparse(text)
+    if parts.scheme not in {"http", "https"} or not parts.netloc:
+        raise ValueError("public_base_url must be an absolute http(s) origin")
+    if parts.path not in {"", "/"} or parts.query or parts.fragment or parts.params:
+        raise ValueError("public_base_url must be an origin without a path")
+    return f"{parts.scheme}://{parts.netloc}"
+
+
 def validate_persisted_config(raw: dict[str, Any]) -> None:
     """Raise ``ValueError`` when ``raw`` cannot be stored as ``config.json``.
 
@@ -497,6 +554,7 @@ def validate_persisted_config(raw: dict[str, Any]) -> None:
             ZoneInfo(tz)
         except ZoneInfoNotFoundError:
             raise ValueError("default_timezone must be an IANA timezone name") from None
+    _optional_str(raw, "git_binary")
     for key in ("enable_dashboard", "enable_api_docs", "require_setup_password"):
         _optional_bool(raw, key)
     upload = _optional_int(raw, "max_upload_mb")
@@ -505,6 +563,8 @@ def validate_persisted_config(raw: dict[str, Any]) -> None:
     idle = _optional_int(raw, "browser_idle_timeout_minutes")
     if idle is not None and idle < 0:
         raise ValueError("browser_idle_timeout_minutes must be >= 0")
+    if "public_base_url" in raw:
+        normalize_public_base_url(raw.get("public_base_url"))
 
     if "database" in raw:
         section = _parse_database_section(raw.get("database"))
@@ -629,6 +689,10 @@ def load_config(path: Path) -> OctopConfig:
         merged["max_upload_mb"] = parse_max_upload_mb(
             merged.get("max_upload_mb", DEFAULT_MAX_UPLOAD_MB)
         )
+    public_base_url = normalize_public_base_url(merged.get("public_base_url", ""))
+    if "OCTOP_PUBLIC_BASE_URL" in os.environ:
+        public_base_url = normalize_public_base_url(os.environ["OCTOP_PUBLIC_BASE_URL"])
+
     if v := os.environ.get("OCTOP_BROWSER_IDLE_TIMEOUT_MINUTES"):
         merged["browser_idle_timeout_minutes"] = _coerce_int(
             "OCTOP_BROWSER_IDLE_TIMEOUT_MINUTES",
@@ -721,6 +785,27 @@ def load_config(path: Path) -> OctopConfig:
             backup,
             include_chats=_coerce_bool("OCTOP_BACKUP_INCLUDE_CHATS", v, backup.include_chats),
         )
+    if v := os.environ.get("OCTOP_BACKUP_REMOTE_ENABLED"):
+        backup = replace(
+            backup,
+            remote_enabled=_coerce_bool("OCTOP_BACKUP_REMOTE_ENABLED", v, backup.remote_enabled),
+        )
+    if v := os.environ.get("OCTOP_BACKUP_REMOTE_BACKEND_ID"):
+        text = v.strip()
+        if not text:
+            backup = replace(backup, remote_backend_id=None)
+        else:
+            try:
+                parsed = int(text)
+            except ValueError as exc:
+                raise ValueError(
+                    "OCTOP_BACKUP_REMOTE_BACKEND_ID must be an integer or empty"
+                ) from exc
+            if parsed < 1:
+                raise ValueError("OCTOP_BACKUP_REMOTE_BACKEND_ID must be >= 1 when set")
+            backup = replace(backup, remote_backend_id=parsed)
+    if backup.remote_enabled and backup.remote_backend_id is None:
+        raise ValueError("config.backup.remote_enabled requires remote_backend_id to be set")
 
     return OctopConfig(
         bind_host=merged["bind_host"],
@@ -731,16 +816,10 @@ def load_config(path: Path) -> OctopConfig:
         login_lockout_seconds=int(merged.get("login_lockout_seconds", 900)),
         cors_origins=list(merged.get("cors_origins") or []),
         default_timezone=str(merged.get("default_timezone") or "Asia/Shanghai"),
+        git_binary=str(merged.get("git_binary") or "").strip(),
         enable_dashboard=bool(merged["enable_dashboard"]),
         enable_api_docs=bool(merged["enable_api_docs"]),
         enable_lan_pairing=bool(merged["enable_lan_pairing"]),
-        history_v2_enabled=_coerce_bool(
-            "OCTOP_HISTORY_V2_ENABLED",
-            os.environ.get(
-                "OCTOP_HISTORY_V2_ENABLED", str(merged.get("history_v2_enabled", False))
-            ),
-            False,
-        ),
         require_setup_password=bool(merged["require_setup_password"]),
         database=parse_database_config(merged_db),
         database_in_file=database_in_file,
@@ -757,4 +836,5 @@ def load_config(path: Path) -> OctopConfig:
                 )
             ),
         ),
+        public_base_url=public_base_url,
     )

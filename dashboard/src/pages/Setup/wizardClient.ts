@@ -126,25 +126,29 @@ export const wizardApi = {
       method: "POST",
     }),
 
-  testDatabase: (body: DatabaseSetupBody, wizardToken?: string) =>
-    request<{ ok: boolean; driver: string; user_count: number }>(
+  testDatabase: (body: DatabaseSetupBody, wizardToken?: string) => {
+    const token = wizardToken ?? wizardSession.loadToken();
+    return request<{ ok: boolean; driver: string; user_count: number }>(
       "/setup/test-database",
       {
         method: "POST",
         body: JSON.stringify(body),
-        ...(wizardToken ? { headers: bearer(wizardToken) } : {}),
+        ...(token ? { headers: bearer(token) } : {}),
       },
-    ),
+    );
+  },
 
-  applyDatabase: (body: DatabaseSetupBody, wizardToken?: string) =>
-    request<{ ok: boolean; driver: string; adopted: boolean }>(
+  applyDatabase: (body: DatabaseSetupBody, wizardToken?: string) => {
+    const token = wizardToken ?? wizardSession.loadToken();
+    return request<{ ok: boolean; driver: string; adopted: boolean }>(
       "/setup/database",
       {
         method: "POST",
         body: JSON.stringify(body),
-        ...(wizardToken ? { headers: bearer(wizardToken) } : {}),
+        ...(token ? { headers: bearer(token) } : {}),
       },
-    ),
+    );
+  },
 
   verifyPassword: (password: string) =>
     request<VerifyResponse>("/setup/verify-password", {

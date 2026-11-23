@@ -48,6 +48,7 @@ from octop.infra.agents.providers.store import (
 )
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.groups import RESOURCE_MODEL, GroupAccess, model_resource_key
+from octop.infra.users.permissions import user_has_permission
 from octop.infra.utils.locale import resolve_request_locale
 from octop.infra.utils.ulid import new_ulid
 
@@ -276,6 +277,13 @@ def _saved_default_model(extra: dict[str, Any]) -> str | None:
     return cleaned or None
 
 
+def _public_row(r: Any) -> dict[str, Any]:
+    """Provider list for any signed-in user: never include the stored API key."""
+    data = _row_to_dict(r, reveal_secret=False)
+    data["api_key_set"] = bool(data.get("has_api_key"))
+    return data
+
+
 def _row_to_dict(r: Any, *, reveal_secret: bool = True) -> dict[str, Any]:
     models: list[dict[str, Any]] = []
     for stored in r.get_models():
@@ -366,11 +374,15 @@ async def set_active_model(
 
 @router.get("")
 async def list_providers(
-    _: Any = Depends(current_user),
+    user: Any = Depends(current_user),
     server: Any = Depends(get_server),
 ) -> list[dict[str, Any]]:
-    """Return all providers. Read-only for regular users."""
-    return [_row_to_dict(r) for r in server.services.provider_repo.list_all()]
+    """Return providers with credentials visible only to provider managers."""
+    reveal = user_has_permission(user, "providers")
+    return [
+        _row_to_dict(r, reveal_secret=reveal) if reveal else _public_row(r)
+        for r in server.services.provider_repo.list_all()
+    ]
 
 
 # ── Admin endpoints ─────────────────────────────────────────────────────────

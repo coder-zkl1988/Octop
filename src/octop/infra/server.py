@@ -739,6 +739,10 @@ class OctopServer:
 
         asyncio.create_task(_resume_bridges(), name="bridge-auto-resume")
 
+        from octop.infra.setup.completion import seal_setup_wizard_if_installed  # noqa: PLC0415
+
+        seal_setup_wizard_if_installed(self)
+
     def _build_companion_hub(self) -> CompanionHub:
         from octop.infra.control.mobile.companion import vlm  # noqa: PLC0415
         from octop.infra.control.mobile.companion.pairing import PairingStore  # noqa: PLC0415

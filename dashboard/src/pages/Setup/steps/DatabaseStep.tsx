@@ -110,7 +110,7 @@ export default function DatabaseStep({
     host: values.host?.trim() || "127.0.0.1",
     port: values.port ?? 5432,
     database: values.database?.trim() || "octop",
-    user: values.user?.trim() || "octop",
+    user: values.user || "octop",
     password: values.password || undefined,
   });
 

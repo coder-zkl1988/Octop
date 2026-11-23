@@ -17,6 +17,11 @@ from tests.support.app import octop_client
 from tests.support.auth import bootstrap_admin, wizard_token
 
 
+async def _wizard_headers(client, home) -> dict[str, str]:
+    token = await wizard_token(client, home)
+    return {"Authorization": f"Bearer {token}"}
+
+
 def _seed_occupied_sqlite(home, *, relative_path: str = "occupied.db") -> None:
     """Create a sibling SQLite control-plane DB that already has one user."""
     paths = PathLayout(home)
@@ -33,14 +38,27 @@ def _seed_occupied_sqlite(home, *, relative_path: str = "occupied.db") -> None:
 
 
 @pytest.mark.asyncio
+async def test_setup_database_requires_wizard_token(patched_app_client) -> None:
+    """Database probe and bind stay closed until the wizard session exists."""
+    client, _srv, _home = patched_app_client
+    body = {"driver": "sqlite", "sqlite_path": "data/wizard.db"}
+    probed = await client.post("/api/setup/test-database", json=body)
+    assert probed.status_code == 401
+    assert probed.json()["error"]["code"] == "SETUP_TOKEN_INVALID"
+    applied = await client.post("/api/setup/database", json=body)
+    assert applied.status_code == 401
+    assert applied.json()["error"]["code"] == "SETUP_TOKEN_INVALID"
+
+
+@pytest.mark.asyncio
 async def test_setup_database_sqlite_bind(patched_app_client) -> None:
     """Already-bound empty wizard can still swap sqlite path via rebind."""
     client, srv, home = patched_app_client
-    wizard = {"Authorization": f"Bearer {await wizard_token(client, home)}"}
+    headers = await _wizard_headers(client, home)
     r = await client.post(
         "/api/setup/test-database",
         json={"driver": "sqlite", "sqlite_path": "data/wizard.db"},
-        headers=wizard,
+        headers=headers,
     )
     assert r.status_code == 200, r.text
     assert r.json()["ok"] is True
@@ -48,7 +66,7 @@ async def test_setup_database_sqlite_bind(patched_app_client) -> None:
     r = await client.post(
         "/api/setup/database",
         json={"driver": "sqlite", "sqlite_path": "data/wizard.db"},
-        headers=wizard,
+        headers=headers,
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -129,13 +147,12 @@ async def test_setup_database_refuses_nonempty_target(patched_app_client) -> Non
     client, srv, home = patched_app_client
     _seed_occupied_sqlite(home)
     before = load_config(home / "config.json")
-    tok = await wizard_token(client, home)
-    wizard = {"Authorization": f"Bearer {tok}"}
+    headers = await _wizard_headers(client, home)
 
     probed = await client.post(
         "/api/setup/test-database",
         json={"driver": "sqlite", "sqlite_path": "occupied.db"},
-        headers=wizard,
+        headers=headers,
     )
     assert probed.status_code == 200, probed.text
     assert probed.json()["user_count"] == 1
@@ -143,7 +160,7 @@ async def test_setup_database_refuses_nonempty_target(patched_app_client) -> Non
     r = await client.post(
         "/api/setup/database",
         json={"driver": "sqlite", "sqlite_path": "occupied.db", "adopt_existing": True},
-        headers=wizard,
+        headers=headers,
     )
     assert r.status_code == 409, r.text
     assert r.json()["error"]["code"] == "DATABASE_NOT_EMPTY"
@@ -152,6 +169,7 @@ async def test_setup_database_refuses_nonempty_target(patched_app_client) -> Non
     assert after.database.sqlite_path == before.database.sqlite_path
     assert srv.user_manager.count() == 0
 
+    tok = await wizard_token(client, home)
     created = await client.post(
         "/api/setup/initial-admin",
         json={"username": "admin", "password": "TestPass12"},
@@ -260,12 +278,12 @@ async def test_setup_postgresql_adopts_existing_users(tmp_octop_home: Path, monk
             "password": info.get("password") or "",
         }
         async with octop_client(tmp_octop_home) as (client, _srv):
-            wizard = {"Authorization": f"Bearer {await wizard_token(client, tmp_octop_home)}"}
-            probed = await client.post("/api/setup/test-database", json=body, headers=wizard)
+            headers = await _wizard_headers(client, tmp_octop_home)
+            probed = await client.post("/api/setup/test-database", json=body, headers=headers)
             assert probed.status_code == 200, probed.text
             assert probed.json()["user_count"] == 1
 
-            refused = await client.post("/api/setup/database", json=body, headers=wizard)
+            refused = await client.post("/api/setup/database", json=body, headers=headers)
             assert refused.status_code == 409, refused.text
             assert refused.json()["error"]["code"] == "DATABASE_NOT_EMPTY"
             assert load_config(tmp_octop_home / "config.json").database.is_sqlite
@@ -273,7 +291,7 @@ async def test_setup_postgresql_adopts_existing_users(tmp_octop_home: Path, monk
             adopted = await client.post(
                 "/api/setup/database",
                 json={**body, "adopt_existing": True},
-                headers=wizard,
+                headers=headers,
             )
             assert adopted.status_code == 200, adopted.text
             assert adopted.json()["adopted"] is True

@@ -353,7 +353,21 @@ def _connector_service(server: Any) -> ConnectorService:
         secret_repo=server.services.secret_repo,
         settings_repo=server.services.settings_repo,
         config=server.services.config,
+        user_repo=server.services.user_repo,
     )
+
+
+def _require_stdio_permission(
+    service: ConnectorService, user_id: int, servers: dict[str, Any]
+) -> None:
+    if any(is_stdio_spec(spec) for spec in servers.values()) and not service.stdio_owner_allowed(
+        user_id
+    ):
+        raise OctopError(
+            ErrorCode.FORBIDDEN,
+            "terminal permission required for stdio MCP servers",
+            details={"permission": "terminal"},
+        )
 
 
 def _instance_to_dict(inst: Any, *, access: GroupAccess | None = None) -> dict[str, Any]:
@@ -705,7 +719,7 @@ async def list_instances(
 
 @router.get("/connectors/custom-mcp", summary="Get custom MCP servers")
 async def get_custom_mcp(
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Return the user's custom MCP server map (langchain-mcp-adapters shape)."""
@@ -716,11 +730,12 @@ async def get_custom_mcp(
 @router.put("/connectors/custom-mcp", summary="Save custom MCP servers")
 async def put_custom_mcp(
     body: CustomMcpPutBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Replace the user's custom MCP servers document and reload agents."""
     svc = _connector_service(server)
+    _require_stdio_permission(svc, user.id, body.servers)
     try:
         servers = svc.put_custom_servers(user.id, body.servers)
     except ConnectorNameTakenError as exc:
@@ -750,7 +765,7 @@ async def put_custom_mcp(
 async def patch_custom_mcp_server(
     server_name: str,
     body: CustomMcpServerPatchBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Update ``enabled`` and/or ``default_open`` for one custom MCP server."""
@@ -776,7 +791,7 @@ async def patch_custom_mcp_server(
 @router.post("/connectors/custom-mcp/test", summary="Probe a custom MCP server")
 async def test_custom_mcp(
     body: CustomMcpTestBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("connector_custom")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Probe connectivity for one custom MCP server (saved name or inline spec)."""
@@ -797,6 +812,8 @@ async def test_custom_mcp(
             ErrorCode.CONNECTOR_INVALID_CREDENTIALS,
             "provide name or server spec to probe",
         )
+    assert spec is not None
+    _require_stdio_permission(svc, user.id, {"inline": spec})
     result = await probe_custom_mcp_server(spec)
     if body.name:
         try:
@@ -1184,7 +1201,7 @@ async def test_instance(
     creds = await svc.ensure_fresh_credentials(instance_id, inst.kind)
     if not creds:
         raise OctopError(ErrorCode.CONNECTOR_INVALID_CREDENTIALS, "missing credentials")
-    if inst.kind in {"agently-cli", "ragflow"}:
+    if inst.kind in {"agently-cli", "gitea", "ragflow"}:
         creds["_locale"] = resolve_request_locale(request)
 
     try:
@@ -1225,7 +1242,7 @@ async def test_credentials(
             str(exc),
             details={"reason": str(exc)},
         ) from exc
-    if body.kind in {"agently-cli", "ragflow"}:
+    if body.kind in {"agently-cli", "gitea", "ragflow"}:
         cred_payload["_locale"] = resolve_request_locale(request)
     try:
         return await probe_connector(

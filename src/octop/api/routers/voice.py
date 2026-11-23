@@ -59,6 +59,19 @@ def _active_payload(mgr: VoiceManager) -> dict[str, Any]:
     return active
 
 
+_SECRET_EXTRA_KEYS = frozenset(
+    {
+        "api_key",
+        "access_token",
+        "refresh_token",
+        "secret",
+        "secret_id",
+        "secret_key",
+        "token",
+    }
+)
+
+
 def _row_to_dict(r: Any, *, reveal_secret: bool = True) -> dict[str, Any]:
     """Serialize a voice provider row. ``reveal_secret=False`` hides the API key."""
     return {
@@ -73,6 +86,19 @@ def _row_to_dict(r: Any, *, reveal_secret: bool = True) -> dict[str, Any]:
         "note": r.note,
         "enabled": bool(r.enabled),
     }
+
+
+def _public_voice_row(r: Any) -> dict[str, Any]:
+    """Voice provider list for any signed-in user: drop stored credentials."""
+    data = _row_to_dict(r, reveal_secret=False)
+    data["api_key_set"] = bool(data.get("has_api_key"))
+    extra = data.get("extra")
+    if isinstance(extra, dict):
+        data["extra"] = {
+            key: None if key.lower() in _SECRET_EXTRA_KEYS else value
+            for key, value in extra.items()
+        }
+    return data
 
 
 class VoiceProviderCreateBody(BaseModel):
@@ -125,11 +151,10 @@ async def list_voice_providers(
     user: Any = Depends(current_user),
     server: Any = Depends(get_server),
 ) -> list[dict[str, Any]]:
-    reveal = user_has_permission(user, "voice")
-    return [
-        _row_to_dict(r, reveal_secret=reveal)
-        for r in server.services.voice_provider_repo.list_all()
-    ]
+    """Return voice providers with credentials visible only to voice managers."""
+    if user_has_permission(user, "voice"):
+        return [_row_to_dict(r) for r in server.services.voice_provider_repo.list_all()]
+    return [_public_voice_row(r) for r in server.services.voice_provider_repo.list_all()]
 
 
 @router.get("/active")
