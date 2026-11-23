@@ -6,7 +6,7 @@ export function openExternalBrowserUrl(url: string): void {
 }
 
 /**
- * The Electron shell routes ``_blank`` targets to the OS browser, so the auth
+ * The desktop shell routes ``_blank`` targets to the OS browser, so the auth
  * flow runs there and the app keeps polling for completion — a placeholder
  * popup would only be opened and immediately handed off.
  */

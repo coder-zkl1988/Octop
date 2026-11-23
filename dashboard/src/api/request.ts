@@ -144,7 +144,12 @@ function handleSetupRequired(): void {
 
 /** Wizard endpoints stay reachable while lockdown is active. */
 function isSetupApiPath(path: string): boolean {
-  return path === "/setup/status" || path.startsWith("/setup/");
+  return (
+    path === "/setup/status" ||
+    path.startsWith("/setup/") ||
+    path.startsWith("/auth/enterprise/") ||
+    path.startsWith("/enterprise/")
+  );
 }
 
 /**
@@ -170,6 +175,9 @@ async function check503ForSetupRequired(
   path: string,
   response: Response,
 ): Promise<boolean> {
+  if (path.startsWith("/auth/enterprise/") || path.startsWith("/enterprise/")) {
+    return false;
+  }
   if (response.status !== 503) return false;
   let body: unknown = null;
   try {

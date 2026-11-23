@@ -278,6 +278,11 @@ class CompanionDeviceItem(BaseModel):
     running_task_id: str | None = None
     running_task: str | None = None
     running_step: int | None = None
+    policy_mode: str | None = None
+    skill_bundle_version: int | None = None
+    skill_sync_status: str | None = None
+    supported_actions: list[str] = Field(default_factory=list)
+    supported_apps: list[str] = Field(default_factory=list)
 
 
 class CompanionDevicesResponse(BaseModel):
@@ -510,7 +515,9 @@ async def put_companion_settings(
         raise OctopError(ErrorCode.FORBIDDEN, "admin required")
     services = server.services
     candidates = await asyncio.to_thread(vlm.list_candidates, services.provider_repo)
-    if not any(c.provider == body.provider and c.model == body.model for c in candidates):
+    if not any(
+        c.provider == body.provider and c.model == body.model and c.vision for c in candidates
+    ):
         raise HTTPException(
             status_code=400,
             detail="model must belong to an enabled OpenAI-compatible provider with a key",

@@ -44,18 +44,31 @@ describe("sidebarNav", () => {
     }
   });
 
-  it("covers every catalog key from the admin nav", () => {
+  it("covers every non-admin catalog key from the admin nav", () => {
     const keys = buildNavSections(adminUser, { mobileEnabled: true }).flatMap(
       (section) => section.items.map((item) => item.key),
     );
-    expect(new Set(keys)).toEqual(new Set(SIDEBAR_NAV_KEYS));
+    const enterpriseMode = import.meta.env.VITE_ENTERPRISE_MODE === "1";
+    expect(new Set(keys)).toEqual(
+      new Set(
+        enterpriseMode
+          ? SIDEBAR_NAV_KEYS.filter((key) => !key.startsWith("admin-"))
+          : SIDEBAR_NAV_KEYS,
+      ),
+    );
     const grouped = buildNavSections(adminUser, { mobileEnabled: true }).filter(
       (section) => section.id,
     );
-    expect(grouped.map((section) => section.id)).toEqual([
-      "settings",
-      "control",
-      "admin",
-    ]);
+    expect(grouped.map((section) => section.id)).toEqual(
+      enterpriseMode
+        ? ["settings", "control"]
+        : ["settings", "control", "admin"],
+    );
+    if (enterpriseMode) {
+      expect(grouped[0]?.items.map((item) => item.key).slice(0, 2)).toEqual([
+        "personalization",
+        "models",
+      ]);
+    }
   });
 });

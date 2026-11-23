@@ -2,7 +2,7 @@
 
 解压即用：内置便携 CPython + Octop 及依赖，通过 `start.sh` / `start.bat` 启动。  
 **不依赖**系统 Python，也**不包含**桌面壳——用浏览器打开 Dashboard。
-（Electron 外壳在 `desktop/src/`，打包时把这个 zip 作为 `extraResources` 随包携带。）
+（Wails 外壳在 `desktop/src/`，发布时把这个 zip 作为便携运行时随包携带。）
 首启走上游正常 setup wizard（本目录**不含** OOB / UI 裁剪）。
 
 ## 与上游解耦
@@ -10,7 +10,7 @@
 本能力全部落在：
 
 - `desktop/portable/**`（脚本 / 模板 / 本目录 Makefile）
-- `.github/workflows/octop-desktop.yml`（多平台 CI）
+- `desktop/package-release.sh`（Wails 原生桌面打包入口）
 - `desktop/portable/.gitignore`（`/release/` `/runtimes/` `/wheels/` 等忽略构建产物）
 - `tests/unit/test_green_launch.py`（launch.py PATH / addsitedir）
 
@@ -107,15 +107,7 @@ OCTOP_GREEN_OFFLINE=1 bash desktop/portable/package.sh
 
 `windows-arm64` 另排除无 wheel 的 `psycopg-binary` / `sqlite-vec`，并把 `cryptography` 钉到 `46.0.0`（仅该版本提供 `win_arm64` wheel）。`opencv-python` 和 `pyclipper` 从未发布 `win_arm64` wheel，源码包分别要编完整 OpenCV 和 Cython 扩展，因此排除。绿色包不含 OCR。
 
-## CI
+## Wails 壳
 
-[`.github/workflows/octop-desktop.yml`](../../.github/workflows/octop-desktop.yml) 在 6 个 runner 上出 zip：
-
-`linux-amd64` `linux-arm64` `darwin-arm64` `darwin-amd64` `windows-amd64` `windows-arm64`
-
-Actions 使用 GitHub 上游 PBS（`PBS_BASE_URL`），本机构建默认 npmmirror。产物以 `archive: false` 上传，避免 zip-in-zip。
-
-## Electron 壳
-
-壳只消费 `Octop-portable-<plat>-<version>.zip`（zip 内仍是 `Octop-<plat>/`），不要把绿包编进 asar。步骤见
-[`AGENT_ELECTRON_INTEGRATION.md`](../docs/AGENT_ELECTRON_INTEGRATION.md)。
+Wails 壳消费 `Octop-portable-<plat>-<version>.zip`，并由
+[`desktop/package-release.sh`](../package-release.sh) 负责组装便携运行时和原生桌面包。

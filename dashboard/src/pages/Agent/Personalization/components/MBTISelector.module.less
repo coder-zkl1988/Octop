@@ -37,14 +37,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   flex-shrink: 0;
 }
 
 .listToolbarMeta {
   font-size: 13px;
   line-height: 1.4;
-  color: var(--fn-text-secondary);
+  color: var(--text-secondary);
   min-width: 0;
 }
 
@@ -67,35 +67,31 @@
   line-height: 1.6;
 }
 
+/* Start action: orange CTA. */
 .testButton {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
-  font-size: 13px;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
   font-weight: 600;
-  color: #fff;
-  background: var(--fn-color-brand);
+  color: var(--cta-fg);
+  background: var(--cta);
   border: none;
-  border-radius: var(--fn-radius-md);
+  border-radius: var(--radius-8);
   cursor: pointer;
-  transition:
-    opacity 0.15s,
-    transform 0.1s;
+  transition: background 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
 
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
   &:hover {
-    opacity: 0.88;
-  }
-
-  &:active {
-    transform: scale(0.97);
-  }
-
-  @media (max-width: 767px) {
-    padding: 7px 16px;
-    font-size: 13px;
+    background: var(--cta-hover);
   }
 }
 
@@ -120,15 +116,12 @@
 }
 
 .groupLabel {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--fn-text-primary);
-  margin-bottom: 12px;
-  letter-spacing: -0.01em;
-
-  @media (max-width: 767px) {
-    font-size: 15px;
-  }
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* ================================================================
@@ -138,7 +131,7 @@
 .typeGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  row-gap: 16px;
+  row-gap: 12px;
   column-gap: 12px;
 
   @media (max-width: 767px) {
@@ -147,101 +140,47 @@
   }
 }
 
+/* iSpace card; per-type colors give way to one orange selection ring. */
 .typeCard {
   position: relative;
-  background: var(--fn-bg-primary);
-  border: 1.5px solid var(--fn-card-border-normal);
-  border-radius: var(--fn-radius-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-16);
   cursor: pointer;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--fn-card-shadow-normal);
+  box-shadow: var(--shadow-rest);
   transition:
-    box-shadow 0.25s ease,
-    transform 0.25s ease,
-    border-color 0.25s ease,
-    background-color 0.25s ease;
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    transform: translateY(-3px);
-
-    .typeAvatar {
-      transform: scale(1.06);
-    }
-
-    @media (max-width: 767px) {
-      transform: none;
-    }
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-card);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--fn-color-brand);
+    outline: 2px solid var(--tabby-orange);
     outline-offset: 2px;
   }
 
-  /* Selected state — highlighted with color border and subtle background */
-  &.typeCardSelected {
-    border-color: var(--card-color, var(--fn-color-brand));
-    box-shadow:
-      0 0 0 2px var(--fn-bg-primary),
-      0 0 0 3px var(--card-color, var(--fn-color-brand)),
-      var(--fn-card-shadow-normal);
-    background: color-mix(
-      in srgb,
-      var(--card-color, var(--fn-color-brand)) 3%,
-      var(--fn-bg-primary)
-    );
-  }
-
-  /* Current personality — highlighted differently */
+  &.typeCardSelected,
   &.typeCardCurrent {
-    border-color: color-mix(
-      in srgb,
-      var(--card-color, var(--fn-color-brand)) 60%,
-      transparent
-    );
+    background: var(--surface-1);
+    border-color: var(--sel);
     box-shadow:
-      inset 0 0 0 1px var(--card-color, var(--fn-color-brand)),
-      var(--fn-card-shadow-normal);
-    background: color-mix(
-      in srgb,
-      var(--card-color, var(--fn-color-brand)) 5%,
-      var(--fn-bg-primary)
-    );
-
-    .typeCardAccent {
-      animation: pulseAccent 2s infinite;
-    }
-  }
-
-  &.typeCardSelected.typeCardCurrent {
-    box-shadow:
-      0 0 0 2px var(--fn-bg-primary),
-      0 0 0 3px var(--card-color, var(--fn-color-brand)),
-      var(--fn-card-shadow-normal);
-  }
-}
-
-@keyframes pulseAccent {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
+      0 0 0 1px var(--sel),
+      var(--shadow-rest);
   }
 }
 
 .typeCardAccent {
-  height: 4px;
-  width: 100%;
-  flex-shrink: 0;
+  display: none;
 }
 
 .typeCardBody {
-  padding: 18px 18px 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -261,12 +200,12 @@
 }
 
 .typeAvatar {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--fn-radius-md);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-12);
+  background: var(--surface-2) !important;
   object-fit: cover;
   flex-shrink: 0;
-  transition: transform 0.25s ease;
 }
 
 .typeCardMeta {
@@ -278,42 +217,62 @@
 }
 
 .typeCardName {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--fn-text-primary);
-  line-height: 1.25;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-heading);
+  line-height: 1.4;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+
+  /* Type code (e.g. INTJ) in mono, neutral instead of the per-type color. */
+  > span:first-child {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-heading) !important;
+  }
 }
 
 .typeNickname {
   font-size: 12px;
-  color: var(--fn-text-quaternary);
+  color: var(--text-tertiary);
   line-height: 1.3;
 }
 
 .currentBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--badge-color, #52c41a);
-  background: color-mix(in srgb, var(--badge-color, #52c41a) 12%, transparent);
-  padding: 2px 8px;
-  border-radius: 20px;
-  line-height: 1.6;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--tabby-orange-hover);
+  background: var(--tabby-orange-subtle);
+  border-radius: var(--radius-pill);
   width: fit-content;
+
+  svg {
+    display: none;
+  }
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 }
 
 /* Description */
 .typeDesc {
   font-size: 13px;
-  color: var(--fn-text-secondary);
-  line-height: 1.65;
+  color: var(--text-secondary);
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -324,9 +283,51 @@
 .typeDims {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding-top: 8px;
-  border-top: 1px solid var(--fn-border-primary);
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+
+  /* Two-tone bars: near-black fill, orange marker. */
+  .dimRow {
+    gap: 8px;
+  }
+
+  .dimLabel {
+    min-width: 44px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+
+    &.dimActive {
+      font-weight: 600;
+      color: var(--text-heading);
+    }
+  }
+
+  .dimTrack {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: var(--radius-pill);
+  }
+
+  .dimFill {
+    background: var(--accent) !important;
+    opacity: 1;
+    border-radius: var(--radius-pill);
+  }
+
+  .dimDot {
+    background: var(--tabby-orange) !important;
+    border: 2px solid var(--surface-1);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  .dimPct {
+    width: 36px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
 }
 
 /* ================================================================

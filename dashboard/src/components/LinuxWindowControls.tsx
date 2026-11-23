@@ -16,7 +16,7 @@ const GLYPH = {
 } as const;
 
 /**
- * Square caption buttons for the Linux shell. Electron's title-bar overlay
+ * Square caption buttons for the Linux shell. The native title-bar overlay
  * paints Adwaita circles, so that overlay stays off and these sit in the
  * reserved corner of the menu row. Close turns red on hover.
  */

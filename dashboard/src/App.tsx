@@ -1,15 +1,16 @@
 import { createGlobalStyle } from "antd-style";
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import enUS from "antd/locale/en_US";
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
 import { useEffect } from "react";
+import DesktopWindowControls from "./components/DesktopWindowControls";
+import DesktopWindowDragBand from "./components/DesktopWindowDragBand";
 import {
   DesktopChromeProvider,
   useDesktopChrome,
 } from "./hooks/useDesktopChrome";
-import { useNativeWindowChrome } from "./hooks/useNativeWindowChrome";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { routerBasename } from "./utils/publicUrl";
 import { useTranslation } from "react-i18next";
@@ -19,13 +20,14 @@ import OidcComplete from "./pages/Login/OidcComplete";
 import SetupPage from "./pages/Setup";
 import InvitePage from "./pages/Invite";
 import SharePage from "./pages/Share";
+import DeviceRevokedPage from "./pages/Enterprise/DeviceRevoked";
+import { EnterpriseProvider } from "./enterprise/EnterpriseContext";
+import RevokedGate, { DEVICE_REVOKED_PATH } from "./enterprise/RevokedGate";
+import EnterpriseStateGate from "./enterprise/EnterpriseStateGate";
 import AuthGuard from "./components/AuthGuard";
-import PwaUpdatePrompt from "./components/PwaUpdatePrompt";
-import DesktopWindowDragBand from "./components/DesktopWindowDragBand";
-import WindowsAppMenu from "./components/WindowsAppMenu";
+import SelfHostedAuthRoutes from "./components/SelfHostedAuthRoutes";
 import OctopSpinner from "./components/OctopSpinner";
 import { AntdAppProvider } from "./components/AntdAppProvider";
-import { popupLayer } from "./utils/overlayLayers";
 import GlobalErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AgentProvider } from "./context/AgentContext";
@@ -33,11 +35,20 @@ import { LayoutModeProvider } from "./context/LayoutModeContext";
 import { VoiceOutputProvider } from "./context/VoiceOutputContext";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useUnauthorizedRedirect } from "./hooks/useUnauthorizedRedirect";
-import { brandTokensFor } from "./styles/themePalettes";
+import { isDesktopShell as isWailsDesktopShell } from "./utils/desktopChrome";
+import { installDesktopExternalLinks } from "./utils/desktopExternalLinks";
+import { ispaceAntdTheme } from "./styles/ispaceTheme";
+import "@fontsource-variable/manrope/wght.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "@fontsource/jetbrains-mono/700.css";
+import "@fontsource/caveat/400.css";
 import "./styles/theme-vars.css";
 import "./styles/layout.css";
 import "./styles/form-override.css";
 import "./styles/spin-override.css";
+import "./styles/ispace-tokens.css";
+import "./styles/ispace-skin.css";
 
 const GlobalStyle = createGlobalStyle`
 * {
@@ -47,13 +58,10 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 function ThemedApp() {
-  const { isDark, palette, customColor } = useTheme();
+  const { isDark } = useTheme();
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
   const desktopChrome = useDesktopChrome();
-  // Native window buttons follow the app theme. Linux draws square ones.
-  useNativeWindowChrome();
-  const brandTokens = brandTokensFor(palette, isDark, customColor);
   // Make antd built-ins (Popconfirm OK/Cancel, Modal default footer, Empty,
   // Pagination, DatePicker, Table… ) follow the current UI language.
   // DatePicker month/weekday labels come from dayjs — keep it in sync too.
@@ -63,106 +71,60 @@ function ThemedApp() {
 
   useUnauthorizedRedirect();
 
+  useEffect(() => installDesktopExternalLinks(), []);
+
   // Set document title based on current language
   useEffect(() => {
     document.title = t("app.pageTitle");
   }, [t]);
 
-  const themeConfig = {
-    algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-    token: {
-      borderRadius: 10,
-      ...(isMobile
-        ? {
-            fontSize: 15,
-            fontSizeSM: 13,
-            fontSizeLG: 17,
-            fontSizeXL: 22,
-            controlHeight: 36,
-          }
-        : {}),
-      ...(isDark
-        ? {
-            colorBgBase: "#0f1117",
-            colorTextBase: "#e7e7ed",
-            colorBgContainer: "#0f1117",
-            colorBgElevated: "#1a1c28",
-            colorBgLayout: "#0b0d14",
-            colorBgSpotlight: "rgba(0, 0, 0, 0.85)",
-            colorBgMask: "rgba(5, 5, 8, 0.80)",
-            colorBorder: "rgba(255,255,255,0.08)",
-            colorBorderSecondary: "rgba(255,255,255,0.05)",
-            colorText: "rgba(255, 255, 255, 0.92)",
-            colorTextSecondary: "rgba(255, 255, 255, 0.64)",
-            colorTextTertiary: "rgba(255, 255, 255, 0.38)",
-            colorTextQuaternary: "rgba(255, 255, 255, 0.22)",
-            colorFill: "rgba(255, 255, 255, 0.06)",
-            colorFillSecondary: "rgba(255, 255, 255, 0.04)",
-            colorFillTertiary: "rgba(255, 255, 255, 0.03)",
-            colorFillQuaternary: "rgba(255, 255, 255, 0.02)",
-            colorBgTextHover: "rgba(255, 255, 255, 0.06)",
-            ...brandTokens,
-            boxShadow: "0px 4px 6px 0px rgba(0, 0, 0, 0.3)",
-            boxShadowSecondary:
-              "0px 12px 24px -16px rgba(0, 0, 0, 0.2), 0px 8px 40px 0px rgba(0, 0, 0, 0.3)",
-          }
-        : {
-            ...brandTokens,
-          }),
-    },
-    components: isDark
-      ? {
-          Modal: {
-            headerBg: "var(--fn-bg-modal)",
-            contentBg: "var(--fn-bg-modal)",
-          },
-          Input: { colorBgBase: "#0f1117" },
-          InputNumber: { colorBgBase: "#0f1117" },
-          Select: { colorBgBase: "#0f1117", selectorBg: "#0f1117" },
-          DatePicker: { colorBgBase: "#0f1117" },
-          Segmented: { itemSelectedBg: "#1a1c28" },
-          Card: { colorBgContainer: "#161822" },
-          Tooltip: { colorBgSpotlight: "#424242" },
-        }
-      : {},
-  };
+  const themeConfig = ispaceAntdTheme(isDark, isMobile);
 
   return (
     <ConfigProvider
       theme={themeConfig}
       prefixCls="octop"
       locale={antdLocale}
-      getPopupContainer={popupLayer}
       spin={{ indicator: <OctopSpinner /> }}
     >
       <AntdAppProvider>
         <DesktopChromeProvider value={desktopChrome}>
-          <PwaUpdatePrompt />
-          {/* Login, setup and invite sit outside MainLayout, so the drag
-              strip has to live above the router, not only inside the shell. */}
           <DesktopWindowDragBand />
-          <WindowsAppMenu />
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/login/oidc/complete" element={<OidcComplete />} />
-            <Route path="/setup" element={<SetupPage />} />
-            <Route path="/invite" element={<InvitePage />} />
-            <Route path="/share/:shareId" element={<SharePage />} />
-            <Route
-              path="/*"
-              element={
-                <AuthGuard>
-                  <AgentProvider>
-                    <LayoutModeProvider>
-                      <VoiceOutputProvider>
-                        <MainLayout />
-                      </VoiceOutputProvider>
-                    </LayoutModeProvider>
-                  </AgentProvider>
-                </AuthGuard>
-              }
-            />
-          </Routes>
+          {desktopChrome && isWailsDesktopShell() ? (
+            <DesktopWindowControls chrome={desktopChrome} />
+          ) : null}
+          <EnterpriseProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route element={<SelfHostedAuthRoutes />}>
+                <Route path="/login/oidc/complete" element={<OidcComplete />} />
+                <Route path="/setup" element={<SetupPage />} />
+                <Route path="/invite" element={<InvitePage />} />
+              </Route>
+              <Route path="/share/:shareId" element={<SharePage />} />
+              <Route
+                path={DEVICE_REVOKED_PATH}
+                element={<DeviceRevokedPage />}
+              />
+              <Route
+                path="/*"
+                element={
+                  <RevokedGate>
+                    <AuthGuard>
+                      <AgentProvider>
+                        <LayoutModeProvider>
+                          <VoiceOutputProvider>
+                            <MainLayout />
+                          </VoiceOutputProvider>
+                        </LayoutModeProvider>
+                      </AgentProvider>
+                    </AuthGuard>
+                  </RevokedGate>
+                }
+              />
+            </Routes>
+            <EnterpriseStateGate />
+          </EnterpriseProvider>
         </DesktopChromeProvider>
       </AntdAppProvider>
     </ConfigProvider>

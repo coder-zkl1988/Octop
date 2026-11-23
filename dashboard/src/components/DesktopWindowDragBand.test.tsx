@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DesktopChromeProvider } from "../hooks/useDesktopChrome";
 import {
   MAC_TITLEBAR_HEIGHT,
-  WINDOW_CONTROLS_INSET,
+  windowControlsInset,
   type DesktopChromeStyle,
 } from "../utils/desktopChrome";
 import DesktopWindowDragBand from "./DesktopWindowDragBand";
@@ -44,7 +44,7 @@ describe("窗口顶部拖拽条", () => {
       position: "fixed",
       top: "0px",
       height: `${MAC_TITLEBAR_HEIGHT}px`,
-      left: `${WINDOW_CONTROLS_INSET.mac}px`,
+      left: `${windowControlsInset("mac", "start")}px`,
       right: "0px",
       pointerEvents: "none",
     });

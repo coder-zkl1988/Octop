@@ -1,4 +1,4 @@
-import { request } from "../../api/request";
+import { request, requestBlob } from "../../api/request";
 import * as chatStore from "../../pages/Chat/hooks/chatStore";
 import i18n from "../../i18n";
 import {
@@ -6,10 +6,12 @@ import {
   parseOctopToolOutput,
 } from "./parseToolOutput";
 import { registerToolRenderer } from "./registry";
+import { registerPluginPage } from "./registry";
 import type {
   OctopPluginUIHost,
   ToolRenderContext,
   ToolRendererRegistration,
+  PluginPageRegistration,
 } from "./types";
 
 let contextOverride: Partial<ToolRenderContext> = {};
@@ -54,6 +56,11 @@ function createHost(defaultPluginId: string): OctopPluginUIHost {
       };
       registerToolRenderer(full);
     },
+    registerPage(reg) {
+      const pluginId = reg.pluginId ?? defaultPluginId;
+      const full: PluginPageRegistration = { ...reg, pluginId };
+      registerPluginPage(full);
+    },
     getToolContext(): ToolRenderContext {
       return {
         agentId: contextOverride.agentId ?? null,
@@ -68,6 +75,9 @@ function createHost(defaultPluginId: string): OctopPluginUIHost {
     },
     request<T = unknown>(path: string, init?: RequestInit) {
       return request<T>(path, init);
+    },
+    requestBlob(path: string) {
+      return requestBlob(path);
     },
     openSidePanel(opts) {
       dockHandlers.openSidePanel?.(opts);

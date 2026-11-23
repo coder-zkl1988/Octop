@@ -40,6 +40,8 @@ interface SkillCardProps {
  * Sparkles icon.
  */
 const DEFAULT_COLOR = "#8B5CF6";
+/** Card tile (iSpace app icon: 40px, radius 12). */
+const CARD_ICON_SIZE = 40;
 
 const FILE_ICON_SIZE = 16;
 
@@ -202,8 +204,18 @@ export function SkillCard({
     .filter(Boolean)
     .join(" ");
   const tileVisual = isBuiltin
-    ? resolveBuiltinSkillIcon(skill.slug, skill.emoji, 44, tileLabel)
-    : resolveFigurativeSkillIcon(skill.slug, skill.emoji, tileLabel);
+    ? resolveBuiltinSkillIcon(
+        skill.slug,
+        skill.emoji,
+        CARD_ICON_SIZE,
+        tileLabel,
+      )
+    : resolveFigurativeSkillIcon(
+        skill.slug,
+        skill.emoji,
+        tileLabel,
+        CARD_ICON_SIZE,
+      );
   const iconColor = tileVisual?.color ?? DEFAULT_COLOR;
   const iconBg = `${iconColor}18`; // ~10% opacity tint
   const displayDesc = skill.description;
@@ -249,9 +261,9 @@ export function SkillCard({
                 src={hubIcon}
                 alt=""
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "var(--fn-radius-md)",
+                  width: CARD_ICON_SIZE,
+                  height: CARD_ICON_SIZE,
+                  borderRadius: "var(--radius-12)",
                   objectFit: "cover",
                 }}
               />
@@ -271,7 +283,7 @@ export function SkillCard({
               )}
               {skill.enabled && (
                 <span className={styles.enabledBadge}>
-                  ✓ {t("common.enabled")}
+                  {t("common.enabled")}
                 </span>
               )}
             </div>

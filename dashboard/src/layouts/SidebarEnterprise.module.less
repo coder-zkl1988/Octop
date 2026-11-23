@@ -1,0 +1,158 @@
+/* Enterprise additions to the sidebar (tenant chip, balance card, sync status). */
+
+.tenant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-8);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.tenantMark {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-6);
+  background: var(--tabby-orange-subtle);
+  color: var(--tabby-orange-hover);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tenantName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tenantTag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.ent {
+  flex-shrink: 0;
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--border-tabby);
+}
+
+.bal {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-12);
+  background: var(--surface-1);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary);
+  transition: border-color var(--fn-transition-fast);
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
+}
+
+.balRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.balLabel {
+  font-weight: 500;
+}
+
+.balVal {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.balNum {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.balRowMeta {
+  white-space: nowrap;
+}
+
+.balMetaNum {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: -0.02em;
+}
+
+.balTrack {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.balFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--text-heading);
+}
+
+.sync {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 4px 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.syncDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.syncDotPending {
+  background: var(--warning);
+}
+
+.syncDotOffline {
+  background: var(--text-tertiary);
+}

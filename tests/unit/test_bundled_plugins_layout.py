@@ -25,7 +25,9 @@ def _catalog_ids() -> set[str]:
 
 
 def test_in_tree_plugin_catalog_is_empty() -> None:
-    assert _catalog_ids() == set()
+    # xhs-ops is an in-tree paid plugin: it is bundled for deterministic local
+    # installs, while licensing still gates every command at runtime.
+    assert _catalog_ids() == {"xhs-ops"}
 
 
 def test_seed_does_not_auto_install_real_catalog(tmp_path: Path) -> None:

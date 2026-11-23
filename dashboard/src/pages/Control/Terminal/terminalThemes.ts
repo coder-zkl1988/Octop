@@ -3,7 +3,7 @@ import type { ITheme } from "@xterm/xterm";
 export interface TerminalThemeDefinition {
   /** Unique key stored in localStorage */
   key: string;
-  /** Display name (i18n key under "terminal.themes.*") */
+  /** Display name (i18n key, usually under "terminal.themes.*") */
   labelKey: string;
   /** Whether this theme is designed for dark backgrounds */
   isDark: boolean;
@@ -12,6 +12,36 @@ export interface TerminalThemeDefinition {
 }
 
 // ─── Dark Themes ──────────────────────────────────────────────────────────────
+
+/** iSpace warm dark (Tabby enterprise default). */
+const tabbyDark: TerminalThemeDefinition = {
+  key: "tabby-dark",
+  labelKey: "enterprise.control.terminal.themeTabbyDark",
+  isDark: true,
+  theme: {
+    background: "#282522",
+    foreground: "#f3f1ef",
+    cursor: "#f3f1ef",
+    cursorAccent: "#282522",
+    selectionBackground: "rgba(243,241,239,0.18)",
+    black: "#1a1816",
+    red: "#ff8a8a",
+    green: "#5fd98d",
+    yellow: "#e0ac55",
+    blue: "#9ec1f5",
+    magenta: "#ff8965",
+    cyan: "#8bd3dd",
+    white: "#e4e1d9",
+    brightBlack: "#72706a",
+    brightRed: "#ffa3a3",
+    brightGreen: "#7fe3a5",
+    brightYellow: "#ebc27c",
+    brightBlue: "#b9d3f8",
+    brightMagenta: "#ffa184",
+    brightCyan: "#a9e1e8",
+    brightWhite: "#ffffff",
+  },
+};
 
 const vscodeDark: TerminalThemeDefinition = {
   key: "vscode-dark",
@@ -251,6 +281,7 @@ const solarizedLight: TerminalThemeDefinition = {
 
 /** All available terminal themes, ordered for the UI dropdown */
 export const TERMINAL_THEMES: TerminalThemeDefinition[] = [
+  tabbyDark,
   vscodeDark,
   dracula,
   oneDarkPro,
@@ -266,7 +297,7 @@ export const TERMINAL_THEME_MAP: Record<string, TerminalThemeDefinition> =
   Object.fromEntries(TERMINAL_THEMES.map((t) => [t.key, t]));
 
 /** Default theme keys per system appearance */
-export const DEFAULT_DARK_THEME = "dracula";
+export const DEFAULT_DARK_THEME = "tabby-dark";
 export const DEFAULT_LIGHT_THEME = "vscode-light";
 
 /**

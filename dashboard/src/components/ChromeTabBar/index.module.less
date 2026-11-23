@@ -2,19 +2,19 @@
 :global(:root) {
   --browser-chrome-tab-font-size: 12px;
   --browser-chrome-tab-line-height: 16px;
-  --browser-chrome-tab-pad: 4px 10px;
-  --browser-chrome-tab-radius: 4px 4px 0 0;
+  --browser-chrome-tab-pad: 0 10px;
+  --browser-chrome-tab-radius: var(--radius-8);
   --browser-chrome-tab-gap: 2px;
-  --browser-chrome-tab-bar-pad: 4px 4px 0;
-  --browser-chrome-tab-accent: var(--fn-color-brand, #635bff);
+  --browser-chrome-tab-bar-pad: 6px 8px;
 }
 
+/* iSpace: surface-2 track with white pill tabs (segmented look). */
 .tabBar {
   display: flex;
   align-items: center;
-  gap: var(--browser-chrome-tab-gap);
-  background: var(--fn-bg-secondary);
-  border-bottom: 1px solid var(--fn-border-secondary);
+  gap: 4px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
   padding: var(--browser-chrome-tab-bar-pad);
   flex-shrink: 0;
   min-width: 0;
@@ -37,7 +37,8 @@
 .tab {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  height: 28px;
   padding: var(--browser-chrome-tab-pad);
   border-radius: var(--browser-chrome-tab-radius);
   cursor: pointer;
@@ -45,21 +46,28 @@
   max-width: 200px;
   font-size: var(--browser-chrome-tab-font-size);
   line-height: var(--browser-chrome-tab-line-height);
-  color: var(--fn-text-secondary);
-  border-top: 2px solid transparent;
+  color: var(--text-secondary);
   user-select: none;
   flex-shrink: 0;
   box-sizing: border-box;
 
   &:hover {
-    color: var(--fn-text-primary);
+    color: var(--text-primary);
+    background: var(--surface-3);
+  }
+
+  /* Lead icons (terminal status, globe) follow the active label colour. */
+  &.tabActive svg {
+    color: var(--text-heading);
   }
 }
 
-.tabActive {
-  background: var(--fn-bg-primary);
-  border-top: 2px solid var(--browser-chrome-tab-accent);
-  color: var(--fn-text-primary);
+.tabActive,
+.tabActive:hover {
+  background: var(--surface-1);
+  color: var(--text-heading);
+  font-weight: 600;
+  box-shadow: var(--shadow-rest);
 }
 
 .tabLabel {
@@ -72,15 +80,15 @@
 .tabClose {
   display: flex;
   align-items: center;
-  opacity: 0.5;
-  border-radius: 3px;
-  padding: 1px 2px;
+  opacity: 0.6;
+  border-radius: var(--radius-4);
+  padding: 2px;
   flex-shrink: 0;
   line-height: 1;
 
   &:hover {
     opacity: 1;
-    background: var(--fn-border-secondary);
+    background: var(--surface-2);
   }
 }
 
@@ -88,17 +96,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--fn-text-tertiary);
-  padding: 4px 6px;
-  border-radius: 4px;
+  color: var(--text-secondary);
+  padding: 0;
+  border-radius: var(--radius-8);
   flex-shrink: 0;
 
   &:hover {
-    color: var(--fn-text-primary);
-    background: var(--fn-bg-primary);
+    color: var(--text-heading);
+    background: var(--surface-3);
   }
 }
 
@@ -106,6 +116,6 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 0 2px 2px 0;
+  padding: 0;
   gap: 4px;
 }

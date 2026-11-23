@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Spin } from "antd";
 import { clearAuthToken, getAuthToken } from "../api/request";
 import { authApi, type OctopUser } from "../api/modules/auth";
 import { applyUserLocale } from "../utils/locale";
 import { isNetworkFetchError } from "../utils/networkError";
 import { CurrentUserProvider } from "../hooks/useCurrentUser";
-import { useTheme } from "../context/ThemeContext";
 import BootOfflinePanel from "./BootOfflinePanel";
-import BrandLoading from "./BrandLoading";
+import {
+  useEnterprise,
+  enterprisePermissionKeys,
+} from "../enterprise/EnterpriseContext";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -39,15 +42,12 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
+  const enterpriseMode = import.meta.env.VITE_ENTERPRISE_MODE === "1";
+  const { snapshot: enterpriseSnapshot } = useEnterprise();
 
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState<OctopUser | null>(null);
-  const { bindUser } = useTheme();
-  useEffect(() => {
-    bindUser(user?.id ?? null);
-    return () => bindUser(null);
-  }, [user?.id, bindUser]);
   const [offline, setOffline] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -57,11 +57,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     const check = async () => {
       setOffline(false);
       try {
-        const status = await authApi.getAuthStatus();
+        const status = enterpriseMode ? null : await authApi.getAuthStatus();
 
         // No admin yet → push to setup wizard; drop any leftover JWT from a
         // previous install so background prefetch cannot stampede lockdown.
-        if (status.setup_required) {
+        if (status?.setup_required) {
           clearAuthToken();
           if (!cancelled) navigateRef.current("/setup", { replace: true });
           return;
@@ -117,7 +117,16 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     return () => {
       cancelled = true;
     };
-  }, [retryKey]);
+  }, [enterpriseMode, retryKey]);
+
+  useEffect(() => {
+    if (!enterpriseMode || !enterpriseSnapshot) return;
+    const enterprisePermissions = enterprisePermissionKeys(enterpriseSnapshot);
+    setUser((current) => {
+      if (!current) return current;
+      return { ...current, permissions: enterprisePermissions };
+    });
+  }, [enterpriseMode, enterpriseSnapshot]);
 
   if (offline) {
     return (
@@ -133,7 +142,19 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (checking || !authed) {
-    return <BrandLoading viewport />;
+    return (
+      <div
+        style={{
+          height: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--fn-bg-layout)",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
   }
 
   return (

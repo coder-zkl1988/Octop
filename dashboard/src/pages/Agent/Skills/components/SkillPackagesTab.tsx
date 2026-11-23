@@ -333,7 +333,7 @@ export default function SkillPackagesTab({
                       </span>
                       {mounted ? (
                         <span className={styles.enabledBadge}>
-                          ✓ {t("common.enabled")}
+                          {t("common.enabled")}
                         </span>
                       ) : null}
                     </div>

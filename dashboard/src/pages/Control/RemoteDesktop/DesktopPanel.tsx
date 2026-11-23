@@ -450,7 +450,7 @@ export default function DesktopPanel({
         message.warning(
           t(
             "remoteDesktop.connectDisabledPerms",
-            "请先在系统设置中开启屏幕录制与辅助功能权限，然后重启 Octop",
+            "请先在系统设置中开启屏幕录制与辅助功能权限，然后重启 Tabby",
           ),
         );
         return;
@@ -845,7 +845,7 @@ export default function DesktopPanel({
                 icon={<Copy size={14} />}
                 onClick={() => void handleCopyInstallLog()}
               >
-                {t("common.copyErrorForOctop", "复制错误信息")}
+                {t("common.copyErrorForTabby", "复制错误信息")}
               </Button>
             </div>
             {renderInstallLog(
@@ -862,8 +862,8 @@ export default function DesktopPanel({
               }}
             >
               {t(
-                "common.askOctopHint",
-                "若安装失败，可复制下方错误信息发给 Octop 排查。",
+                "common.askTabbyHint",
+                "若安装失败，可复制下方错误信息发给 Tabby 排查。",
               )}
             </div>
           </div>
@@ -1014,9 +1014,9 @@ export default function DesktopPanel({
   const pageTitle = t("nav.remoteDesktop", "远程桌面");
   const pageSubtitle = t(
     "pageShell.desktop.subtitle",
-    "查看并操控 Octop 主机操作系统桌面，远程完成桌面操作",
+    "查看并操控 Tabby 主机操作系统桌面，远程完成桌面操作",
   );
-  const setupMascot = <OctopEmptyMascot />;
+  const setupMascot = <OctopEmptyMascot size={128} />;
 
   if (user === null) {
     const loading = (
@@ -1084,12 +1084,13 @@ export default function DesktopPanel({
     icon: <PlugZap size={14} />,
     disabled: !envReady,
     type: envReady ? ("primary" as const) : ("default" as const),
+    cta: envReady,
     title: envReady
       ? undefined
       : needsMacPermissions
       ? t(
           "remoteDesktop.connectDisabledPerms",
-          "请先在系统设置中开启屏幕录制与辅助功能权限，然后重启 Octop",
+          "请先在系统设置中开启屏幕录制与辅助功能权限，然后重启 Tabby",
         )
       : t("remoteDesktop.connectDisabled"),
   };
@@ -1183,7 +1184,7 @@ export default function DesktopPanel({
                         "remoteDesktop.macPermissionsTitle",
                         "需要 macOS 系统权限",
                       )
-                    : t("remoteDesktop.subtitle", "控制 Octop 主机操作系统桌面")
+                    : t("remoteDesktop.subtitle", "控制 Tabby 主机操作系统桌面")
                 }
                 description={
                   envReady
@@ -1239,7 +1240,7 @@ export default function DesktopPanel({
                               t("remoteDesktop.permJoin", "、"),
                             ),
                             defaultValue:
-                              "在「{{permissions}}」里勾选正在运行 Octop 的终端或应用。",
+                              "在「{{permissions}}」里勾选正在运行 Tabby 的终端或应用。",
                           }),
                         },
                         {
@@ -1249,7 +1250,7 @@ export default function DesktopPanel({
                           ),
                           detail: t(
                             "remoteDesktop.macPermStep3Detail",
-                            "重启 Octop（octop run），回到本页点击「重新检测」。",
+                            "重启 Tabby（octop run），回到本页点击「重新检测」。",
                           ),
                         },
                       ]

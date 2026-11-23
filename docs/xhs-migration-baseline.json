@@ -1,0 +1,123 @@
+{
+  "captured_at": "2026-11-17T20:57:23+08:00",
+  "source_repositories": {
+    "tabby": {
+      "path": "/Volumes/CloneData/workspace/tabby",
+      "revision": "7337401d9d62215d06595c5404dcdb5684dc1cc5"
+    },
+    "tabby-control": {
+      "path": "/Volumes/CloneData/workspace/tabby-control",
+      "revision": "8542bf1b8c812d1c623c30f95c0892545fe5011c"
+    }
+  },
+  "source_assets": {
+    "xhs-ops-state": {
+      "path": "/Volumes/CloneData/workspace/tabby/.tmp/dev/nexu-home/xhs-ops.json",
+      "sha256": "1a339d8f04fad1970077ad8b214bde317ce4d11ed63b99c7b1ade9b8b69ec8be",
+      "bytes": 176431,
+      "read_only": true
+    },
+    "xhs-skill": {
+      "path": "/Volumes/CloneData/workspace/tabby-control/phone-skills/apps/xhs/skill.json",
+      "sha256": "eada02a24ac3633de3e4898c4390ab60b479d891c81799379c3cfcd77fad3d81"
+    },
+    "phone-skills-manifest": {
+      "path": "/Volumes/CloneData/workspace/tabby-control/phone-skills/manifest.json",
+      "sha256": "a1d12fde75e351a33876fbeff8740c38a3527fb6ed3a44cf6d971ae250dbb2f8"
+    }
+  },
+  "asset_recovery": {
+    "explicit_root": "/Volumes/CloneData/workspace/tabby/.tmp",
+    "referenced_assets": 63,
+    "recoverable_by_unique_basename": 12,
+    "missing_after_recovery": 21,
+    "ambiguous_basename_policy": "leave_missing",
+    "profile_assets": {
+      "referenced_assets": 33,
+      "recoverable": 12,
+      "missing": 21,
+      "root": "/Volumes/CloneData/workspace/tabby/.tmp/cover-diagnosis/thumbs"
+    },
+    "run_evidence": {
+      "referenced_assets": 20,
+      "recoverable": 0,
+      "missing": 20,
+      "root": "/Volumes/CloneData/workspace/tabby/.tmp",
+      "policy": "recover_unique_basename_when_present; otherwise retain unknown/missing report"
+    }
+  },
+  "resource_facade": {
+    "source_route_definitions": 64,
+    "target_typed_routes": 66,
+    "target_compatibility_routes": [
+      "GET /xhs-ops/accounts/{account_id}/diagnoses",
+      "POST /xhs-ops/change-orders/{order_id}/rollback"
+    ],
+    "remaining_source_only_area": "device skill sync, real device, platform-readback acceptance, non-owner PostgreSQL RLS smoke, and native iCat acceptance remain",
+    "target_response_models": 66,
+    "response_mapping_status": "All 66 routes use explicit typed top-level envelope models. Source-compatible project business/audience/opsNotes/profile/schedule defaults, account/profile/persona/comment/run/schedule/identity/takeover envelopes, pending identity mapping, nested run/change-order/audit/diagnosis compatibility models, and legacy null event payloads are covered",
+    "target_explicit_response_models": 66
+  },
+  "target_verification": {
+    "verified_at": "2026-11-17T00:00:00+08:00",
+    "xhs_backend_specialized_tests": "247 passed",
+    "xhs_frontend_specialized_tests": "46 passed",
+    "project_contract_tests": "16 passed",
+    "source_route_parity": "64 source routes covered; 2 compatibility extensions",
+    "full_non_live_tests": "6338 passed, 4 failed, 42 skipped; failures are outside XHS migration scope"
+  },
+  "live_environment_verification": {
+    "verified_at": "2026-11-17T20:57:23+08:00",
+    "octop_health": "HTTP 200; db=true; users_loaded=2; agents_running=1",
+    "enterprise_ready": "ready; postgres=true; redis=true",
+    "enterprise_admin_session": "Tenant-admin login and XHS enablement confirmed by the user; browser cookies were not read. Read-only control-plane database verification confirms the live grant.",
+    "enterprise_license_readback": {
+      "plugin_id": "xhs-ops",
+      "status": "active",
+      "version": 1,
+      "purchased_features": [
+        "xhs.analytics",
+        "xhs.comment",
+        "xhs.content",
+        "xhs.ops",
+        "xhs.publish",
+        "xhs.takeover"
+      ],
+      "member_assigned_features": [
+        "xhs.analytics",
+        "xhs.comment",
+        "xhs.content",
+        "xhs.ops",
+        "xhs.publish",
+        "xhs.takeover"
+      ],
+      "limits": {
+        "accounts": 10,
+        "devices": 10
+      },
+      "latest_audit_action": "member.assign",
+      "latest_audit_at": "2026-11-17T08:44:46.519407+00:00"
+    },
+    "desktop_login": "Enterprise login API returned authenticated with principal_type=tenant_admin; the native desktop process is running. Native window readback remains pending while macOS is locked.",
+    "adb_physical_devices_online": 3,
+    "tabby_app_version": "All three physical devices are on TabbyApp 1.1.0 (versionCode 29) after an in-place debug APK upgrade.",
+    "xhs_installed_physical_devices": "3 ADB devices online; 2/3 have com.xingin.xhs installed",
+    "companion_pairing": "All three physical devices were paired to Octop through ADB reverse and one-time pairing URLs; all are online in GET /api/mobile/companion/devices.",
+    "device_skill_state": "All three devices report policy_mode=enforce, skill_bundle_version=66, skill_sync_status=current, and the full action vocabulary. The two XHS-capable 24094RAD4C devices report com.xingin.xhs and xhs-v1; the 2312DRAABC device does not have XHS installed. Android sync_version.json on all three reports bundle/version 66 and includes xhs-v1.",
+    "remaining_live_gates": [
+      "Phone visual model configuration",
+      "User completes XHS test-account login on the two XHS phones",
+      "Real XHS page actions and independent platform readback",
+      "Non-owner PostgreSQL RLS smoke",
+      "Native desktop window readback after macOS unlock"
+    ]
+  },
+  "migration_policy": {
+    "dry_run_before_import": true,
+    "source_hash_required": true,
+    "dispatch_during_import": false,
+    "platform_mutation_during_import": false,
+    "active_runs": "unknown",
+    "device_bindings": "rebind_required"
+  }
+}

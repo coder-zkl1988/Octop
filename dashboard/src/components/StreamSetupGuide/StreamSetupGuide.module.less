@@ -16,10 +16,11 @@
   gap: 14px;
   width: min(100%, 420px);
   padding: 36px 32px 32px;
-  background: var(--fn-bg-primary);
-  border: 1px solid var(--fn-border-secondary);
-  border-radius: 14px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  /* iSpace card-in-card: the guide sits inside a white surface. */
+  background: var(--surface-2);
+  border: none;
+  border-radius: var(--radius-16);
+  box-shadow: none;
   text-align: center;
 }
 
@@ -34,7 +35,7 @@
   height: 100%;
   align-items: flex-start;
   justify-content: center;
-  padding: 64px 24px 48px;
+  padding: 56px 24px 40px;
 }
 
 .plain .card {
@@ -44,7 +45,7 @@
   border: none;
   border-radius: 0;
   box-shadow: none;
-  gap: 12px;
+  gap: 10px;
 }
 
 .plain.wide .card {
@@ -52,21 +53,30 @@
 }
 
 .plain .title {
-  font-size: 18px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .plain .description {
   margin-bottom: 8px;
 }
 
-.plain .steps {
+/* One-line steps sit in an inset checklist box. */
+.plain .steps:not(.stepsDetailed) {
+  margin: 8px 0;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-12);
+}
+
+.plain .stepsDetailed {
   margin-top: 8px;
   margin-bottom: 8px;
 }
 
 .plain .actions {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .icon {
@@ -78,17 +88,17 @@
 
 .title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1.4;
-  color: var(--fn-text-primary);
+  color: var(--text-heading);
 }
 
 .description {
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--fn-text-tertiary);
+  color: var(--text-secondary);
 }
 
 .steps {
@@ -108,38 +118,49 @@
   gap: 10px;
 }
 
+/* Neutral numbered steps (no brand tint). */
 .stepIndex {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--fn-text-brand);
-  background: var(--fn-color-brand-bg);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+
+.wrap:not(.plain) .stepIndex {
+  background: var(--surface-1);
 }
 
 .stepBody {
   min-width: 0;
   flex: 1;
-  padding-top: 1px;
 }
 
 .stepLabel {
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--fn-text-primary);
-  font-weight: 500;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.stepsDetailed .stepLabel {
+  font-weight: 600;
+  color: var(--text-heading);
 }
 
 .stepDetail {
   margin-top: 2px;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--fn-text-tertiary);
+  color: var(--text-tertiary);
 }
 
 .notice {

@@ -5,8 +5,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Input, Button, Checkbox } from "antd";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Input, Button, Checkbox, Spin } from "antd";
 import { message } from "@/utils/antdMessage";
 
 import { Fingerprint, KeyRound, Lock, User } from "lucide-react";
@@ -19,6 +19,7 @@ import {
 import {
   authApi,
   isMfaChallenge,
+  type AuthStatus,
   type LdapStatus,
   type MfaChallengeResponse,
   type MfaMethod,
@@ -29,6 +30,7 @@ import { publicUrl } from "../../utils/publicUrl";
 import { refreshServerLabels } from "../../i18n";
 import { applyUserLocale, applyGuestLocale } from "../../utils/locale";
 import { useTheme } from "../../context/ThemeContext";
+import BootOfflinePanel from "../../components/BootOfflinePanel";
 import {
   isSsoPopup,
   isSsoPopupMessage,
@@ -49,6 +51,7 @@ import dingtalkIcon from "../../assets/channels/dingtalk.svg";
 import wecomIcon from "../../assets/channels/wecom.svg";
 import googleIcon from "../../assets/providers/google.svg";
 import CaptchaField, { type CaptchaFieldHandle } from "./CaptchaField";
+import EnterpriseRegistration from "./EnterpriseRegistration";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 import { type PublicCaptchaConfig } from "./captchaAdapters";
 import {
@@ -58,6 +61,7 @@ import {
   renewDesktopSession,
 } from "../../api/desktopSession";
 import { isDesktopShell } from "../../utils/desktopBridge";
+import styles from "./index.module.less";
 
 // Per page load, not per mount: the point is to stop a renew/refuse cycle from
 // ping-ponging between /login and /chat.
@@ -126,6 +130,12 @@ export default function LoginPage() {
   const { isDark } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState<AuthStatus | null>(null);
+  const [offline, setOffline] = useState(false);
+  const enterpriseMode =
+    import.meta.env.VITE_ENTERPRISE_MODE === "1" ||
+    status?.enterprise_mode === true;
+  const registration = enterpriseMode && searchParams.get("register") === "1";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -143,9 +153,17 @@ export default function LoginPage() {
     provider: "slider",
   });
   const captchaRef = useRef<CaptchaFieldHandle>(null);
+  const canSubmit = Boolean(
+    (enterpriseMode ? username.trim() : username) &&
+      password &&
+      (enterpriseMode || captchaReady),
+  );
 
   // MFA challenge — mfa_token stays in React state only (never localStorage).
   const [mfaChallenge, setMfaChallenge] = useState<MfaChallengeResponse | null>(
+    null,
+  );
+  const [enterpriseMfaTicket, setEnterpriseMfaTicket] = useState<string | null>(
     null,
   );
   const [mfaMode, setMfaMode] = useState<MfaStepMode>("totp");
@@ -165,7 +183,7 @@ export default function LoginPage() {
   // try a refresh before showing a form nobody can fill in. Runs once per page
   // load, so a server that keeps refusing cannot bounce us in a loop.
   useEffect(() => {
-    if (desktopAutoLoginTried) return;
+    if (!status || enterpriseMode || desktopAutoLoginTried) return;
     desktopAutoLoginTried = true;
     // Logout of the local account sets this so the form stays up for other
     // accounts. The flag dies with the window; the next launch can enter again.
@@ -185,7 +203,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [enterpriseMode, navigate, status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,60 +219,62 @@ export default function LoginPage() {
     let cancelled = false;
     authApi
       .getAuthStatus()
-      .then((status) => {
-        if (cancelled) return;
-        if (status.setup_required) {
-          clearAuthToken();
-          navigate("/setup", { replace: true });
-          return;
-        }
-        if (isDesktopShell()) {
-          setShowCreateLocal(true);
-          setLocalAccountExists(status.local_account);
-        }
-        // Only probe OIDC / captcha after setup is done — otherwise lockdown 503s.
-        authApi
-          .getOauthStatus()
-          .then((next) => {
-            if (!cancelled) {
-              setProviders(next.providers.filter((item) => item.enabled));
-            }
-          })
-          .catch(() => {});
-        authApi
-          .getLdapStatus()
-          .then((next) => {
-            if (!cancelled) setLdap(next);
-          })
-          .catch(() => {});
-        authApi
-          .getPasskeyLoginStatus()
-          .then((next) => {
-            if (!cancelled) {
-              setPasswordlessLogin(next.passwordless_login === true);
-            }
-          })
-          .catch(() => {});
-        authApi
-          .getCaptcha()
-          .then((next) => {
-            if (!cancelled) setCaptcha(next);
-          })
-          .catch(() => {
-            if (!cancelled) setCaptcha({ provider: "slider" });
-          });
+      .then((next) => {
+        if (!cancelled) setStatus(next);
       })
       .catch(() => {
-        // Backend unreachable — let the user attempt login and show a real
-        // error from the request itself; redirecting blindly to /setup
-        // would mask the actual problem.
+        if (!cancelled) setOffline(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
+    if (!status || enterpriseMode) return;
+    if (status.setup_required) {
+      clearAuthToken();
+      navigate("/setup", { replace: true });
+      return;
+    }
+    if (isDesktopShell()) {
+      setShowCreateLocal(true);
+      setLocalAccountExists(status.local_account);
+    }
+    let cancelled = false;
+    authApi
+      .getOauthStatus()
+      .then((next) => {
+        if (!cancelled) {
+          setProviders(next.providers.filter((item) => item.enabled));
+        }
+      })
+      .catch(() => {});
+    authApi
+      .getLdapStatus()
+      .then((next) => {
+        if (!cancelled) setLdap(next);
+      })
+      .catch(() => {});
+    authApi
+      .getPasskeyLoginStatus()
+      .then((next) => {
+        if (!cancelled) setPasswordlessLogin(next.passwordless_login === true);
+      })
+      .catch(() => {});
+    authApi
+      .getCaptcha()
+      .then((next) => {
+        if (!cancelled) setCaptcha(next);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [enterpriseMode, navigate, status]);
+
+  useEffect(() => {
+    if (!status || enterpriseMode) return;
     const code = searchParams.get("oidc_error");
     if (!code) return;
     if (notifySsoOpener({ ok: false, error: code })) return;
@@ -264,9 +284,10 @@ export default function LoginPage() {
       }),
     );
     navigate("/login", { replace: true });
-  }, [navigate, searchParams, t]);
+  }, [enterpriseMode, navigate, searchParams, status, t]);
 
   useEffect(() => {
+    if (!status || enterpriseMode) return;
     const onMessage = (event: MessageEvent) => {
       if (!isSsoPopupMessage(event, window.location.origin) || !event.data.ok) {
         if (
@@ -290,7 +311,7 @@ export default function LoginPage() {
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [t]);
+  }, [enterpriseMode, status, t]);
 
   const resetCaptcha = () => {
     setCaptchaReady(false);
@@ -302,6 +323,7 @@ export default function LoginPage() {
       conditionalAbortRef.current?.abort();
       setAuthToken(accessToken, remember);
       setMfaChallenge(null);
+      setEnterpriseMfaTicket(null);
       setMfaCode("");
       const applied = await applyUserLocale(locale);
       void refreshServerLabels(applied);
@@ -370,6 +392,7 @@ export default function LoginPage() {
 
   const clearMfaStep = () => {
     setMfaChallenge(null);
+    setEnterpriseMfaTicket(null);
     setMfaCode("");
     setPassword("");
     resetCaptcha();
@@ -429,9 +452,23 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
-    if (!username || !password || !captchaReady) return;
+    if (!canSubmit || loading) return;
     setLoading(true);
     try {
+      if (enterpriseMode) {
+        const res = await authApi.enterpriseLogin(username.trim(), password);
+        if (res.status === "mfa_required" && res.mfa_ticket) {
+          setEnterpriseMfaTicket(res.mfa_ticket);
+          setMfaCode("");
+          setPassword("");
+          return;
+        }
+        if (!res.access_token) {
+          throw new Error("Invalid enterprise login response");
+        }
+        await finishLogin(res.access_token, res.user?.locale);
+        return;
+      }
       const token = await captchaRef.current?.getToken();
       const res = await authApi.login(username, password, token);
       if (isMfaChallenge(res)) {
@@ -451,9 +488,18 @@ export default function LoginPage() {
   };
 
   const handleMfaVerify = async () => {
-    if (!mfaChallenge || !mfaCode.trim()) return;
+    if ((!mfaChallenge && !enterpriseMfaTicket) || !mfaCode.trim()) return;
     setLoading(true);
     try {
+      if (enterpriseMfaTicket) {
+        const res = await authApi.enterpriseMfa(
+          enterpriseMfaTicket,
+          mfaCode.trim(),
+        );
+        await finishLogin(res.access_token, res.user.locale);
+        return;
+      }
+      if (!mfaChallenge) return;
       const method: MfaMethod = mfaMode === "recovery" ? "recovery" : "totp";
       const res = await authApi.mfaVerify({
         mfa_token: mfaChallenge.mfa_token,
@@ -526,7 +572,16 @@ export default function LoginPage() {
     }
   };
 
-  if (isSsoPopup() && searchParams.get("oidc_error")) {
+  if (offline) return <BootOfflinePanel />;
+  if (!status || (!enterpriseMode && status.setup_required)) {
+    return (
+      <div className={styles.shell}>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (!enterpriseMode && isSsoPopup() && searchParams.get("oidc_error")) {
     return null;
   }
 
@@ -552,7 +607,7 @@ export default function LoginPage() {
           ? publicUrl("logo_horizontal_white.png")
           : publicUrl("logo_horizontal_dark.png")
       }
-      alt="Octop"
+      alt="Tabby"
       style={{
         height: 48,
         width: "auto",
@@ -563,12 +618,18 @@ export default function LoginPage() {
     />
   );
 
-  if (mfaChallenge) {
-    const methods = mfaChallenge.methods;
+  if (registration) {
+    return <EnterpriseRegistration logo={logo} onRegistered={setUsername} />;
+  }
+
+  if (mfaChallenge || enterpriseMfaTicket) {
+    const enterpriseMfa = Boolean(enterpriseMfaTicket);
+    const methods = mfaChallenge?.methods ?? [];
     const showTotp = methods.includes("totp");
     const showRecovery = methods.includes("recovery");
-    const showPasskey = methods.includes("webauthn");
+    const showPasskey = !enterpriseMfa && methods.includes("webauthn");
     const showCodeField =
+      enterpriseMfa ||
       (mfaMode === "totp" && showTotp) ||
       (mfaMode === "recovery" && showRecovery);
     const codeLabel =
@@ -605,7 +666,7 @@ export default function LoginPage() {
           >
             {t("login.mfaTitle")}
           </h2>
-          {mfaChallenge.user_hint ? (
+          {mfaChallenge?.user_hint ? (
             <p
               style={{
                 margin: 0,
@@ -751,14 +812,15 @@ export default function LoginPage() {
             textAlign: "center",
           }}
         >
-          {t("login.title")}
+          {t(enterpriseMode ? "login.enterpriseTitle" : "login.title")}
         </h2>
 
         <Input
           prefix={
             <User size={16} style={{ color: "var(--fn-text-quaternary)" }} />
           }
-          placeholder={t("login.username")}
+          placeholder={t(enterpriseMode ? "login.workEmail" : "login.username")}
+          inputMode={enterpriseMode ? "email" : undefined}
           size="large"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -800,15 +862,17 @@ export default function LoginPage() {
           </p>
         )}
 
-        <CaptchaField
-          ref={captchaRef}
-          config={captcha}
-          resetKey={captchaResetKey}
-          slideHint={t("login.slideHint")}
-          slideVerifiedLabel={t("login.slideVerified")}
-          unsupportedLabel={t("login.unsupportedCaptcha")}
-          onReadyChange={setCaptchaReady}
-        />
+        {!enterpriseMode && (
+          <CaptchaField
+            ref={captchaRef}
+            config={captcha}
+            resetKey={captchaResetKey}
+            slideHint={t("login.slideHint")}
+            slideVerifiedLabel={t("login.slideVerified")}
+            unsupportedLabel={t("login.unsupportedCaptcha")}
+            onReadyChange={setCaptchaReady}
+          />
+        )}
 
         <div
           style={{
@@ -860,11 +924,17 @@ export default function LoginPage() {
           block
           loading={loading}
           onClick={handleLogin}
-          disabled={!username || !password || !captchaReady}
+          disabled={!canSubmit}
           style={{ borderRadius: 10, height: 44, fontWeight: 500 }}
         >
           {t("login.submit")}
         </Button>
+
+        {enterpriseMode && (
+          <Link to="/login?register=1" onClick={() => setPassword("")}>
+            {t("login.enterpriseRegister.title")}
+          </Link>
+        )}
 
         {passwordlessLogin ? (
           passkeyAvailable && !passkeyIpHost ? (

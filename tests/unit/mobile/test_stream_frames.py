@@ -34,6 +34,19 @@ class _FakeWS:
         return [m.get("type") for m in self.sent]
 
 
+class _FakeH264WS:
+    def __init__(self) -> None:
+        self.application_state = WebSocketState.CONNECTED
+        self.sent: list[dict[str, Any]] = []
+        self.binary: list[bytes] = []
+
+    async def send_text(self, payload: str) -> None:
+        self.sent.append(json.loads(payload))
+
+    async def send_bytes(self, payload: bytes) -> None:
+        self.binary.append(payload)
+
+
 def _run(
     ws: _FakeWS,
     *,
@@ -99,3 +112,60 @@ def test_stream_frames_keeps_going_when_misses_are_not_consecutive(
 
     assert ws.types == ["frame"] * 4
     assert frame_dims == [1080, 1920]
+
+
+def test_parse_stream_size_rejects_invalid_dimensions() -> None:
+    assert mobile_stream._parse_stream_size("720x1600") == (720, 1600)
+    assert mobile_stream._parse_stream_size(" 1080x2400 ") == (1080, 2400)
+    assert mobile_stream._parse_stream_size("720") is None
+    assert mobile_stream._parse_stream_size("0x1600") is None
+
+
+def test_h264_stream_keeps_encoded_and_physical_sizes_separate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeStdout:
+        def __init__(self) -> None:
+            start = b"\x00\x00\x00\x01"
+            self._chunks = [
+                start + b"\x67\x64\x00\x2a" + start,
+                b"\x68\xee\x3c\x80" + start + b"\x65\x88\x84" + start,
+                b"",
+            ]
+
+        async def read(self, _size: int) -> bytes:
+            return self._chunks.pop(0)
+
+    class _FakeProcess:
+        def __init__(self) -> None:
+            self.stdout = _FakeStdout()
+            self.returncode = 0
+
+    async def fake_create_process(*_args: object, **_kwargs: object) -> _FakeProcess:
+        return _FakeProcess()
+
+    monkeypatch.setattr(mobile_stream, "find_adb", lambda: "/usr/bin/adb")
+    monkeypatch.setattr(mobile_stream, "find_scrcpy_server", lambda: None)
+    monkeypatch.setattr(mobile_stream, "wm_size", lambda *_args, **_kwargs: (1080, 2400))
+    monkeypatch.setattr(mobile_stream.asyncio, "create_subprocess_exec", fake_create_process)
+
+    ws = _FakeH264WS()
+    frame_dims = [0, 0]
+    first_frame = asyncio.Event()
+
+    asyncio.run(
+        mobile_stream._stream_h264(
+            ws,
+            device="device-1",
+            frame_dims=frame_dims,
+            first_frame=first_frame,
+            max_fps=30.0,
+            max_side=720,
+        )
+    )
+
+    assert frame_dims == [1080, 2400]
+    assert ws.sent[0]["type"] == "video_init"
+    assert (ws.sent[0]["width"], ws.sent[0]["height"]) == (720, 1600)
+    assert len(ws.binary) == 1
+    assert first_frame.is_set()

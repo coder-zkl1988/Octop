@@ -26,6 +26,40 @@ def _conninfo() -> str:
     return os.environ["OCTOP_TEST_DATABASE_URL"]
 
 
+@requires_postgresql
+@pytest.mark.postgresql
+def test_plugin_state_related_documents_commit_and_roll_back_atomically() -> None:
+    from octop.infra.db.migrate import run_migrations
+    from octop.infra.db.pool import PostgresPool
+    from octop.infra.db.repos.plugin_state import PluginStateRepo
+
+    pool = PostgresPool(_conninfo())
+    try:
+        _reset_public_schema(pool)
+        run_migrations(pool)
+        repo = PluginStateRepo(pool)
+        assert repo.compare_and_set("plugin-test-scope", None, "old-scope")
+        assert repo.compare_and_set("plugin-test-capacity", None, "old-capacity")
+        assert not repo.compare_and_set_many(
+            [
+                ("plugin-test-scope", "old-scope", "new-scope"),
+                ("plugin-test-capacity", "stale", "new-capacity"),
+            ]
+        )
+        assert repo.get("plugin-test-scope") == "old-scope"
+        assert repo.get("plugin-test-capacity") == "old-capacity"
+        assert repo.compare_and_set_many(
+            [
+                ("plugin-test-scope", "old-scope", "new-scope"),
+                ("plugin-test-capacity", "old-capacity", "new-capacity"),
+            ]
+        )
+        assert repo.get("plugin-test-scope") == "new-scope"
+        assert repo.get("plugin-test-capacity") == "new-capacity"
+    finally:
+        pool.close()
+
+
 def _reset_public_schema(pool: object) -> None:
     with pool.connect() as conn:  # type: ignore[attr-defined]
         conn.execute("DROP SCHEMA public CASCADE")

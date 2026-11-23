@@ -8,11 +8,13 @@ from octop.infra.control.mobile.h264 import (
     NAL_PPS,
     NAL_SPS,
     AnnexBSplitter,
+    annex_b_nals,
     avc_codec_string,
     avcc_from_sps_pps,
     avcc_sample,
     nal_type,
 )
+from octop.infra.control.mobile.scrcpy import build_server_command, parse_frame_meta
 
 
 def test_extract_png_strips_screencap_warning() -> None:
@@ -70,6 +72,39 @@ def test_avcc_and_codec_string() -> None:
     sample = avcc_sample([idr])
     assert sample[:4] == (2).to_bytes(4, "big")
     assert sample[4:] == idr
+
+
+def test_complete_annexb_access_unit_is_split_without_a_trailing_start_code() -> None:
+    sps = bytes([0x67, 0x42, 0xC0, 0x32])
+    pps = bytes([0x68, 0xCE, 0x01, 0xA8])
+    idr = bytes([0x65, 0x88, 0x80])
+    access_unit = b"\x00\x00\x00\x01" + sps + b"\x00\x00\x01" + pps + b"\x00\x00\x00\x01" + idr
+    assert annex_b_nals(access_unit) == [sps, pps, idr]
+
+
+def test_scrcpy_frame_metadata_keeps_pts_and_flags() -> None:
+    flags = (1 << 61) | 123_000
+    meta = flags.to_bytes(8, "big") + (17).to_bytes(4, "big")
+    assert parse_frame_meta(meta) == (123_000, 17, False, True, False)
+
+
+def test_scrcpy_server_command_uses_framed_h264_stream() -> None:
+    cmd = build_server_command(
+        "/usr/bin/adb",
+        "device-1",
+        remote_path="/data/local/tmp/server.jar",
+        scid="1234abcd",
+        max_size=720,
+        bit_rate=8_000_000,
+        max_fps=30,
+    )
+    assert "tunnel_forward=true" in cmd
+    assert "audio=false" in cmd
+    assert "control=false" in cmd
+    assert "send_stream_meta=true" in cmd
+    assert "send_frame_meta=true" in cmd
+    assert "max_size=720" in cmd
+    assert "max_fps=30" in cmd
 
 
 def test_screenrecord_args_include_display_id() -> None:

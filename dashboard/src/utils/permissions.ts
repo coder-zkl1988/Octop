@@ -53,10 +53,13 @@ export const PERM = {
     "providers",
     "ollama_models",
     "onnx_models",
+    "model_chat",
+    "model_embedding",
     "model_generation",
     "voice",
     "model_decision",
     "search",
+    "model_phone",
   ],
   storage: ["storage_backends"],
   plugins: ["plugins", "plugin_market"],
@@ -118,7 +121,7 @@ export const NAV_PERMISSIONS = {
   "remote-desktop": PERM.desktop,
   phone: PERM.mobile,
   "remote-phone": PERM.mobile,
-  acp: "admin",
+  acp: ["acp"],
   "admin-users": PERM.usersPage,
   models: PERM.modelsPage,
   "admin-storage": PERM.storage,
@@ -326,9 +329,9 @@ export function pathPermissionKeys(pathname: string): PermissionKeys | null {
   if (pathname === "/workbench" || pathname.startsWith("/workbench/")) {
     return PERM.workbench;
   }
-  // ACP: no module key this round — admin role only.
+  // ACP is governed by the enterprise ACP module permission.
   if (pathname === "/acp" || pathname.startsWith("/acp/")) {
-    return "admin";
+    return ["acp"];
   }
   if (pathname === "/experts" || pathname.startsWith("/experts/")) {
     return PERM.experts;

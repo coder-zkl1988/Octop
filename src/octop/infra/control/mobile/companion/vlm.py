@@ -119,6 +119,13 @@ def resolve_target(settings: SettingsStore, providers: ProviderLookup) -> VlmTar
     row = providers.get_by_name(chosen.provider)
     if not _openai_compatible(row):
         return None
+    if not any(
+        candidate.provider == chosen.provider
+        and candidate.model == chosen.model
+        and candidate.vision
+        for candidate in list_candidates(providers)
+    ):
+        return None
     return VlmTarget(
         base_url=str(row.base_url).rstrip("/"),
         api_key=str(row.api_key),

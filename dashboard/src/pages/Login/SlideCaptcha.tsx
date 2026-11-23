@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 
-const THUMB_SIZE = 40;
+const THUMB_SIZE = 32;
 const COMPLETE_RATIO = 0.92;
 
 export type SlideCaptchaProps = {
@@ -151,15 +151,10 @@ export default function SlideCaptcha({
         position: "relative",
         width: "100%",
         height: THUMB_SIZE,
-        borderRadius: 10,
-        background: verified
-          ? "var(--fn-success-bg, #e8f8ef)"
-          : "var(--fn-bg-layout)",
-        border: `1px solid ${
-          verified
-            ? "var(--fn-success-border, #86d3a9)"
-            : "var(--fn-border-primary)"
-        }`,
+        boxSizing: "border-box",
+        borderRadius: "var(--radius-8)",
+        background: verified ? "var(--success-subtle)" : "var(--surface-2)",
+        border: `1px solid ${verified ? "var(--success)" : "var(--border)"}`,
         overflow: "hidden",
         userSelect: "none",
         touchAction: "none",
@@ -175,10 +170,8 @@ export default function SlideCaptcha({
           justifyContent: "center",
           paddingLeft: verified ? 8 : THUMB_SIZE,
           paddingRight: verified ? THUMB_SIZE : 8,
-          fontSize: 13,
-          color: verified
-            ? "var(--fn-success, #16a34a)"
-            : "var(--fn-text-tertiary)",
+          fontSize: 12,
+          color: verified ? "var(--success)" : "var(--text-tertiary)",
           pointerEvents: "none",
           whiteSpace: "nowrap",
         }}
@@ -195,7 +188,7 @@ export default function SlideCaptcha({
             top: 0,
             bottom: 0,
             width: offset + THUMB_SIZE / 2,
-            background: "var(--fn-primary-bg, rgba(22, 119, 255, 0.12))",
+            background: "var(--accent-subtle)",
             pointerEvents: "none",
           }}
         />
@@ -214,31 +207,30 @@ export default function SlideCaptcha({
         }}
         style={{
           position: "absolute",
-          left: verified
-            ? maxOffset || trackMaxOffset(trackRef.current)
-            : offset,
-          top: 0,
+          // -1: the thumb sits over the track's 1px border.
+          left:
+            (verified
+              ? maxOffset || trackMaxOffset(trackRef.current)
+              : offset) - 1,
+          top: -1,
           width: THUMB_SIZE,
           height: THUMB_SIZE,
-          borderRadius: 10,
+          boxSizing: "border-box",
+          borderRadius: "var(--radius-8)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: verified
-            ? "var(--fn-success, #16a34a)"
-            : "var(--fn-bg-elevated)",
-          border: `1px solid ${
-            verified ? "transparent" : "var(--fn-border-primary)"
-          }`,
-          boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+          background: verified ? "var(--success)" : "var(--surface-1)",
+          border: `1px solid ${verified ? "transparent" : "var(--border)"}`,
+          boxShadow: "var(--shadow-rest)",
           cursor: verified ? "default" : dragging ? "grabbing" : "grab",
-          color: verified ? "#fff" : "var(--fn-text-secondary)",
+          color: verified ? "#fff" : "var(--text-secondary)",
         }}
       >
         {verified ? (
-          <Check size={18} strokeWidth={2.5} />
+          <Check size={16} strokeWidth={2.5} />
         ) : (
-          <ChevronRight size={18} />
+          <ChevronRight size={16} />
         )}
       </div>
     </div>

@@ -145,7 +145,7 @@ export default function LanPairingPrompt() {
           <Typography.Text type="secondary" className={styles.hint}>
             {t(
               "companionPhone.lanPair.codeHint",
-              "请确认与手机上显示的核对码一致后再允许。允许后这台手机将以你的账号连接 Octop。",
+              "请确认与手机上显示的核对码一致后再允许。允许后这台手机将以你的账号连接 Tabby。",
             )}
           </Typography.Text>
           {visible.length > 1 ? (

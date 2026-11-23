@@ -17,7 +17,7 @@ from octop.api.common.agent import (
 from octop.api.common.agent_runtime import AgentRuntimeFields, persisted_agent_settings
 from octop.api.common.validators import assert_user_backend_root_dirs
 from octop.api.common.workspace import require_agent_workspace
-from octop.api.deps import current_user, get_server
+from octop.api.deps import current_user, get_server, require_permission
 from octop.infra.agents.experts.avatar import (
     agent_avatar_api_path,
     delete_workspace_avatar,
@@ -346,7 +346,7 @@ async def list_agents(
 @router.post("", status_code=201, summary="Create agent")
 async def create_agent(
     body: AgentCreateBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("experts")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Create a new agent from a template or custom config for the current user."""

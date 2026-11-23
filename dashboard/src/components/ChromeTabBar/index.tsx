@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Tooltip } from "antd";
 import { Plus, X } from "lucide-react";
 import cx from "classnames";
@@ -41,6 +42,7 @@ export function ChromeTabBar({
   trailing,
   className,
 }: ChromeTabBarProps) {
+  const { t } = useTranslation();
   return (
     <div className={cx(styles.tabBar, className)}>
       <div className={styles.tabsScroll} role="tablist">
@@ -60,6 +62,7 @@ export function ChromeTabBar({
                   className={styles.tabClose}
                   role="button"
                   tabIndex={0}
+                  aria-label={t("common.close")}
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose(tab.key, e);

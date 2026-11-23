@@ -93,10 +93,10 @@ const STREAM_QUALITY_PRESETS: Record<
   StreamQualityPreset,
   { quality: number; maxSide: number; maxFps: number }
 > = {
-  low: { quality: 55, maxSide: 720, maxFps: 8 },
-  balanced: { quality: 75, maxSide: 1080, maxFps: 10 },
-  high: { quality: 85, maxSide: 1440, maxFps: 12 },
-  max: { quality: 90, maxSide: 0, maxFps: 10 },
+  low: { quality: 55, maxSide: 720, maxFps: 24 },
+  balanced: { quality: 75, maxSide: 1080, maxFps: 30 },
+  high: { quality: 85, maxSide: 1440, maxFps: 45 },
+  max: { quality: 90, maxSide: 0, maxFps: 60 },
 };
 
 function loadStreamQuality(): StreamQualityPreset {
@@ -565,7 +565,7 @@ export default function RemoteAndroidPage({
         quality: preset.quality,
         maxFps: preset.maxFps,
         maxSide: preset.maxSide,
-        codec: "jpeg",
+        codec: "h264",
       },
       {
         canvas: canvasRef.current,
@@ -608,7 +608,7 @@ export default function RemoteAndroidPage({
             quality: preset.quality,
             maxFps: preset.maxFps,
             maxSide: preset.maxSide,
-            codec: "jpeg",
+            codec: "h264",
           },
           {
             canvas: canvasRef.current,
@@ -1039,26 +1039,8 @@ export default function RemoteAndroidPage({
     </div>
   );
 
-  const actions = (
-    <Space size={8} wrap>
-      {!showTopBar && isMobile ? (
-        <>
-          {viewSwitcher}
-          {aiToggleButton}
-        </>
-      ) : !showTopBar ? (
-        aiToggleButton
-      ) : null}
-      {needsInstall ? (
-        <Button
-          type="primary"
-          icon={<Download size={14} />}
-          loading={installPhase === "installing"}
-          onClick={handleInstall}
-        >
-          {t("remoteAndroid.install", "安装容器")}
-        </Button>
-      ) : null}
+  const deviceActions = (
+    <Space size={8} wrap className={styles.deviceCommandActions}>
       {!isMobile ? shellToggleButton : null}
       <Button
         icon={<RefreshCw size={14} />}
@@ -1081,6 +1063,29 @@ export default function RemoteAndroidPage({
           {t("remoteAndroid.connect", "Connect")}
         </Button>
       )}
+    </Space>
+  );
+
+  const actions = (
+    <Space size={8} wrap>
+      {!showTopBar && isMobile ? (
+        <>
+          {viewSwitcher}
+          {aiToggleButton}
+        </>
+      ) : !showTopBar ? (
+        aiToggleButton
+      ) : null}
+      {needsInstall ? (
+        <Button
+          type="primary"
+          icon={<Download size={14} />}
+          loading={installPhase === "installing"}
+          onClick={handleInstall}
+        >
+          {t("remoteAndroid.install", "安装容器")}
+        </Button>
+      ) : null}
     </Space>
   );
 
@@ -1189,6 +1194,7 @@ export default function RemoteAndroidPage({
               <div className={styles.deviceBarSpacer} />
               <div className={styles.deviceBarActions}>
                 {qualityControl}
+                {deviceActions}
                 {aiToggleButton}
               </div>
             </div>

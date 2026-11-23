@@ -358,3 +358,99 @@
 .settingsDivider {
   margin: 16px 0 !important;
 }
+
+/* ---- Enterprise variant (Tabby enterprise menu) ---- */
+
+.initialAvatar {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.entMenuPopover {
+  z-index: 1100 !important;
+
+  :global(.octop-popover-inner) {
+    padding: 6px;
+    border-radius: var(--radius-12);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-dropdown);
+  }
+}
+
+.entMenu {
+  width: 196px;
+}
+
+.entMenuHead {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.entMenuName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.entMenuMail {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.entMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-8);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+
+  svg {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+  }
+
+  &:hover {
+    background: var(--surface-2);
+  }
+}
+
+.entMenuMeta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.entMenuSep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+.aboutBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.aboutName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+}

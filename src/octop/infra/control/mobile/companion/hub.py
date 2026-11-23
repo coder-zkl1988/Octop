@@ -20,7 +20,7 @@ import logging
 import secrets
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
@@ -59,6 +59,7 @@ class MirrorViewer(Protocol):
 
 VlmPayloadBuilder = Callable[[str, str], dict[str, Any] | None]
 """``(public_base_url, device_key) -> connected.vlm`` (``None`` = no model)."""
+PhoneSkillBundleProvider = Callable[[int, str], Awaitable[dict[str, Any] | None]]
 
 
 class CompanionError(Exception):
@@ -98,6 +99,11 @@ class DeviceView:
     running_task_id: str | None = None
     running_task: str | None = None
     running_step: int | None = None
+    policy_mode: str | None = None
+    skill_bundle_version: int | None = None
+    skill_sync_status: str | None = None
+    supported_actions: tuple[str, ...] = ()
+    supported_apps: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -118,6 +124,11 @@ class DeviceView:
             "running_task_id": self.running_task_id,
             "running_task": self.running_task,
             "running_step": self.running_step,
+            "policy_mode": self.policy_mode,
+            "skill_bundle_version": self.skill_bundle_version,
+            "skill_sync_status": self.skill_sync_status,
+            "supported_actions": list(self.supported_actions),
+            "supported_apps": list(self.supported_apps),
         }
 
 
@@ -136,6 +147,7 @@ class _LiveDevice:
     """Latest mirror JSON frame, replayed to a viewer that just joined."""
     keyframe: bytes | None = None
     """Latest binary H.264 keyframe, so a new viewer can start decoding at once."""
+    expected_skill_bundle: tuple[int, int, str] | None = None
 
 
 @dataclass
@@ -178,6 +190,12 @@ class CompanionHub:
         self._background: set[asyncio.Task[None]] = set()
         # device_id -> {viewer: requested fps}; the phone streams at the max.
         self._viewers: dict[str, dict[MirrorViewer, int]] = {}
+        self._media_waiters: dict[tuple[str, str], asyncio.Future[dict[str, Any]]] = {}
+        self.skill_bundle_provider: PhoneSkillBundleProvider | None = None
+
+    def set_skill_bundle_provider(self, provider: PhoneSkillBundleProvider | None) -> None:
+        """Install the host callback that authorizes and returns phone skills."""
+        self.skill_bundle_provider = provider
 
     # ----- connection lifecycle -----
 
@@ -250,6 +268,13 @@ class CompanionHub:
         if task_id is not None:
             await self._on_result(live, msg, task_id)
             return
+        media_id = protocol.media_result_id(msg)
+        if media_id is not None:
+            result = protocol.parse_media_result(msg)
+            waiter = self._media_waiters.pop((device_id, media_id), None)
+            if waiter is not None and result is not None and not waiter.done():
+                waiter.set_result(result)
+            return
         progress = protocol.parse_progress(msg)
         if progress is not None:
             self._on_progress(live, progress)
@@ -262,8 +287,62 @@ class CompanionHub:
                 live.info = replace(live.info, current_app=frame.current_app)
             await self._broadcast(device_id, text=json.dumps(msg, ensure_ascii=False))
             return
+        if msg.get("channel") == "skill":
+            await self._on_skill_status(live, msg)
+            return
         if msg.get("channel") == "control" and msg.get("event") == "device_info":
             self._on_device_info(live, msg)
+
+    async def _on_skill_status(self, live: _LiveDevice, msg: dict[str, Any]) -> None:
+        method = str(msg.get("method") or msg.get("type") or "")
+        params = msg.get("params")
+        if not isinstance(params, dict):
+            return
+        version = params.get("bundleVersion", params.get("syncVersion"))
+        parsed_version = protocol._int_or_none(version)
+        if method == "skill.hello":
+            provider = self.skill_bundle_provider
+            bundle = await provider(live.user_id, live.device_id) if provider is not None else None
+            if bundle is None:
+                live.info = replace(
+                    live.info,
+                    skill_bundle_version=parsed_version,
+                    skill_sync_status="unknown",
+                )
+                return
+            expected = protocol.skill_bundle_identity(bundle)
+            if expected is None:
+                live.info = replace(live.info, skill_sync_status="error")
+                return
+            live.expected_skill_bundle = expected
+            if protocol.skill_message_identity(params) == expected:
+                live.info = replace(
+                    live.info,
+                    skill_bundle_version=expected[1],
+                    skill_sync_status="current",
+                )
+                return
+            await live.conn.send_json(protocol.skill_sync_message(bundle))
+            status = "syncing"
+        elif method in {"skill.ack", "skill.acknowledged"}:
+            status = (
+                "current"
+                if protocol.skill_message_identity(params) == live.expected_skill_bundle
+                else "error"
+            )
+        elif method in {"skill.nack", "skill.error"}:
+            status = (
+                "incompatible" if str(params.get("code", "")).upper() == "INCOMPATIBLE" else "error"
+            )
+        else:
+            return
+        live.info = replace(
+            live.info,
+            skill_bundle_version=parsed_version
+            if parsed_version is not None
+            else live.info.skill_bundle_version,
+            skill_sync_status=status,
+        )
 
     def _on_device_info(self, live: _LiveDevice, msg: dict[str, Any]) -> None:
         refreshed = protocol.parse_phone_info(
@@ -271,6 +350,11 @@ class CompanionHub:
                 "currentApp": msg.get("currentApp"),
                 "batteryLevel": msg.get("batteryLevel"),
                 "isCharging": msg.get("isCharging"),
+                "policyMode": msg.get("policyMode", msg.get("devicePolicyMode")),
+                "skillBundleVersion": msg.get("skillBundleVersion", msg.get("bundleVersion")),
+                "skillSyncStatus": msg.get("skillSyncStatus"),
+                "supportedActions": msg.get("supportedActions"),
+                "supportedApps": msg.get("supportedApps"),
             }
         )
         live.info = replace(
@@ -282,6 +366,13 @@ class CompanionHub:
             is_charging=refreshed.is_charging
             if refreshed.is_charging is not None
             else live.info.is_charging,
+            policy_mode=refreshed.policy_mode or live.info.policy_mode,
+            skill_bundle_version=refreshed.skill_bundle_version
+            if refreshed.skill_bundle_version is not None
+            else live.info.skill_bundle_version,
+            skill_sync_status=refreshed.skill_sync_status or live.info.skill_sync_status,
+            supported_actions=refreshed.supported_actions or live.info.supported_actions,
+            supported_apps=refreshed.supported_apps or live.info.supported_apps,
         )
 
     async def _on_result(self, live: _LiveDevice, msg: dict[str, Any], task_id: str) -> None:
@@ -305,6 +396,21 @@ class CompanionHub:
             return
         running.last_activity = time.monotonic()
         running.step = max(running.step, progress.step)
+        policy_mode = progress.metadata.get("policyMode")
+        if isinstance(policy_mode, str) and policy_mode:
+            live.info = replace(live.info, policy_mode=policy_mode)
+        supported_apps = protocol._str_tuple(progress.metadata.get("supportedApps"))
+        if supported_apps:
+            live.info = replace(live.info, supported_apps=supported_apps)
+        supported_actions = protocol._str_tuple(progress.metadata.get("supportedActions"))
+        if supported_actions:
+            live.info = replace(live.info, supported_actions=supported_actions)
+        skill_bundle_version = protocol._int_or_none(progress.metadata.get("skillBundleVersion"))
+        if skill_bundle_version is not None:
+            live.info = replace(live.info, skill_bundle_version=skill_bundle_version)
+        skill_sync_status = progress.metadata.get("skillSyncStatus")
+        if isinstance(skill_sync_status, str) and skill_sync_status:
+            live.info = replace(live.info, skill_sync_status=skill_sync_status)
         shot = progress.screenshot or progress.interaction_screenshot
         if shot:
             live.frame, live.frame_at = shot, live.last_seen
@@ -330,6 +436,8 @@ class CompanionHub:
         idle_timeout_s: float = DEFAULT_IDLE_TIMEOUT_S,
         guidance: str | None = None,
         session_id: str | None = None,
+        task_policy: dict[str, Any] | None = None,
+        task_id: str | None = None,
     ) -> TaskResult | NeedsInteraction:
         """Run *task* on the phone and wait for its result or a guidance request.
 
@@ -348,7 +456,11 @@ class CompanionHub:
             running.last_activity = time.monotonic()
             await live.conn.send_json(
                 protocol.execute_message(
-                    guidance_id, running.task, guidance=guidance, session_id=session_id
+                    guidance_id,
+                    running.task,
+                    guidance=guidance,
+                    session_id=session_id,
+                    task_policy=task_policy,
                 )
             )
             return await self._await(running)
@@ -360,7 +472,7 @@ class CompanionHub:
 
         now = time.monotonic()
         running = _RunningTask(
-            task_id=new_task_id(),
+            task_id=task_id or new_task_id(),
             device_id=device_id,
             task=task,
             started_at=now,
@@ -376,6 +488,7 @@ class CompanionHub:
                     max_steps=max_steps,
                     guidance=guidance,
                     session_id=session_id,
+                    task_policy=task_policy,
                 )
             )
         except Exception as exc:
@@ -385,6 +498,42 @@ class CompanionHub:
             self._watch(running), name=f"companion-task-{running.task_id}"
         )
         return await self._await(running)
+
+    async def push_media(
+        self,
+        device_id: str,
+        media: list[dict[str, Any]],
+        *,
+        album: str = "Tabby",
+        timeout_s: float = 35.0,
+    ) -> list[dict[str, Any]]:
+        """Push media one file at a time and return each phone receipt."""
+        live = self._live.get(device_id)
+        if live is None:
+            raise CompanionError("DEVICE_OFFLINE", f"phone {device_id} is not connected")
+        results: list[dict[str, Any]] = []
+        for item in media:
+            media_id = str(item.get("mediaId") or item.get("media_id") or secrets.token_hex(8))
+            message = protocol.media_push_message(
+                media_id,
+                str(item.get("filename", "")),
+                str(item.get("mimeType", item.get("mime_type", "application/octet-stream"))),
+                str(item.get("dataBase64", item.get("data_base64", ""))),
+                album=album,
+            )
+            waiter: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
+            self._media_waiters[(device_id, media_id)] = waiter
+            try:
+                await live.conn.send_json(message)
+                result = await asyncio.wait_for(waiter, timeout=max(0.1, timeout_s))
+            except TimeoutError:
+                result = {"mediaId": media_id, "success": False, "error": "MEDIA_TIMEOUT"}
+            except Exception as exc:
+                result = {"mediaId": media_id, "success": False, "error": str(exc)}
+            finally:
+                self._media_waiters.pop((device_id, media_id), None)
+            results.append(result)
+        return results
 
     async def _await(self, running: _RunningTask) -> TaskResult | NeedsInteraction:
         try:
@@ -618,6 +767,11 @@ class CompanionHub:
                     running_task_id=running.task_id if running else None,
                     running_task=running.task if running else None,
                     running_step=running.step if running else None,
+                    policy_mode=info.policy_mode,
+                    skill_bundle_version=info.skill_bundle_version,
+                    skill_sync_status=info.skill_sync_status,
+                    supported_actions=info.supported_actions,
+                    supported_apps=info.supported_apps,
                 )
             )
         views.sort(key=lambda v: (not v.online, v.model, v.device_id))

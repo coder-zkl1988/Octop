@@ -3,7 +3,6 @@ import {
   Monitor,
   MessageSquareText,
   Timer,
-  SlidersHorizontal,
   Waypoints,
   Link2,
   Database,
@@ -13,13 +12,15 @@ import {
   Share2,
   Cloudy,
   Sparkles,
-  Puzzle,
   Package,
+  Puzzle,
   HardDrive,
-  GraduationCap,
   Shield,
+  SlidersHorizontal,
+  GraduationCap,
   PanelsTopLeft,
   Smartphone,
+  AppWindow,
 } from "lucide-react";
 import type { OctopUser } from "../api/modules/auth";
 import { navAllowed, userCan } from "../utils/permissions";
@@ -80,6 +81,7 @@ export const SIDEBAR_NAV_KEYS = [
   "remote-desktop",
   "phone",
   "acp",
+  "apps",
   "admin-users",
   "models",
   "admin-storage",
@@ -142,6 +144,7 @@ export const SIDEBAR_GROUPED_NAV_KEYS = [
   "admin-security",
   "admin-advanced",
   "agent-config",
+  "apps",
 ] as const;
 
 const GROUPED_NAV_KEY_SET = new Set<string>(SIDEBAR_GROUPED_NAV_KEYS);
@@ -189,12 +192,27 @@ export function buildNavSections(
   const sections: NavSection[] = [{ items: topItems }];
 
   const settingsItems: NavItem[] = [];
+  settingsItems.push({
+    key: "apps",
+    path: "/apps",
+    icon: <AppWindow size={iconSize} strokeWidth={iconStroke} />,
+    labelKey: "nav.apps",
+  });
   if (navAllowed(user, "personalization")) {
     settingsItems.push({
       key: "personalization",
       path: personalizationNavPath(user),
       icon: <Sparkles size={iconSize} strokeWidth={iconStroke} />,
       labelKey: "nav.personalization",
+    });
+  }
+  // Enterprise: models sit under settings (cloud read-only + local whitelist).
+  if (navAllowed(user, "models")) {
+    settingsItems.push({
+      key: "models",
+      path: "/admin/models",
+      icon: <Cpu size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.models",
     });
   }
   if (navAllowed(user, "channels")) {
@@ -288,57 +306,51 @@ export function buildNavSections(
     });
   }
 
-  const adminItems: NavItem[] = [];
-  if (navAllowed(user, "admin-users")) {
-    adminItems.push({
-      key: "admin-users",
-      path: "/admin/users",
-      icon: <UsersIcon size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.adminUsers",
-    });
-  }
-  if (navAllowed(user, "models")) {
-    adminItems.push({
-      key: "models",
-      path: "/admin/models",
-      icon: <Cpu size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.models",
-    });
-  }
-  if (navAllowed(user, "admin-storage")) {
-    adminItems.push({
-      key: "admin-storage",
-      path: "/admin/backend",
-      icon: <HardDrive size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.adminStorage",
-    });
-  }
-  if (navAllowed(user, "admin-plugins")) {
-    adminItems.push({
-      key: "admin-plugins",
-      path: "/admin/plugins",
-      icon: <Puzzle size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.adminPlugins",
-    });
-  }
-  if (navAllowed(user, "admin-security")) {
-    adminItems.push({
-      key: "admin-security",
-      path: "/admin/security",
-      icon: <Shield size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.security",
-    });
-  }
-  if (navAllowed(user, "admin-advanced")) {
-    adminItems.push({
-      key: "admin-advanced",
-      path: "/admin/advanced",
-      icon: <SlidersHorizontal size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.adminAdvanced",
-    });
-  }
-  if (adminItems.length > 0) {
-    sections.push({ id: "admin", groupKey: "nav.admin", items: adminItems });
+  if (import.meta.env.VITE_ENTERPRISE_MODE !== "1") {
+    const adminItems: NavItem[] = [];
+    if (navAllowed(user, "admin-users")) {
+      adminItems.push({
+        key: "admin-users",
+        path: "/admin/users",
+        icon: <UsersIcon size={iconSize} strokeWidth={iconStroke} />,
+        labelKey: "nav.adminUsers",
+      });
+    }
+    if (navAllowed(user, "admin-storage")) {
+      adminItems.push({
+        key: "admin-storage",
+        path: "/admin/backend",
+        icon: <HardDrive size={iconSize} strokeWidth={iconStroke} />,
+        labelKey: "nav.adminStorage",
+      });
+    }
+    if (navAllowed(user, "admin-plugins")) {
+      adminItems.push({
+        key: "admin-plugins",
+        path: "/admin/plugins",
+        icon: <Puzzle size={iconSize} strokeWidth={iconStroke} />,
+        labelKey: "nav.adminPlugins",
+      });
+    }
+    if (navAllowed(user, "admin-security")) {
+      adminItems.push({
+        key: "admin-security",
+        path: "/admin/security",
+        icon: <Shield size={iconSize} strokeWidth={iconStroke} />,
+        labelKey: "nav.security",
+      });
+    }
+    if (navAllowed(user, "admin-advanced")) {
+      adminItems.push({
+        key: "admin-advanced",
+        path: "/admin/advanced",
+        icon: <SlidersHorizontal size={iconSize} strokeWidth={iconStroke} />,
+        labelKey: "nav.adminAdvanced",
+      });
+    }
+    if (adminItems.length > 0) {
+      sections.push({ id: "admin", groupKey: "nav.admin", items: adminItems });
+    }
   }
   return sections;
 }

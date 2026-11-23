@@ -82,7 +82,7 @@ export function useAgentFormResources(
     return () => {
       cancelled = true;
     };
-  }, [enabled, agentId]);
+  }, [agentId, enabled]);
 
   return { models, modelsLoading, backends, backendsLoading };
 }

@@ -3,14 +3,66 @@
   min-width: 0;
   margin-bottom: 12px;
   padding: 10px 16px;
-  background: var(--fn-bg-container, var(--fn-bg-elevated));
-  border: 1px solid var(--fn-border-secondary);
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-rest);
 
   @media (max-width: 767px) {
     padding: 8px 12px;
   }
+}
+
+/** Content card (iSpace surface-1 + hairline). */
+.content {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-16);
+  box-shadow: var(--shadow-rest);
+
+  /* Page-level antd tabs read as the iSpace segmented pill. */
+  :global(.octop-tabs-top > .octop-tabs-nav) {
+    margin-bottom: 20px;
+  }
+
+  :global(.octop-tabs-top > .octop-tabs-nav::before),
+  :global(.octop-tabs .octop-tabs-ink-bar) {
+    display: none;
+  }
+
+  :global(.octop-tabs > .octop-tabs-nav .octop-tabs-nav-wrap) {
+    flex: none;
+  }
+
+  :global(.octop-tabs > .octop-tabs-nav .octop-tabs-nav-list) {
+    gap: 2px;
+    padding: 2px;
+    background: var(--surface-2);
+    border-radius: var(--radius-10);
+  }
+
+  :global(.octop-tabs > .octop-tabs-nav .octop-tabs-tab),
+  :global(.octop-tabs > .octop-tabs-nav .octop-tabs-tab + .octop-tabs-tab) {
+    height: 28px;
+    margin: 0;
+    padding: 0 12px;
+    border-radius: var(--radius-8);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  :global(.octop-tabs > .octop-tabs-nav .octop-tabs-tab.octop-tabs-tab-active) {
+    background: var(--surface-1);
+    box-shadow: var(--shadow-rest);
+  }
+}
+
+/** `bare`: sections render their own cards. */
+.contentBare {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /** Desktop path-tab label: icon + text. */
@@ -18,6 +70,15 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 28px;
+  line-height: 1;
+
+  svg {
+    display: block;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+  }
 }
 
 /**

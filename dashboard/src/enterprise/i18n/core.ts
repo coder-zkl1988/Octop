@@ -1,0 +1,126 @@
+/** Enterprise shell strings (sidebar, user menu, shared labels) → `enterprise.core.*`. */
+export const zh = {
+  edition: "企业版",
+  productName: "Tabby 企业版",
+  tenantTitle: "当前租户",
+  points: "点",
+  pointsValue: "{{value}} 点",
+  tenantRemaining: "租户剩余",
+  monthUsage: "本月用量",
+  accountAndUsage: "账户与用量",
+  myDevices: "我的设备",
+  aboutApp: "关于 Tabby",
+  signOut: "退出登录",
+  syncCenter: "同步中心",
+  lockedByAdmin: "由企业管理员锁定",
+  contactAdmin: "请联系企业管理员。",
+  sync: {
+    synced: "已同步",
+    pending: "{{count}} 条待同步",
+    offline: "离线 · 联网后同步",
+    offlineShort: "离线",
+  },
+  role: {
+    admin: "管理员",
+    developer: "开发人员",
+    member: "成员",
+  },
+  loginMethod: {
+    password: "账号密码",
+    feishu: "飞书单点登录",
+    wecom: "企业微信单点登录",
+    dingtalk: "钉钉单点登录",
+    oidc: "OIDC 单点登录",
+  },
+  channel: {
+    stable: "稳定通道",
+    beta: "测试通道",
+  },
+  justNow: "刚刚",
+  minutesAgo: "{{count}} 分钟前",
+  hoursAgo: "{{count}} 小时前",
+  daysAgo: "{{count}} 天前",
+  block: {
+    offline: {
+      title: "当前离线",
+      desc: "本地功能仍可使用，联网后会自动同步并恢复云端调用。",
+    },
+    billing: {
+      title: "云端调用暂时不可用",
+      desc: "企业余额或个人配额已达到限制，请联系企业管理员。",
+      account: "查看账户与用量",
+    },
+    tenant: { desc: "企业账户余额不足，所有成员的云端模型调用已暂停。" },
+    "member-quota": { desc: "本月配额已用尽（{{used}} / {{quota}} 点）。" },
+    session: {
+      title: "会话正在其他设备使用",
+      desc: "该会话由另一台设备持有，你可以接管后继续。",
+      takeOver: "接管会话",
+    },
+  },
+};
+
+export const en: typeof zh = {
+  edition: "Enterprise",
+  productName: "Tabby Enterprise",
+  tenantTitle: "Current tenant",
+  points: "pts",
+  pointsValue: "{{value}} pts",
+  tenantRemaining: "Tenant balance",
+  monthUsage: "This month",
+  accountAndUsage: "Account & usage",
+  myDevices: "My devices",
+  aboutApp: "About Tabby",
+  signOut: "Sign out",
+  syncCenter: "Sync center",
+  lockedByAdmin: "Locked by your admin",
+  contactAdmin: "Contact your enterprise admin.",
+  sync: {
+    synced: "Synced",
+    pending: "{{count}} waiting to sync",
+    offline: "Offline · syncs when back online",
+    offlineShort: "Offline",
+  },
+  role: {
+    admin: "Admin",
+    developer: "Developer",
+    member: "Member",
+  },
+  loginMethod: {
+    password: "Password",
+    feishu: "Feishu SSO",
+    wecom: "WeCom SSO",
+    dingtalk: "DingTalk SSO",
+    oidc: "OIDC SSO",
+  },
+  channel: {
+    stable: "Stable channel",
+    beta: "Beta channel",
+  },
+  justNow: "just now",
+  minutesAgo: "{{count}} min ago",
+  hoursAgo: "{{count}} h ago",
+  daysAgo: "{{count}} d ago",
+  block: {
+    offline: {
+      title: "You're offline",
+      desc: "Local features remain available. Cloud calls and sync resume when you reconnect.",
+    },
+    billing: {
+      title: "Cloud calls are temporarily unavailable",
+      desc: "Your enterprise balance or member quota has been reached. Contact your administrator.",
+      account: "View account & usage",
+    },
+    tenant: {
+      desc: "The enterprise balance is exhausted, so cloud model calls are paused for everyone.",
+    },
+    "member-quota": {
+      desc: "Your monthly quota is exhausted ({{used}} / {{quota}} pts).",
+    },
+    session: {
+      title: "This conversation is open elsewhere",
+      desc: "Another device currently holds this conversation. Take it over to continue.",
+      takeOver: "Take over",
+    },
+  },
+};

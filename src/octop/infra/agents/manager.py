@@ -562,6 +562,7 @@ class AgentManager:
         self._config = config or _OctopConfig()
         self._expert_catalog = expert_catalog
         self._plugin_manager = plugin_manager
+        self.plugin_apps: Any | None = None
         self._cron_manager: CronManager | None = None
         self._companion_hub: CompanionHub | None = None
         self._proactive_scheduler: ProactiveCareScheduler | None = None
@@ -4646,6 +4647,8 @@ class AgentManager:
                 agent_plugins=mount_plugins,
                 global_plugins=effective_plugins,
             )
+            if self.plugin_apps is not None:
+                self.plugin_apps.guard_tools(plugin_tools)
         else:
             for plugin in PluginRegistry().list_plugins():
                 effective_plugins[plugin.manifest.id] = False

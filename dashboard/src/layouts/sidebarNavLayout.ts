@@ -135,6 +135,10 @@ export function visibleEditorGroups(
     const count = state.itemsByGroup[group.id]?.length ?? 0;
     if (count > 0) return true;
     if (!isBuiltinNavGroupId(group.id)) return true;
+    // Keep the settings bucket available in the customizer even when every
+    // setting is currently hidden by permissions; enterprise layouts can add
+    // managed settings when the account policy is refreshed.
+    if (group.id === "settings") return true;
     return catalogGroupIds.has(group.id);
   });
 }

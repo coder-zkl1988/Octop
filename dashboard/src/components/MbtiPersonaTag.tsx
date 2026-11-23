@@ -36,7 +36,6 @@ export default function MbtiPersonaTag({
 
   const tag = (
     <Tag
-      color={value ? "purple" : "default"}
       style={{
         margin: 0,
         cursor: clickable ? "pointer" : undefined,

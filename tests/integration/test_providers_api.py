@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.support.auth import create_user
+
 
 async def test_list_providers(env):
     """GET /providers returns all providers (read-only endpoint for any user)."""
@@ -13,7 +15,8 @@ async def test_list_providers(env):
     )
     assert r.status_code == 201
 
-    r = await c.get("/api/providers", headers=auth)
+    reader_auth = await create_user(c, auth, username="provider-reader", permissions=[])
+    r = await c.get("/api/providers", headers=reader_auth)
     assert r.status_code == 200
     listed = r.json()
     assert any(p["name"] == "openai" for p in listed)

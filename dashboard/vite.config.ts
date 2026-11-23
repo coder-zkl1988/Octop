@@ -87,13 +87,14 @@ export default defineConfig(({ mode }) => {
               if (id.includes("react-dom")) return "vendor-react";
               if (id.includes("react-router")) return "vendor-react";
               if (/\/node_modules\/react\//.test(id)) return "vendor-react";
-              // Keep rc-* with antd in one chunk. Splitting rc-* into vendor-rc
-              // creates a circular chunk (vendor-rc ↔ vendor-antd) that breaks
-              // production with "Cannot access 'FastColor' before initialization".
-              if (id.includes("rc-")) return "vendor-antd";
-              if (id.includes("/antd/")) return "vendor-antd";
-              if (id.includes("antd-style")) return "vendor-antd";
-              if (id.includes("@ant-design")) return "vendor-antd";
+              // Keep React and Ant Design in one runtime chunk. Splitting
+              // antd-style/rc-* creates a vendor-react ↔ vendor-antd cycle;
+              // WebKit then evaluates React before its createContext export
+              // is initialized and the whole dashboard stays on the boot UI.
+              if (id.includes("rc-")) return "vendor-react";
+              if (id.includes("/antd/")) return "vendor-react";
+              if (id.includes("antd-style")) return "vendor-react";
+              if (id.includes("@ant-design")) return "vendor-react";
               if (id.includes("@xterm")) return "vendor-xterm";
               // mermaid + deps are dynamically imported — skip manualChunks so
               // Vite generates async chunks automatically.
@@ -191,7 +192,7 @@ export default defineConfig(({ mode }) => {
           // vendor-antd (incl. the ColorPicker color engine) exceeds the
           // 2 MiB workbox default; raise the precache limit so it stays
           // offline-available instead of silently skipped.
-          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           // FastAPI already serves the SPA fallback. A Workbox NavigationRoute
           // would Cache-First the old shell; use NetworkFirst below instead.
           navigateFallback: null,

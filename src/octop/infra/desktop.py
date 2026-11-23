@@ -1,6 +1,6 @@
 """Desktop shell ownership for the Octop Python sidecar.
 
-The Electron shell marks the Python process it owns with
+The desktop shell marks the Python process it owns with
 ``OCTOP_DESKTOP_SHELL=1``.  This flag is authoritative for "this process is the
 desktop-hosted sidecar" and is intentionally distinct from ``OCTOP_DESKTOP`` /
 ``OCTOP_GREEN_PACKAGES``: a standalone green portable install may set those

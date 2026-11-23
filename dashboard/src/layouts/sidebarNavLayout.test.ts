@@ -40,11 +40,11 @@ describe("sidebarNavLayout", () => {
       "tasks",
       "token-usage",
     ]);
-    expect(editor.groups.map((group) => group.id)).toEqual([
-      "settings",
-      "control",
-      "admin",
-    ]);
+    expect(editor.groups.map((group) => group.id)).toEqual(
+      import.meta.env.VITE_ENTERPRISE_MODE === "1"
+        ? ["settings", "control"]
+        : ["settings", "control", "admin"],
+    );
     expect(editor.hidden).toEqual([]);
   });
 
@@ -97,8 +97,12 @@ describe("sidebarNavLayout", () => {
   it("moves a deleted group's items to the front of the ungrouped list", () => {
     const editor = editorFromCatalog(catalog(), null);
     const next = deleteGroup(editor, "settings");
-    expect(next.groups.map((group) => group.id)).toEqual(["control", "admin"]);
-    expect(next.ungrouped.slice(0, 2)).toEqual(["personalization", "channels"]);
+    expect(next.groups.map((group) => group.id)).toEqual(
+      import.meta.env.VITE_ENTERPRISE_MODE === "1"
+        ? ["control"]
+        : ["control", "admin"],
+    );
+    expect(next.ungrouped.slice(0, 2)).toEqual(["apps", "personalization"]);
     expect(next.ungrouped).toContain("chat");
   });
 

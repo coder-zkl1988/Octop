@@ -24,6 +24,12 @@ def should_defer_control_plane_db(config: OctopConfig, paths: PathLayout) -> boo
     ``OCTOP_DATABASE_*`` / PostgreSQL configuration. Password verification and
     early wizard steps then run without a pool.
     """
+    if config.enterprise_backend_url:
+        # Enterprise desktop mode still needs Octop's local session, user,
+        # thread, and workspace stores, but it must not show the self-hosted
+        # database setup wizard.  The default private SQLite file is created
+        # on first boot and is scoped by OCTOP_HOME like any other install.
+        return False
     if config.database.is_postgresql:
         return False
     if database_env_configured():

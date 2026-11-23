@@ -35,6 +35,11 @@ class PhoneInfo:
     battery_level: int | None = None
     is_charging: bool | None = None
     current_app: str = ""
+    policy_mode: str | None = None
+    skill_bundle_version: int | None = None
+    skill_sync_status: str | None = None
+    supported_actions: tuple[str, ...] = ()
+    supported_apps: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,6 +57,7 @@ class TaskProgress:
     screenshot: bytes | None
     interaction_message: str | None = None
     interaction_screenshot: bytes | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -102,6 +108,12 @@ def _app(value: object) -> str:
     return "" if name.lower() == "unknown" else name
 
 
+def _str_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(item.strip() for item in value if isinstance(item, str) and item.strip())
+
+
 def decode_image(value: object) -> bytes | None:
     """Decode a base64 screenshot field (``data:`` prefixes tolerated)."""
     if not isinstance(value, str) or not value:
@@ -126,6 +138,13 @@ def parse_phone_info(raw: object) -> PhoneInfo:
         battery_level=_int_or_none(caps.get("batteryLevel")),
         is_charging=charging if isinstance(charging, bool) else None,
         current_app=_app(caps.get("currentApp")),
+        policy_mode=_str(caps.get("policyMode", caps.get("devicePolicyMode"))) or None,
+        skill_bundle_version=_int_or_none(
+            caps.get("skillBundleVersion", caps.get("bundleVersion"))
+        ),
+        skill_sync_status=_str(caps.get("skillSyncStatus")) or None,
+        supported_actions=_str_tuple(caps.get("supportedActions")),
+        supported_apps=_str_tuple(caps.get("supportedApps")),
     )
 
 
@@ -154,6 +173,9 @@ def parse_progress(msg: dict[str, Any]) -> TaskProgress | None:
     if isinstance(interaction, dict):
         message = _str(interaction.get("message")) or "The phone needs a decision."
         interaction_shot = decode_image(interaction.get("screenshot"))
+    runtime = params.get("runtime")
+    metadata: dict[str, Any] = dict(runtime) if isinstance(runtime, dict) else {}
+    metadata.update({k: params[k] for k in ("progressPercent", "target") if k in params})
     return TaskProgress(
         task_id=task_id,
         step=_int_or_none(params.get("step")) or 0,
@@ -162,6 +184,7 @@ def parse_progress(msg: dict[str, Any]) -> TaskProgress | None:
         screenshot=decode_image(params.get("screenshot")),
         interaction_message=message,
         interaction_screenshot=interaction_shot,
+        metadata=metadata,
     )
 
 
@@ -173,6 +196,26 @@ def result_task_id(msg: dict[str, Any]) -> str | None:
     if msg_id.startswith(MEDIA_RESULT_ID_PREFIX) or "result" not in msg:
         return None
     return msg_id[len(RESULT_ID_PREFIX) :] or None
+
+
+def media_result_id(msg: dict[str, Any]) -> str | None:
+    msg_id = msg.get("id")
+    if not isinstance(msg_id, str) or not msg_id.startswith(MEDIA_RESULT_ID_PREFIX):
+        return None
+    return msg_id[len(MEDIA_RESULT_ID_PREFIX) :] or None
+
+
+def parse_media_result(msg: dict[str, Any]) -> dict[str, Any] | None:
+    media_id = media_result_id(msg)
+    result = msg.get("result")
+    if media_id is None or not isinstance(result, dict):
+        return None
+    return {
+        "mediaId": _str(result.get("mediaId")) or media_id,
+        "success": result.get("success") is True,
+        **({"savedUri": _str(result["savedUri"])} if result.get("savedUri") else {}),
+        **({"error": _str(result["error"])} if result.get("error") else {}),
+    }
 
 
 def parse_result(msg: dict[str, Any], *, device_id: str) -> TaskResult | None:
@@ -233,6 +276,7 @@ def execute_message(
     max_steps: int | None = None,
     guidance: str | None = None,
     session_id: str | None = None,
+    task_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {"taskId": task_id, "task": task, "mode": "autonomous"}
     if max_steps is not None:
@@ -241,7 +285,26 @@ def execute_message(
         params["guidance"] = guidance
     if session_id:
         params["sessionId"] = session_id
+    if task_policy is not None:
+        params["taskPolicy"] = task_policy
     return {"channel": "task", "id": task_id, "method": "agent.execute", "params": params}
+
+
+def media_push_message(
+    media_id: str, filename: str, mime_type: str, data_base64: str, *, album: str = "Tabby"
+) -> dict[str, Any]:
+    return {
+        "channel": "task",
+        "id": f"media_{media_id}",
+        "method": "media.push",
+        "params": {
+            "mediaId": media_id,
+            "filename": filename,
+            "mimeType": mime_type,
+            "dataBase64": data_base64,
+            "album": album,
+        },
+    }
 
 
 def cancel_message(task_id: str) -> dict[str, Any]:
@@ -255,6 +318,32 @@ def cancel_message(task_id: str) -> dict[str, Any]:
 
 def result_ack_message(task_id: str) -> dict[str, Any]:
     return {"channel": "task", "method": "agent.result_ack", "params": {"taskId": task_id}}
+
+
+def skill_bundle_identity(value: dict[str, Any]) -> tuple[int, int, str] | None:
+    schema = _int_or_none(value.get("schemaVersion"))
+    version = _int_or_none(value.get("bundleVersion", value.get("syncVersion")))
+    digest = _str(value.get("digest"))
+    if schema is None or version is None or not digest:
+        return None
+    return schema, version, digest
+
+
+def skill_message_identity(params: dict[str, Any]) -> tuple[int, int, str] | None:
+    return skill_bundle_identity(params)
+
+
+def skill_sync_message(bundle: dict[str, Any]) -> dict[str, Any]:
+    identity = skill_bundle_identity(bundle)
+    if identity is None:
+        raise ValueError("invalid phone skill bundle")
+    return {
+        "channel": "skill",
+        "type": "skill.sync",
+        "method": "skill.sync",
+        "id": f"skill-sync-{identity[1]}-{int(time.time() * 1000)}",
+        "params": bundle,
+    }
 
 
 # Live mirror. ``fps > 5`` asks the phone for an H.264 stream (it prompts for

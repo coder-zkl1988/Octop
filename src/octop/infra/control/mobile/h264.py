@@ -47,6 +47,31 @@ def avcc_sample(nals: list[bytes]) -> bytes:
     return bytes(out)
 
 
+def annex_b_nals(data: bytes) -> list[bytes]:
+    """Split one complete Annex-B access unit into NAL units."""
+
+    starts: list[tuple[int, int]] = []
+    i = 0
+    while i <= len(data) - 3:
+        if data[i : i + 3] == b"\x00\x00\x01":
+            starts.append((i, 3))
+            i += 3
+            continue
+        if i <= len(data) - 4 and data[i : i + 4] == b"\x00\x00\x00\x01":
+            starts.append((i, 4))
+            i += 4
+            continue
+        i += 1
+
+    nals: list[bytes] = []
+    for index, (start, prefix_len) in enumerate(starts):
+        end = starts[index + 1][0] if index + 1 < len(starts) else len(data)
+        nal = data[start + prefix_len : end]
+        if nal:
+            nals.append(nal)
+    return nals
+
+
 def _start_len(buf: bytes | bytearray, idx: int) -> int:
     if buf[idx : idx + 4] == b"\x00\x00\x00\x01":
         return 4

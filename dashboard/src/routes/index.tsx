@@ -31,6 +31,12 @@ const AdminStoragePage = lazy(() => import("../pages/Admin/Storage"));
 const AdminPluginsPage = lazy(() => import("../pages/Admin/Plugins"));
 const AgentConfigPage = lazy(() => import("../pages/Agent/Config"));
 
+// Enterprise
+const AccountPage = lazy(() => import("../pages/Enterprise/Account"));
+const SyncCenterPage = lazy(() => import("../pages/Enterprise/SyncCenter"));
+const AppsLandingPage = lazy(() => import("../pages/PluginApps/AppsLanding"));
+const PluginAppPage = lazy(() => import("../pages/PluginApps"));
+
 // Misc
 const PwaDebugPage = lazy(() => import("../pages/PwaDebug"));
 const NotFoundPage = lazy(() => import("../components/NotFoundPage"));
@@ -67,6 +73,10 @@ export const pathToKey: Record<string, string> = {
   "/skills": "personalization",
   "/token-usage": "token-usage",
   "/agent-config": "agent-config",
+  // Enterprise
+  "/account": "account",
+  "/sync": "sync",
+  "/apps": "apps",
   // Control
   "/acp": "acp",
   "/channels": "channels",
@@ -147,6 +157,7 @@ export function resolveSelectedKey(pathname: string): string {
   if (pathname.startsWith("/remote-desktop/")) return "remote-desktop";
   if (pathname.startsWith("/phone/")) return "phone";
   if (pathname.startsWith("/personalization/")) return "personalization";
+  if (pathname.startsWith("/apps/")) return "apps";
   return "";
 }
 
@@ -173,6 +184,12 @@ export const routeConfigs: RouteConfig[] = [
     element: <RedirectPreserveSearch to="/personalization/skills" />,
   },
   { path: "/token-usage", element: <TokenUsagePage /> },
+
+  // Enterprise
+  { path: "/account", element: <AccountPage /> },
+  { path: "/sync", element: <SyncCenterPage /> },
+  { path: "/apps", element: <AppsLandingPage /> },
+  { path: "/apps/:pluginId", element: <PluginAppPage /> },
 
   // Control (RequirePermission via pathPermissionKeys in MainLayout)
   { path: "/acp", element: <ACPPage /> },

@@ -42,6 +42,7 @@ help:
 	@echo "Build targets:"
 	@echo "  build            Build frontend + Python wheel (full package)"
 	@echo "  build-frontend   Build React dashboard only → $(DASHBOARD_DEST)"
+	@echo "  build-frontend-enterprise  Build enterprise dashboard for the desktop package"
 	@echo "  build-wheel      Build Python wheel only (assumes frontend built)"
 	@echo ""
 	@echo "Publish targets:"
@@ -100,6 +101,14 @@ build-frontend:
 	# Render peaks above 2GB (Full GC, then OOM at 2048 on GitHub runners).
 	cd $(DASHBOARD_DIR) && NODE_ENV=production NODE_OPTIONS="--max-old-space-size=4096" npm run build
 	@echo "[build-frontend] Done."
+
+.PHONY: build-frontend-enterprise
+build-frontend-enterprise:
+	@echo "[build-frontend-enterprise] Installing npm dependencies..."
+	cd $(DASHBOARD_DIR) && npm ci
+	@echo "[build-frontend-enterprise] Building enterprise dashboard (output: $(DASHBOARD_DEST))..."
+	cd $(DASHBOARD_DIR) && VITE_ENTERPRISE_MODE=1 NODE_ENV=production NODE_OPTIONS="--max-old-space-size=2048" npm run build
+	@echo "[build-frontend-enterprise] Done."
 
 .PHONY: build-wheel
 build-wheel:

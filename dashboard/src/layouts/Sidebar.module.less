@@ -1,5 +1,5 @@
 .navGroup {
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 
   &:last-child {
     margin-bottom: 0;
@@ -12,18 +12,16 @@
   justify-content: space-between;
   gap: 6px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 12px 6px;
   border: none;
   background: transparent;
   cursor: pointer;
   text-align: left;
   user-select: none;
-  border-radius: var(--fn-radius-md);
+  border-radius: var(--radius-6);
   transition: background var(--fn-transition-fast);
 
   &:hover {
-    background: color-mix(in srgb, var(--fn-text-primary) 3%, transparent);
-
     .navGroupChevron {
       opacity: 0.5;
     }
@@ -33,18 +31,18 @@
 .navGroupLabel {
   flex: 1;
   min-width: 0;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--fn-sidebar-group-text);
-  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   line-height: 1.2;
 }
 
 .navGroupChevron {
   flex-shrink: 0;
-  color: var(--fn-sidebar-group-text);
-  opacity: 0.28;
+  color: var(--text-tertiary);
+  opacity: 0.5;
   transition:
     transform 0.2s ease,
     opacity 0.15s ease;
@@ -62,34 +60,9 @@
   display: flex;
   align-items: stretch;
   width: 100%;
-  margin-bottom: 2px;
-  border-radius: var(--fn-radius-md);
+  margin-bottom: 1px;
+  border-radius: var(--radius-8);
   transition: background var(--fn-transition-fast);
-}
-
-.chatRailExpandBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  margin: 6px 6px 6px 0;
-  padding: 0;
-  border: none;
-  border-radius: var(--fn-radius-md);
-  appearance: none;
-  background: none;
-  color: var(--fn-text-tertiary);
-  cursor: pointer;
-  transition:
-    background var(--fn-transition-fast),
-    color var(--fn-transition-fast);
-
-  &:hover {
-    color: var(--fn-text-primary);
-    background: color-mix(in srgb, var(--fn-text-primary) 8%, transparent);
-  }
 }
 
 .navItemMain {
@@ -99,26 +72,62 @@
   flex: 1;
   min-width: 0;
   padding: 0 12px;
-  height: 40px;
+  height: var(--nav-item-height);
   border: none;
-  border-radius: var(--fn-radius-md);
+  border-radius: var(--radius-8);
   background: transparent;
   cursor: pointer;
   text-align: left;
   transition: color var(--fn-transition-fast);
 }
 
+.chatRailExpandBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin: 4px 4px 4px 0;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    background var(--fn-transition-fast),
+    color var(--fn-transition-fast);
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text-heading);
+  }
+}
+
+/* "有新版本": small brand pill with a status dot, not a red fill. */
 .navUpdateBadge {
-  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--tabby-orange-subtle);
+  color: var(--tabby-orange-hover);
+  font-size: 10px;
   font-weight: 600;
-  color: #fff;
-  background-color: #ff4d4f;
-  padding: 1px 4px;
-  border-radius: 2px;
   white-space: nowrap;
   flex-shrink: 0;
-  line-height: 1.2;
+  line-height: 1;
   letter-spacing: 0;
+
+  &::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 }
 
 .navUpdateBadgeCollapsed {
@@ -141,6 +150,10 @@
 @media (max-width: 767px) {
   .navGroupLabel {
     font-size: 12px;
+  }
+
+  .navItemMain {
+    height: 40px;
   }
 
   .navUpdateBadge {
@@ -216,13 +229,11 @@
   width: 40px;
   height: 40px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--fn-radius-md);
   background: transparent;
   color: var(--fn-text-tertiary);
   cursor: pointer;
-  transition:
-    background var(--fn-transition-fast),
-    color var(--fn-transition-fast);
+  transition: all var(--fn-transition-fast);
 
   &:hover {
     background: var(--fn-sidebar-item-hover);
@@ -249,33 +260,15 @@
   }
 }
 
-/* ---------- Rail header ---------- */
-/* Keeps the rail above the history rail so the header controls are never
-   painted over by the neighbouring column. */
-.navRailHost {
-  position: relative;
-  display: flex;
-  flex-shrink: 0;
-  align-self: stretch;
-  min-height: 0;
-  z-index: 3;
-}
-
-/* Width is set inline (it animates), so the reduced-motion opt-out has to
-   outrank inline styles — hence `!important` inside the media query. */
-.navRail {
-  @media (prefers-reduced-motion: reduce) {
-    transition: none !important;
-  }
-}
-
-/* Collapsed icons sit on the traffic-light center line. A fixed tile, not a
-   full-bleed stripe, so the active state stays clear of the seam. */
+/* Keep the icon rail centered inside the collapsed sidebar. The tile width
+   stays fixed so the active background never expands to the rail edge. */
 .collapsedNav {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 2px 0 8px;
 }
 
@@ -284,12 +277,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  flex: 0 0 40px;
   width: 40px;
   height: 40px;
+  margin: 0 auto;
   padding: 0;
+  box-sizing: border-box;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--fn-radius-md);
   background: transparent;
   color: var(--fn-text-tertiary);
   cursor: pointer;
@@ -324,90 +319,4 @@
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
-}
-
-/* The collapsed icon list is only as wide as the traffic lights. A 5px
-   scrollbar would steal that width, so it stays hidden while still scrolling. */
-.navScrollCollapsed {
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-  }
-}
-
-/* macOS only: room above the brand for the traffic lights (shell y = 8).
-   Windows keeps its menu in the caption row above the shell, so the logo
-   has no blank spacer. Shorter than the 58px title row. */
-.navChrome {
-  position: relative;
-  flex: 0 0 36px;
-  height: 36px;
-  box-sizing: border-box;
-}
-
-/* logo_mark.svg's circle sits left of the view box. Nudge it onto the
-   traffic-light center line; the expanded wordmark stays put. */
-.brandMarkCollapsed {
-  transform: translateX(2px);
-}
-
-/* Version badges shrink before the wordmark does. */
-.brandMeta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-  flex: 1 1 auto;
-}
-
-/* Logo, version, then the fold control against the rail's right edge. */
-.brandRow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex-shrink: 0;
-  padding: 10px 4px 10px 14px;
-}
-
-.brandRowCollapsed {
-  justify-content: center;
-  padding: 10px 0 12px;
-}
-
-.navFold {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
-  padding: 0;
-  border: none;
-  border-radius: var(--fn-radius-md);
-  background: transparent;
-  color: var(--fn-text-tertiary);
-  cursor: pointer;
-
-  &:hover {
-    color: var(--fn-text-primary);
-    background: var(--fn-sidebar-item-hover);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--fn-color-brand);
-    outline-offset: 1px;
-  }
-}
-
-/* Mobile drawer slides in from the left; same opt-out as the rail. */
-.mobileDrawer {
-  @media (prefers-reduced-motion: reduce) {
-    transition: none !important;
-  }
 }

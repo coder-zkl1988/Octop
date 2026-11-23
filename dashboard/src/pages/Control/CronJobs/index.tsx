@@ -328,7 +328,12 @@ function CronJobsPage() {
                 onClick={() => void handleRefresh()}
               />
             </Tooltip>
-            <Button type="primary" onClick={handleCreate} disabled={listStale}>
+            <Button
+              type="primary"
+              className="is-cta"
+              onClick={handleCreate}
+              disabled={listStale}
+            >
               + {t("cronJobs.createJob")}
             </Button>
           </div>

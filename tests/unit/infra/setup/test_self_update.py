@@ -1200,11 +1200,10 @@ def test_cold_target_install_budget_preserves_regular_timeout(
     assert budgets == ([90, 900] if portable and installer == "pip" else [90])
 
 
-# The desktop launcher compares versions with its own implementation
-# (desktop/src/main/supervisor/version.ts + version.test.ts) and decides
-# whether to replace the portable runtime; the server decides below whether an
-# upgrade is newer. The two ends must agree on the same strings, so this table
-# mirrors the desktop one, including ignoring PEP 440 local segments on both ends.
+# The desktop release compares versions before replacing the portable runtime;
+# the server decides below whether an upgrade is newer. The two ends must
+# agree on the same strings, so this table mirrors the desktop ordering rules,
+# including ignoring PEP 440 local segments on both ends.
 _DESKTOP_ORDERING_PARITY = [
     ("0.9.32", "0.9.31", 1),
     ("0.9.32", "0.9.32", 0),

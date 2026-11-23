@@ -117,15 +117,17 @@
   justify-content: center;
 }
 
+/* iSpace card: start guide on white; the stream surface fills it. */
 .viewport {
   flex: 1;
   min-height: 240px;
   display: flex;
   align-items: stretch;
   justify-content: center;
-  background: var(--fn-bg-secondary);
-  border: 1px solid var(--fn-border-secondary);
-  border-radius: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-16);
+  box-shadow: var(--shadow-rest);
   overflow: auto;
   position: relative;
 }

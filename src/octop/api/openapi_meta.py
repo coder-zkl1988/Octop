@@ -188,6 +188,10 @@ OPENAPI_TAGS: list[dict[str, str]] = [
         "name": "onnx",
         "description": "Local ONNX / fastembed embedding service: enable, catalog, and download.",
     },
+    {
+        "name": "xhs-ops",
+        "description": "Typed resource facade for the licensed 小红书运营 application.",
+    },
 ]
 
 _BEARER_SCHEME = {

@@ -63,15 +63,43 @@ export interface OctopPluginUIHost {
   registerRenderer(
     reg: Omit<ToolRendererRegistration, "pluginId"> & { pluginId?: string },
   ): void;
+  registerPage(
+    reg: Omit<PluginPageRegistration, "pluginId"> & { pluginId?: string },
+  ): void;
   getToolContext(): ToolRenderContext;
   /** L2: update display payload for a tool call without re-running the LLM. */
   patchResult(callId: string, nextData: unknown): void;
   /** Authenticated Octop API request (path starts with ``/`` under ``/api``). */
   request<T = unknown>(path: string, init?: RequestInit): Promise<T>;
+  requestBlob(path: string): Promise<Blob>;
   /** Open this tool call's UI in the chat side dock (one tab per callId). */
   openSidePanel(opts: OpenSidePanelOptions): void;
   /** Close the side dock tab for this tool call, if open. */
   closeSidePanel(callId: string): void;
+}
+
+export interface PluginPageProps {
+  host: OctopPluginUIHost;
+  license: PluginLicense | null;
+}
+
+export interface PluginPageRegistration {
+  id: string;
+  pluginId: string;
+  title?: string;
+  component: ComponentType<PluginPageProps>;
+}
+
+export interface PluginLicense {
+  plugin_id?: string;
+  tenant_id?: string | null;
+  member_id?: string | null;
+  status?: string;
+  version?: number | string | null;
+  features?: string[];
+  read_features?: string[];
+  limits?: Record<string, unknown>;
+  expires_at?: string | null;
 }
 
 /** Shape expected from ``ui/dist/index.js``. */

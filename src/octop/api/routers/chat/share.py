@@ -27,6 +27,18 @@ router = APIRouter()
 
 _SHARE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 _PRIVATE_MARKDOWN_RE = re.compile(r"(!?)\[([^\]]*)\]\(([^)]+)\)")
+_PUBLIC_EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b")
+_PUBLIC_PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:/(?:Users|home|private|var|tmp|Volumes)/[^\s`\"']+|[A-Za-z]:\\[^\s`\"']+)"
+)
+_PUBLIC_IDENTIFIER_RE = re.compile(
+    r"\b(?:user|account|member|tenant|owner)[_ -]?id\s*[:=]\s*[A-Za-z0-9._:-]+",
+    re.IGNORECASE,
+)
+_SENSITIVE_KEY_RE = re.compile(
+    r"(?:userid|accountid|memberid|tenantid|ownerid|username|email|useremail|accountemail)",
+    re.IGNORECASE,
+)
 PUBLIC_SHARE_MESSAGE_LIMIT = 400
 
 
@@ -72,16 +84,36 @@ def _visible_text(raw: str, *, strip_model_thinking: bool) -> str:
     if _OFFLOAD_PLACEHOLDER_RE.match(raw):
         return ""
     text = strip_thinking(raw) if strip_model_thinking else raw
-    return _redact_private_markdown(text.strip())
+    return _redact_public_text(text.strip())
+
+
+def _redact_public_text(text: str) -> str:
+    text = _redact_private_markdown(text)
+    text = _PUBLIC_EMAIL_RE.sub("[REDACTED_EMAIL]", text)
+    text = _PUBLIC_PATH_RE.sub("[REDACTED_PATH]", text)
+    return _PUBLIC_IDENTIFIER_RE.sub(
+        lambda match: (
+            f"{match.group(0).split(':', 1)[0]}: [REDACTED_ID]"
+            if ":" in match.group(0)
+            else f"{match.group(0).split('=', 1)[0]}= [REDACTED_ID]"
+        ),
+        text,
+    )
 
 
 def _redact_value(value: Any) -> Any:
     if isinstance(value, str):
-        return _redact_private_markdown(value)
+        return _redact_public_text(value)
     if isinstance(value, list):
         return [_redact_value(item) for item in value]
     if isinstance(value, dict):
-        return {str(key): _redact_value(item) for key, item in value.items()}
+        result: dict[str, Any] = {}
+        for key, item in value.items():
+            public_key = str(key)
+            normalized_key = re.sub(r"[^a-z0-9]", "", public_key.lower())
+            sensitive = _SENSITIVE_KEY_RE.search(normalized_key) is not None
+            result[public_key] = "[REDACTED]" if sensitive else _redact_value(item)
+        return result
     if value is None or isinstance(value, (int, float, bool)):
         return value
     return str(value)

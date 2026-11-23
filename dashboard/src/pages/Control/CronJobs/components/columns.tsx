@@ -37,6 +37,13 @@ interface ColumnHandlers {
   stickyColumns?: boolean;
 }
 
+/** Last-run status → `is-badge` modifier. */
+const STATUS_BADGE: Record<"success" | "error" | "warning", string> = {
+  success: "is-badge--success",
+  error: "is-badge--danger",
+  warning: "is-badge--warning",
+};
+
 function channelLabel(channel: string, t: TFunction): string {
   const key = CHANNEL_LABEL_KEYS[channel as keyof typeof CHANNEL_LABEL_KEYS];
   return key ? t(key) : channel;
@@ -76,48 +83,17 @@ export const createColumns = (
         return (
           <Tooltip title={id}>
             <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                maxWidth: "100%",
-                overflow: "hidden",
-                cursor: "pointer",
-                paddingLeft: 8,
-              }}
+              className={styles.idCell}
               onClick={() => handlers.onDetail(record)}
             >
               <Tooltip title={label}>
                 {icon ? (
-                  <img
-                    src={icon}
-                    alt={label}
-                    style={{ width: 16, height: 16, flexShrink: 0 }}
-                  />
+                  <img src={icon} alt={label} className={styles.idCellIcon} />
                 ) : (
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      fontSize: 12,
-                      color: "var(--fn-text-tertiary)",
-                    }}
-                  >
-                    {label}
-                  </span>
+                  <span className={styles.idCellChannel}>{label}</span>
                 )}
               </Tooltip>
-              <span
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  color: "var(--fn-text-secondary)",
-                  fontSize: 13,
-                  fontFamily: "monospace",
-                }}
-              >
-                {id}
-              </span>
+              <span className={styles.idText}>{id}</span>
             </div>
           </Tooltip>
         );
@@ -164,32 +140,14 @@ export const createColumns = (
           : handlers.t("common.disabled");
         const dot =
           phase === "failed"
-            ? "var(--fn-color-error, #ef4444)"
+            ? "is-dot--blocked"
             : phase === "missed"
-            ? "#d97706"
+            ? "is-dot--building"
             : phase === "pending" || (!phase && enabled)
-            ? "var(--fn-color-success)"
-            : "var(--fn-border-input)";
+            ? "is-dot--running"
+            : "";
         return (
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              paddingLeft: 8,
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                backgroundColor: dot,
-              }}
-            />
-            {label}
-          </span>
+          <span className={`${styles.enabledCell} is-dot ${dot}`}>{label}</span>
         );
       },
     },
@@ -199,7 +157,7 @@ export const createColumns = (
       key: "trigger",
       width: 160,
       render: (trigger: string) => (
-        <code style={{ fontSize: 12 }}>
+        <code className={styles.triggerCode}>
           {formatTriggerText(trigger, {
             mail: handlers.t("cronJobs.form.agentlyNewMail"),
             once: handlers.t("cronJobs.form.scheduleModeOnce"),
@@ -235,7 +193,7 @@ export const createColumns = (
       render: (_: unknown, record: CronJob) => {
         const content = extractPromptFromJob(record);
         if (!content) {
-          return <span style={{ color: "var(--fn-text-tertiary)" }}>—</span>;
+          return <span className={styles.mutedCell}>—</span>;
         }
         const preview = truncatePromptPreview(content);
         const truncated = preview !== content.trim();
@@ -254,7 +212,7 @@ export const createColumns = (
         const meta = (record.meta as Record<string, unknown> | undefined) ?? {};
         const ts = meta.octop_last_run_at;
         return (
-          <span style={{ fontSize: 12, color: "var(--fn-text-secondary)" }}>
+          <span className={styles.timeCell}>
             {formatCronTimestamp(
               typeof ts === "number" ? ts : null,
               handlers.timeZone,
@@ -275,13 +233,17 @@ export const createColumns = (
             ? meta.octop_last_error
             : null;
         if (typeof status !== "string" || !status) {
-          return <span style={{ color: "var(--fn-text-tertiary)" }}>—</span>;
+          return <span className={styles.mutedCell}>—</span>;
         }
         const known = lastRunStatusTag(status);
         const tag = (
-          <Tag color={known?.color ?? "default"} style={{ fontSize: 11 }}>
+          <span
+            className={`is-badge is-badge--dot ${
+              known ? STATUS_BADGE[known.color] : ""
+            }`}
+          >
             {known ? handlers.t(known.labelKey) : status}
-          </Tag>
+          </span>
         );
         if (status === "error" && lastError) {
           return <Tooltip title={lastError}>{tag}</Tooltip>;
@@ -297,11 +259,11 @@ export const createColumns = (
         const meta = (record.meta as Record<string, unknown> | undefined) ?? {};
         const fresh = Boolean(meta.octop_fresh_thread);
         return (
-          <Tag style={{ fontSize: 11 }}>
+          <span className="is-badge">
             {fresh
               ? handlers.t("cronJobs.col.freshThreadOn")
               : handlers.t("cronJobs.col.freshThreadOff")}
-          </Tag>
+          </span>
         );
       },
     },

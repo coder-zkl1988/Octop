@@ -43,6 +43,11 @@ interface PageShellProps {
   hideManaged?: boolean;
   /** When true, the content area does not scroll; children fill remaining height. */
   fill?: boolean;
+  /**
+   * Drop the white content card: sections inside render their own cards
+   * (iSpace settings / list pages).
+   */
+  bare?: boolean;
   children: React.ReactNode;
 }
 
@@ -79,11 +84,13 @@ function PathTabsSegmented({
  * Universal page wrapper for every non-fullscreen, non-Chat page.
  *
  * Visual contract (master spec §5 / sub-project ② spec §6.2):
- *  - Title row: 20px / 600 weight, fixed (does not scroll with content)
- *  - Subtitle: 13px / secondary colour, 4px below title
+ *  - iSpace: 40px page padding, content fills the available desktop width
+ *  - Title row: 24px / 700 weight, fixed (does not scroll with content)
+ *  - Subtitle: 13px / secondary colour, 6px below title
  *  - Optional agent bar (`agentScoped`): below title, outside content card
  *  - Gap between title row and content: 24px (12px + agent bar when scoped)
- *  - Content: colorBgContainer background, 24px padding, 8px radius
+ *  - Content: surface-1 card, hairline border, 16px radius, 20px padding
+ *    (`bare` drops the card for pages whose sections are cards themselves)
  *  - Only the content area scrolls internally
  *  - `actions` slot: right-aligned in the title row
  *  - `pathTabs`: desktop in title row; mobile full-width bar in content
@@ -100,13 +107,14 @@ function PageShell({
   showTeams,
   hideManaged,
   fill,
+  bare,
   children,
 }: PageShellProps) {
   const isMobile = useIsMobile();
   const { activeAgent } = useAgent();
-  const outerPad = isMobile ? 12 : 32;
-  const outerPadTop = isMobile ? 12 : 24;
-  const contentPad = isMobile ? 12 : 24;
+  const outerPad = isMobile ? 12 : 40;
+  const outerPadTop = isMobile ? 12 : 40;
+  const contentPad = bare ? 0 : isMobile ? 12 : 20;
   /** Fill layout, or mobile path-tabs that must stay pinned above the body. */
   const pinBody = Boolean(fill || (isMobile && pathTabs));
   /**
@@ -140,6 +148,9 @@ function PageShell({
         padding: `${outerPadTop}px ${outerPad}px ${outerPadBottom}`,
         boxSizing: "border-box",
         overflow: "hidden",
+        width: "100%",
+        maxWidth: "none",
+        marginInline: 0,
       }}
     >
       {/* Title row — fixed, never scrolls */}
@@ -159,9 +170,11 @@ function PageShell({
             level={4}
             style={{
               margin: 0,
-              lineHeight: "28px",
-              fontSize: 20,
-              fontWeight: 600,
+              lineHeight: 1.2,
+              fontSize: isMobile ? 20 : 24,
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              color: "var(--text-heading)",
             }}
           >
             {title}
@@ -169,7 +182,7 @@ function PageShell({
           {subtitle && (
             <Text
               type="secondary"
-              style={{ fontSize: 13, marginTop: 4, display: "block" }}
+              style={{ fontSize: 13, marginTop: 6, display: "block" }}
             >
               {subtitle}
             </Text>
@@ -190,11 +203,11 @@ function PageShell({
          tabbed pages get more usable horizontal space. Path tabs on mobile
          pin above the body (same chrome as Workbench / Personalization). */}
       <div
-        className={DESKTOP_NO_DRAG_CLASS}
+        className={`${DESKTOP_NO_DRAG_CLASS} ${styles.content}${
+          bare ? ` ${styles.contentBare}` : ""
+        }`}
         style={{
           flex: 1,
-          background: "var(--fn-bg-container, var(--fn-bg-elevated))",
-          borderRadius: 8,
           padding: contentPad,
           paddingBottom: pinBody
             ? contentPad

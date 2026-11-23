@@ -81,6 +81,8 @@ export function useCompanionMirror(
     frameRef.current = null;
 
     let decoder: VideoDecoder | null = null;
+    let decoderConfig: VideoDecoderConfig | null = null;
+    let waitingForKeyframe = false;
     let stream = { width: 0, height: 0 };
     let raf: number | null = null;
     let pending: MirrorFrameInfo | null = null;
@@ -114,14 +116,26 @@ export function useCompanionMirror(
           },
           error: (err) => console.error("companion mirror decode error", err),
         });
-        decoder.configure({
+        decoderConfig = {
           codec: avcCodecString(description),
           description,
           optimizeForLatency: true,
           hardwareAcceleration: "prefer-hardware",
-        });
+        };
+        decoder.configure(decoderConfig);
       }
-      if (decoder.decodeQueueSize > 8 && !parsed.keyframe) return;
+      if (waitingForKeyframe && !parsed.keyframe) return;
+      if (decoder.decodeQueueSize > 3 && decoderConfig) {
+        // Delta frames depend on earlier frames. Dropping one creates gray
+        // blocks in the next frames, so restart at the next keyframe instead.
+        decoder.reset();
+        decoder.configure(decoderConfig);
+        waitingForKeyframe = !parsed.keyframe;
+        if (!parsed.keyframe) return;
+        const target = canvasRef.current;
+        target?.getContext("2d")?.clearRect(0, 0, target.width, target.height);
+      }
+      if (parsed.keyframe) waitingForKeyframe = false;
       decoder.decode(
         new EncodedVideoChunk({
           type: parsed.keyframe ? "key" : "delta",

@@ -80,6 +80,7 @@ export default function WorkbenchPage({
       title={pageTitle}
       subtitle={t("workbench.description")}
       fill
+      bare
       pathTabs={pathTabs}
     >
       <div className={styles.panels}>
@@ -98,7 +99,7 @@ export default function WorkbenchPage({
             style={{ display: activeTab === "terminal" ? "flex" : "none" }}
             aria-hidden={activeTab !== "terminal"}
           >
-            <TerminalPage embedded isVisible={terminalVisible} />
+            <TerminalPage embedded card isVisible={terminalVisible} />
           </div>
         )}
         {isMounted("cloud") && (

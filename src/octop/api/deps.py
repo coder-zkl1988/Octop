@@ -43,6 +43,9 @@ _JWT_EXEMPT_PREFIXES = (
     "/api/i18n/",
     "/api/connectors/oauth/callback",
     "/api/internal/mcp/",
+    "/api/internal/enterprise/",
+    "/api/mobile/companion/ws",
+    "/api/mobile/companion/vlm/",
     # Short-lived download links: the unguessable token is the credential.
     "/api/downloads/link/",
     # Companion phones authenticate with their pairing key, not a JWT.
@@ -57,6 +60,10 @@ _JWT_EXEMPT_PREFIXES = (
 _JWT_EXEMPT_EXACT = (
     "/api/health",
     "/api/auth/login",
+    "/api/auth/enterprise/login",
+    "/api/auth/enterprise/mfa",
+    "/api/auth/enterprise/register",
+    "/api/auth/enterprise/register/validate",
     # Desktop shells renew an expired session here; the device token is the
     # credential and the router enforces shell-flag + loopback + digest match.
     "/api/auth/device/token",
@@ -194,6 +201,7 @@ def maybe_sliding_renew_token(server: OctopServer, token: str, user: User) -> st
     secret = server.services.secret_repo.get("jwt")
     if secret is None:
         raise OctopError(ErrorCode.INTERNAL_ERROR, "jwt secret missing")
+    assert server.user_manager is not None
     row = server.services.user_repo.get(user.id)
     mfa_version = int(row.mfa_version) if row is not None else 0
     password_version = int(row.password_version) if row is not None else 0

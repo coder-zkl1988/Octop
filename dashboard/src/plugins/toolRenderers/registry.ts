@@ -3,11 +3,13 @@ import type {
   ParsedToolOutput,
   ToolRendererRegistration,
   ToolRenderProps,
+  PluginPageRegistration,
 } from "./types";
 
 const byKey = new Map<string, ToolRendererRegistration>();
 const byToolName = new Map<string, ToolRendererRegistration>();
 const listeners = new Set<() => void>();
+const pages = new Map<string, PluginPageRegistration>();
 let version = 0;
 
 function rendererKey(pluginId: string, id: string): string {
@@ -41,6 +43,33 @@ export function clearToolRenderers(): void {
   byKey.clear();
   byToolName.clear();
   bump();
+}
+
+export function registerPluginPage(reg: PluginPageRegistration): void {
+  pages.set(`${reg.pluginId}::${reg.id}`, reg);
+  bump();
+}
+
+export function unregisterPluginPages(pluginId: string): void {
+  let changed = false;
+  for (const [key, page] of pages) {
+    if (page.pluginId === pluginId) {
+      pages.delete(key);
+      changed = true;
+    }
+  }
+  if (changed) bump();
+}
+
+export function getPluginPage(
+  pluginId: string,
+  id = "main",
+): PluginPageRegistration | null {
+  return pages.get(`${pluginId}::${id}`) ?? null;
+}
+
+export function listPluginPages(): PluginPageRegistration[] {
+  return [...pages.values()];
 }
 
 export function registerToolRenderer(reg: ToolRendererRegistration): void {

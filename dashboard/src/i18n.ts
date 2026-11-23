@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { getApiUrl } from "./api/config";
 import { i18nApi } from "./api/modules/i18n";
+import { withEnterpriseStrings } from "./enterprise/i18n";
 import {
   resolveInitialLocale,
   syncDocumentLang,
@@ -11,10 +12,11 @@ import {
 export type { UiLocale } from "./utils/localePrefs";
 
 async function loadLocaleBundle(locale: UiLocale) {
-  if (locale === "zh") {
-    return (await import("./locales/zh.json")).default;
-  }
-  return (await import("./locales/en.json")).default;
+  const bundle =
+    locale === "zh"
+      ? (await import("./locales/zh.json")).default
+      : (await import("./locales/en.json")).default;
+  return withEnterpriseStrings(bundle, locale);
 }
 
 export async function ensureLocaleBundle(locale: UiLocale): Promise<void> {

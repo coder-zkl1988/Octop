@@ -1,0 +1,284 @@
+/* Enterprise sign-in card (iSpace): canvas ground, 380px white card, 32px controls. */
+.shell {
+  min-height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top, 0px))
+    max(16px, env(safe-area-inset-right, 0px))
+    max(24px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  background: var(--surface-canvas);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  transition: background var(--fn-transition);
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 16px;
+  padding: 40px 32px 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-16);
+  box-shadow: var(--shadow-elevated);
+
+  :global {
+    .octop-input-affix-wrapper.octop-input-affix-wrapper {
+      width: 100%;
+      height: var(--control-height);
+      min-height: var(--control-height);
+      padding: 0 12px;
+      border-radius: var(--radius-8);
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+
+    .octop-input-prefix {
+      margin-inline-end: 8px;
+      color: var(--text-tertiary);
+    }
+
+    .octop-input-password-icon {
+      color: var(--text-tertiary);
+    }
+
+    .octop-btn.octop-btn.octop-btn-block {
+      width: 100%;
+      height: var(--control-height);
+      border-radius: var(--radius-8);
+      font-size: 13px;
+    }
+
+    .octop-btn.octop-btn-primary {
+      font-weight: 600;
+    }
+
+    .octop-checkbox-wrapper.octop-checkbox-wrapper {
+      margin: 0;
+      font-size: 12px;
+    }
+
+    .octop-checkbox-label {
+      color: var(--text-secondary);
+    }
+  }
+}
+
+.logo {
+  display: block;
+  width: auto;
+  height: 48px;
+  max-width: 260px;
+  object-fit: contain;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-heading);
+  text-align: center;
+}
+
+.sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.registrationField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  color: var(--text-secondary);
+}
+
+.registrationModes {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.registrationModes button {
+  flex: 1;
+}
+
+.registrationCodeRow {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.registrationCodeRow > :first-child {
+  flex: 1;
+}
+
+.ldapHint {
+  width: 100%;
+  margin: -6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.opts {
+  width: 100%;
+  margin-top: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.forgot {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--link);
+}
+
+.or {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.orLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-tabby);
+}
+
+.sso {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.ssoBtn {
+  min-width: 0;
+  height: 60px;
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: var(--border-hover);
+    background: var(--surface-canvas);
+  }
+
+  &:disabled {
+    cursor: progress;
+  }
+
+  img,
+  svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+
+  > span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.device {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-12);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+
+  > svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+.deviceTitle {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.deviceMeta {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
+.link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.noticeBody {
+  max-width: 280px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.foot {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+}

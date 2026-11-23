@@ -26,21 +26,18 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <meta name="apple-mobile-web-app-title" content="Octop" />
+    <meta name="apple-mobile-web-app-title" content="Tabby" />
     <!-- Web App Manifest -->
     <link rel="manifest" href="%BASE_URL%manifest.json" />
-    <title>Octop</title>
+    <title>Tabby</title>
     <!--
       Resolve dashboard theme before first paint. Must stay a classic script:
       the splash CSS keys off html[data-theme], not prefers-color-scheme,
       so a stored "light" preference wins over an OS dark setting.
       Storage shape matches appearanceStorage.ts (THEME_STORAGE_KEY = "theme").
 
-      The desktop shell loads this page with ?octopTheme=system|light|dark
-      (DASHBOARD_THEME_QUERY in desktop/src/main/windows/chrome.ts). That
-      device preference wins over localStorage and is written back, then the
-      query is removed so a later reload keeps the stored value. Browser
-      loads have no query and keep using localStorage alone.
+      The desktop shell and browser both use the same local theme preference.
+      Browser loads keep using localStorage alone.
     -->
     <script id="octop-boot-theme">
       (function () {
@@ -370,13 +367,13 @@
             <img
               class="octop-boot-logo octop-boot-logo-light"
               src="%BASE_URL%logo_horizontal_dark.png"
-              alt="Octop"
+              alt="Tabby"
               height="72"
             />
             <img
               class="octop-boot-logo octop-boot-logo-dark"
               src="%BASE_URL%logo_horizontal_white.png"
-              alt="Octop"
+              alt="Tabby"
               height="72"
             />
             <p class="octop-boot-status">
@@ -390,6 +387,25 @@
         </div>
       </div>
     </div>
+    <script>
+      // Keep a native/WebKit startup failure visible instead of leaving the
+      // boot screen spinning forever when the entry module cannot execute.
+      (function () {
+        var bootText = document.getElementById("octop-boot-text");
+        function showBootError(message) {
+          if (!bootText) return;
+          bootText.textContent = "加载失败：" + String(message || "未知错误");
+          bootText.style.color = "#b42318";
+        }
+        window.addEventListener("error", function (event) {
+          showBootError(event.message || "脚本加载失败");
+        });
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event.reason;
+          showBootError(reason && reason.message ? reason.message : reason);
+        });
+      })();
+    </script>
     <script>
       (function () {
         var el = document.getElementById("octop-boot-text");

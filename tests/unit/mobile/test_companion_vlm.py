@@ -78,6 +78,13 @@ def test_resolve_target_requires_configured_usable_provider() -> None:
     assert vlm.resolve_target(settings, providers) is None
 
 
+def test_resolve_target_rejects_non_vision_model() -> None:
+    settings = FakeSettings()
+    providers = _Providers(_provider("p", models=[{"id": "text-only"}]))
+    vlm.save_settings(settings, vlm.VlmSettings("p", "text-only"))
+    assert vlm.resolve_target(settings, providers) is None
+
+
 def test_phone_payload_points_at_proxy_with_device_key() -> None:
     assert vlm.phone_vlm_payload("http://h:8088", "dev-key", None) is None
     target = vlm.VlmTarget("https://up/v1", "sk-up", "gpt-4o", max_tokens=4096)

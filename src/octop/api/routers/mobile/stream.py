@@ -1,4 +1,4 @@
-"""WebSocket Remote Android stream — H.264 screenrecord with JPEG fallback."""
+"""WebSocket Remote Android stream — scrcpy H.264 with JPEG fallback."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import base64
 import contextlib
 import json
 import logging
+import re
 from functools import partial
 from typing import Any
 
@@ -42,11 +43,13 @@ from octop.infra.control.mobile.h264 import (
     NAL_SLICE,
     NAL_SPS,
     AnnexBSplitter,
+    annex_b_nals,
     avc_codec_string,
     avcc_from_sps_pps,
     avcc_sample,
     nal_type,
 )
+from octop.infra.control.mobile.scrcpy import ScrcpyStream, find_scrcpy_server
 from octop.infra.control.mobile.setup import mobile_status
 from octop.infra.users.identity import User
 from octop.infra.users.permissions import user_has_permission
@@ -56,11 +59,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_DEFAULT_FPS = 10.0
+_DEFAULT_FPS = 30.0
 _MIN_QUALITY = 30
 _MAX_QUALITY = 95
 _MIN_FPS = 1.0
-_MAX_FPS = 20.0
+_MAX_FPS = 60.0
 _CAPTURE_TIMEOUT_S = 8.0
 # Consecutive frames that may fail before the stream gives up, matching the
 # desktop loop (``api/routers/desktop/stream.py``). At 10 fps that is ~3 s of
@@ -71,8 +74,10 @@ _INPUT_TIMEOUT_S = 25.0
 _START_TIMEOUT_S = 15.0
 _H264_PROBE_S = 2.0
 _H264_FIRST_FRAME_S = 3.0
-_H264_BIT_RATE = 2_500_000
+_H264_BIT_RATE = 8_000_000
+_H264_PTS_MARKER = 0xA5
 _H264_SIZE = "720x1600"
+_H264_SIZE_RE = re.compile(r"^(\d+)x(\d+)$")
 _JPEG_MAX_SIDE_DEFAULT = 1080
 _JPEG_MAX_SIDE_CAP = 2160
 _SWIPE_THRESHOLD_PX = 28
@@ -151,6 +156,16 @@ def _auth_token_from_start(start_msg: dict[str, Any], query_token: str | None) -
     return None
 
 
+def _parse_stream_size(value: str) -> tuple[int, int] | None:
+    match = _H264_SIZE_RE.fullmatch(value.strip())
+    if not match:
+        return None
+    width, height = int(match.group(1)), int(match.group(2))
+    if width <= 0 or height <= 0:
+        return None
+    return width, height
+
+
 async def _stream_frames(
     ws: WebSocket,
     *,
@@ -219,18 +234,113 @@ async def _stream_frames(
         await asyncio.sleep(max(0.0, interval - elapsed))
 
 
-async def _stream_h264(
+async def _stream_scrcpy(
+    ws: WebSocket,
+    *,
+    device: str,
+    frame_dims: list[int],
+    first_frame: asyncio.Event,
+    max_fps: float,
+    max_side: int,
+) -> None:
+    adb = find_adb()
+    if not adb:
+        return
+    screen_size = await asyncio.to_thread(wm_size, device, adb=adb)
+    if screen_size:
+        frame_dims[0], frame_dims[1] = screen_size
+
+    server_path = find_scrcpy_server()
+    if server_path is None:
+        return
+
+    stream = await ScrcpyStream.start(
+        adb=adb,
+        device=device,
+        server_path=server_path,
+        max_size=max_side,
+        bit_rate=_H264_BIT_RATE,
+        max_fps=max_fps,
+    )
+    try:
+        sps: bytes | None = None
+        pps: bytes | None = None
+        init_sent = False
+        base_pts_us: int | None = None
+        while ws.application_state == WebSocketState.CONNECTED:
+            packet = await stream.read_frame()
+            nals = annex_b_nals(packet.payload)
+            if packet.config:
+                for nal in nals:
+                    kind = nal_type(nal)
+                    if kind == NAL_SPS:
+                        sps = nal
+                    elif kind == NAL_PPS:
+                        pps = nal
+                continue
+
+            if not nals:
+                continue
+            if sps is None or pps is None:
+                for nal in nals:
+                    kind = nal_type(nal)
+                    if kind == NAL_SPS:
+                        sps = nal
+                    elif kind == NAL_PPS:
+                        pps = nal
+                if sps is None or pps is None:
+                    continue
+            if not init_sent:
+                await _send_json(
+                    ws,
+                    {
+                        "type": "video_init",
+                        "codec": avc_codec_string(sps),
+                        "description": base64.b64encode(avcc_from_sps_pps(sps, pps)).decode(
+                            "ascii"
+                        ),
+                        "width": stream.width,
+                        "height": stream.height,
+                        "screen_width": frame_dims[0],
+                        "screen_height": frame_dims[1],
+                    },
+                )
+                init_sent = True
+            sample = avcc_sample([nal for nal in nals if nal_type(nal) in {NAL_SLICE, NAL_IDR}])
+            if not sample:
+                continue
+            flag = 1 if packet.keyframe else 0
+            if base_pts_us is None:
+                base_pts_us = packet.pts_us
+            pts_us = max(0, packet.pts_us - base_pts_us)
+            await _send_bytes(
+                ws,
+                bytes([flag, _H264_PTS_MARKER]) + pts_us.to_bytes(8, "big") + sample,
+            )
+            if packet.keyframe and not first_frame.is_set():
+                first_frame.set()
+    finally:
+        await stream.close()
+
+
+async def _stream_screenrecord_h264(
     ws: WebSocket,
     *,
     device: str,
     frame_dims: list[int],
     first_frame: asyncio.Event,
 ) -> None:
+    """Compatibility fallback for hosts without the bundled scrcpy server."""
+
     adb = find_adb()
     if not adb:
         return
-    # Prefer primary display size for coords; skip --display-id (can stall on emulator).
-    size = await asyncio.to_thread(wm_size, device, adb=adb)
+    screen_size = await asyncio.to_thread(wm_size, device, adb=adb)
+    encoded_size = _parse_stream_size(_H264_SIZE)
+    if screen_size:
+        frame_dims[0], frame_dims[1] = screen_size
+    elif encoded_size:
+        frame_dims[0], frame_dims[1] = encoded_size
     args = screenrecord_h264_args(
         device,
         adb=adb,
@@ -238,11 +348,15 @@ async def _stream_h264(
         bit_rate=_H264_BIT_RATE,
         size=_H264_SIZE,
     )
-    proc = await asyncio.create_subprocess_exec(
-        *args,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,
-    )
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+    except OSError:
+        logger.exception("mobile H.264 encoder could not start (device=%s)", device)
+        return
     splitter = AnnexBSplitter()
     sps: bytes | None = None
     pps: bytes | None = None
@@ -268,10 +382,7 @@ async def _stream_h264(
                 if not (sps and pps):
                     continue
                 if not init_sent:
-                    width, height = size or (0, 0)
-                    if width > 0 and height > 0:
-                        frame_dims[0] = width
-                        frame_dims[1] = height
+                    width, height = encoded_size or (0, 0)
                     await _send_json(
                         ws,
                         {
@@ -282,6 +393,8 @@ async def _stream_h264(
                             ),
                             "width": width,
                             "height": height,
+                            "screen_width": frame_dims[0],
+                            "screen_height": frame_dims[1],
                         },
                     )
                     init_sent = True
@@ -294,6 +407,70 @@ async def _stream_h264(
             proc.kill()
             with contextlib.suppress(ProcessLookupError, TimeoutError):
                 await asyncio.wait_for(proc.wait(), timeout=2)
+
+
+async def _stream_h264(
+    ws: WebSocket,
+    *,
+    device: str,
+    frame_dims: list[int],
+    first_frame: asyncio.Event,
+    max_fps: float,
+    max_side: int,
+) -> None:
+    """Use scrcpy's MediaCodec stream, with screenrecord as a last fallback."""
+
+    if find_scrcpy_server() is not None:
+        try:
+            await _stream_scrcpy(
+                ws,
+                device=device,
+                frame_dims=frame_dims,
+                first_frame=first_frame,
+                max_fps=max_fps,
+                max_side=max_side,
+            )
+            return
+        except (OSError, RuntimeError, TimeoutError):
+            logger.exception("scrcpy H.264 stream failed (device=%s)", device)
+            if ws.application_state != WebSocketState.CONNECTED:
+                return
+    await _stream_screenrecord_h264(
+        ws,
+        device=device,
+        frame_dims=frame_dims,
+        first_frame=first_frame,
+    )
+
+
+async def _stream_h264_then_jpeg(
+    ws: WebSocket,
+    h264_task: asyncio.Task[None],
+    *,
+    device: str,
+    quality: int,
+    max_fps: float,
+    max_side: int,
+    frame_dims: list[int],
+) -> None:
+    """Keep JPEG as a live fallback if a started H.264 process later exits."""
+    try:
+        await h264_task
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("mobile H.264 stream failed (device=%s)", device)
+    if ws.application_state != WebSocketState.CONNECTED:
+        return
+    logger.info("mobile H.264 stream ended; falling back to JPEG (device=%s)", device)
+    await _stream_frames(
+        ws,
+        device=device,
+        quality=quality,
+        max_fps=max_fps,
+        max_side=max_side,
+        frame_dims=frame_dims,
+    )
 
 
 def _msg_device_point(
@@ -564,7 +741,7 @@ async def mobile_stream_ws(
                 else _JPEG_MAX_SIDE_DEFAULT
             ),
         )
-        prefer = str(start_msg.get("codec") or "jpeg").lower()
+        prefer = str(start_msg.get("codec") or "h264").lower()
 
         if prefer != "jpeg":
             first_frame = asyncio.Event()
@@ -574,6 +751,8 @@ async def mobile_stream_ws(
                     device=device,
                     frame_dims=frame_dims,
                     first_frame=first_frame,
+                    max_fps=max_fps,
+                    max_side=max_side,
                 )
             )
             use_h264 = False
@@ -586,11 +765,25 @@ async def mobile_stream_ws(
             except TimeoutError:
                 use_h264 = False
             if use_h264:
-                stream_task = h264_task
+                stream_task = asyncio.create_task(
+                    _stream_h264_then_jpeg(
+                        websocket,
+                        h264_task,
+                        device=device,
+                        quality=quality,
+                        max_fps=max_fps,
+                        max_side=max_side,
+                        frame_dims=frame_dims,
+                    )
+                )
             else:
                 h264_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
+                try:
                     await h264_task
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    logger.exception("mobile H.264 probe failed (device=%s)", device)
                 logger.info(
                     "mobile H.264 unavailable/stalled; falling back to JPEG (device=%s)",
                     device,

@@ -21,6 +21,7 @@ import PlanReadyCard from "./components/PlanReadyCard";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { useHitlEnabled } from "../../hooks/useHitlEnabled";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useEnterprise } from "../../enterprise/EnterpriseContext";
 import { navAllowed, userCan } from "../../utils/permissions";
 import { useChat } from "./hooks/useChat";
 import { useSessions, fetchAndSyncSessionArtifacts } from "./hooks/useSessions";
@@ -143,6 +144,7 @@ function ChatPageInner() {
   });
   const isMobile = useIsMobile();
   const user = useCurrentUser();
+  const { syncState } = useEnterprise();
   const { layoutMode } = useLayoutMode();
   const isMinimalLayout = layoutMode === "minimal";
   const canTerminal = userCan(user, "terminal");
@@ -1500,6 +1502,15 @@ function ChatPageInner() {
               styles.chatPageWithRightDock,
           )}
         >
+          {syncState === "offline" ? (
+            <Alert
+              banner
+              type="warning"
+              showIcon
+              message={t("enterprise.core.block.offline.title")}
+              description={t("enterprise.core.block.offline.desc")}
+            />
+          ) : null}
           {/* Main chat area */}
           <div
             className={cx(

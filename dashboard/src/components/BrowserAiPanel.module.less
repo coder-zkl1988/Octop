@@ -14,6 +14,36 @@
   overflow: hidden;
 }
 
+// ── Inline assistant chrome ───────────────────────────────────────────────
+
+.header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -12px -16px 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--fn-border-secondary, rgba(0, 0, 0, 0.06));
+}
+
+.headerTitle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--fn-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.headerActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
 // ── Context section ────────────────────────────────────────────────────────
 
 .contextSection {
@@ -154,6 +184,69 @@
   min-width: 0;
   font-size: 11px;
   opacity: 0.5;
+}
+
+.sendBar {
+  flex: 0 0 auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--fn-border-secondary);
+}
+
+.sendRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.sendTextarea {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  max-height: 120px;
+  padding: 7px 9px;
+  border: 1px solid var(--fn-border-primary, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  outline: none;
+  background: var(--fn-bg-elevated, #fff);
+  color: var(--fn-text-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  resize: none;
+
+  &:focus {
+    border-color: var(--fn-color-brand, #6366f1);
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--fn-color-brand, #6366f1) 15%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+.sendBtn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--fn-color-brand, #6366f1);
+  border-radius: 8px;
+  background: var(--fn-color-brand, #6366f1);
+  color: #fff;
+  cursor: pointer;
+
+  &:disabled {
+    border-color: var(--fn-border-primary, rgba(0, 0, 0, 0.12));
+    background: var(--fn-bg-secondary);
+    color: var(--fn-text-quaternary);
+    cursor: not-allowed;
+  }
 }
 
 // ── Recording indicator ─────────────────────────────────────────────────

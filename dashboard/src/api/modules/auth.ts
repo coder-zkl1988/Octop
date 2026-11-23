@@ -33,7 +33,9 @@ import type {
 export interface AuthStatus {
   /** True when no admin exists yet — UI must redirect to /setup. */
   setup_required: boolean;
-  /** Desktop shell only: a user named ``local`` already exists. */
+  /** The connected Octop server authenticates through the enterprise control plane. */
+  enterprise_mode?: boolean;
+  /** Desktop shell only: a user named `local` already exists. */
   local_account: boolean;
   /** Legacy alias of ``!setup_required`` kept for compat. */
   setup_done: boolean;
@@ -77,10 +79,6 @@ export interface OctopUser {
   avatar_icon?: string | null;
   /** Uploaded portrait. Shown ahead of the preset when present. */
   avatar_url?: string | null;
-  /**
-   * Backend types this account may select when creating an expert.
-   * ``null`` or omitted means unrestricted.
-   */
   allowed_backend_types?: string[] | null;
 }
 
@@ -245,6 +243,21 @@ function normalizeMfaStatus(raw: Record<string, unknown>): MfaStatus {
   };
 }
 
+export interface EnterpriseLoginResponse {
+  status: "mfa_required" | "ok" | "authenticated";
+  mfa_ticket?: string;
+  principal_type?: string;
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
+  user?: OctopUser;
+}
+
+export interface EnterpriseInvitation {
+  email: string;
+  tenant_name: string;
+}
+
 export interface PublicCaptcha {
   provider: string;
   site_key?: string;
@@ -279,6 +292,7 @@ export interface SetupBody {
 
 interface RawSetupStatus {
   setup_required: boolean;
+  enterprise_mode?: boolean;
   local_account?: boolean;
   wizard_password_required?: boolean;
   wizard_password_exists?: boolean;
@@ -340,6 +354,57 @@ function applySetupFlags(status: AuthStatus): AuthStatus {
 }
 
 export const authApi = {
+  validateEnterpriseInvitation: (invitation_token: string) =>
+    request<EnterpriseInvitation>("/auth/enterprise/register/validate", {
+      method: "POST",
+      body: JSON.stringify({ invitation_token }),
+    }),
+  enterpriseRegister: (
+    invitation_token: string,
+    name: string,
+    password: string,
+  ) =>
+    request<{ member_id: string; status: "active" }>(
+      "/auth/enterprise/register",
+      {
+        method: "POST",
+        body: JSON.stringify({ invitation_token, name, password }),
+      },
+    ),
+  enterpriseOpenRegisterCode: (email: string) =>
+    request<{ sent: boolean; expires_in: number; debug_code?: string }>(
+      "/auth/enterprise/register/email/code",
+      { method: "POST", body: JSON.stringify({ email }) },
+    ),
+  enterpriseOpenRegister: (
+    email: string,
+    code: string,
+    name: string,
+    password: string,
+  ) =>
+    request<{ member_id: string; tenant_id: string; status: "active" }>(
+      "/auth/enterprise/register/email",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, code, name, password }),
+      },
+    ),
+  enterpriseLogin: (email: string, password: string) =>
+    request<EnterpriseLoginResponse>("/auth/enterprise/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  enterpriseMfa: (mfa_ticket: string, code: string) =>
+    request<{
+      status: "authenticated";
+      principal_type?: string;
+      access_token: string;
+      user: OctopUser;
+      expires_in: number;
+    }>("/auth/enterprise/mfa", {
+      method: "POST",
+      body: JSON.stringify({ mfa_ticket, code }),
+    }),
   /** Probe whether the initial admin has been created. */
   getAuthStatus: async (): Promise<AuthStatus> => {
     if (statusInFlight) return statusInFlight;
@@ -349,6 +414,7 @@ export const authApi = {
         const raw = await request<RawSetupStatus>("/setup/status");
         const value: AuthStatus = {
           setup_required: raw.setup_required,
+          enterprise_mode: raw.enterprise_mode,
           local_account: raw.local_account ?? false,
           setup_done: !raw.setup_required,
           enabled: true,

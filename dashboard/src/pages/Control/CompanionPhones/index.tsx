@@ -316,11 +316,11 @@ export default function CompanionPhonesPanel({
                 showIcon
                 message={t(
                   "companionPhone.loopbackTitle",
-                  "Octop 只监听本机，手机无法通过 Wi-Fi 连接",
+                  "Tabby 只监听本机，手机无法通过 Wi-Fi 连接",
                 )}
                 description={t(
                   "companionPhone.loopbackDesc",
-                  "请用 OCTOP_BIND_HOST=0.0.0.0 启动 Octop 后重新生成二维码，或在 USB 连接下执行 adb reverse 把端口转发到手机。",
+                  "请用 OCTOP_BIND_HOST=0.0.0.0 启动 Tabby 后重新生成二维码，或在 USB 连接下执行 adb reverse 把端口转发到手机。",
                 )}
               />
             ) : null}

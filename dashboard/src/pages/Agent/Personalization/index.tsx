@@ -7,6 +7,7 @@ import {
   Notebook,
   Puzzle,
   Sparkles,
+  ShieldCheck,
   Waypoints,
   Wrench,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import MBTISelector from "./components/MBTISelector";
 import AgentPluginsPanel from "./components/AgentPluginsPanel";
 import MemoryPanel from "../Memory/MemoryPanel";
 import ChannelsPanel from "../Channels/ChannelsPanel";
+import EnterprisePolicyPanel from "./components/EnterprisePolicyPanel";
 import styles from "./index.module.less";
 
 export type PersonalizationTab =
@@ -36,7 +38,8 @@ export type PersonalizationTab =
   | "plugins"
   | "mbti"
   | "memory"
-  | "channels";
+  | "channels"
+  | "policy";
 
 const PERSONALIZATION_TABS = [
   "skills",
@@ -46,6 +49,7 @@ const PERSONALIZATION_TABS = [
   "mbti",
   "memory",
   "channels",
+  "policy",
 ] as const satisfies readonly PersonalizationTab[];
 
 const TAB_ICONS = {
@@ -56,6 +60,7 @@ const TAB_ICONS = {
   mbti: Brain,
   memory: Notebook,
   channels: Waypoints,
+  policy: ShieldCheck,
 } as const;
 
 export default function PersonalizationPage() {
@@ -66,6 +71,7 @@ export default function PersonalizationPage() {
   const activeAgent = agents.find((a) => a.agent_id === activeAgentId);
   const isAllowed = useCallback(
     (tab: PersonalizationTab) =>
+      tab === "policy" ||
       userCanKey(user, PERSONALIZATION_TAB_PERMISSIONS[tab]),
     [user],
   );
@@ -158,6 +164,15 @@ export default function PersonalizationPage() {
         />
       ) : null}
       <div className={styles.panels}>
+        {isMounted("policy") && (
+          <div
+            className={styles.panel}
+            style={{ display: activeTab === "policy" ? "flex" : "none" }}
+            aria-hidden={activeTab !== "policy"}
+          >
+            <EnterprisePolicyPanel />
+          </div>
+        )}
         {isMounted("skills") && (
           <div
             className={styles.panel}

@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from octop.api.common.agent import apply_agent_audience, require_agent_owner_row, user_owns_agent
 from octop.api.common.agent_runtime import AgentRuntimeFields, persisted_agent_settings
 from octop.api.common.validators import assert_user_backend_root_dirs
-from octop.api.deps import current_user, get_server
+from octop.api.deps import current_user, get_server, require_permission
 from octop.infra.agents.experts.avatar import (
     display_published_expert_icon_url,
     public_portrait_icon_url,
@@ -760,7 +760,7 @@ async def unpublish_expert(
 async def install_published_expert(
     expert_id: str,
     body: InstallPublishedExpertBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("experts")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Create a private agent and seed it from the immutable published snapshot."""
@@ -823,7 +823,7 @@ async def install_published_expert(
 
 @router.get("/experts")
 async def list_experts(
-    _: Any = Depends(current_user),
+    _: Any = Depends(require_permission("experts")),
     server: Any = Depends(get_server),
 ) -> list[dict[str, Any]]:
     catalog = server.expert_catalog
@@ -840,7 +840,7 @@ async def list_experts(
 async def list_expert_hub(
     q: str = "",
     scene: str = "",
-    _: Any = Depends(current_user),
+    _: Any = Depends(require_permission("experts")),
 ) -> dict[str, Any]:
     """List experts published on the octop.cloud market."""
     try:
@@ -872,7 +872,7 @@ async def list_expert_hub(
 )
 async def get_expert_hub_item(
     slug: str,
-    _: Any = Depends(current_user),
+    _: Any = Depends(require_permission("experts")),
 ) -> dict[str, Any]:
     """Expert detail from the octop.cloud market."""
     try:
@@ -902,7 +902,7 @@ async def get_expert_hub_item(
 async def install_expert_hub_item(
     slug: str,
     body: FromExpertBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("experts")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Create an agent from an octop.cloud market expert package."""
@@ -1010,7 +1010,7 @@ async def get_expert(
 async def create_agent_from_expert(
     expert_id: str,
     body: FromExpertBody,
-    user: Any = Depends(current_user),
+    user: Any = Depends(require_permission("experts")),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Create an agent with the expert template workspace files."""

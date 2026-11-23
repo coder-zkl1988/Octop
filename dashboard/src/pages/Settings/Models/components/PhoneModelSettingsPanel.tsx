@@ -103,7 +103,7 @@ export function PhoneModelSettingsPanel() {
       <Typography.Text type="secondary" className={styles.hint}>
         {t(
           "companionPhone.modelHint",
-          "手机上的 Agent 用这个支持看图的模型操作屏幕。请求经 Octop 转发，模型密钥不会下发到手机。",
+          "手机上的 Agent 用这个支持看图的模型操作屏幕。请求经 Tabby 转发，模型密钥不会下发到手机。",
         )}
       </Typography.Text>
       {isAdmin ? (

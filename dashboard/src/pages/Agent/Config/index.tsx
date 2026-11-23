@@ -77,6 +77,7 @@ function AgentConfigPage() {
 
       <div style={{ display: loading || error ? "none" : "block" }}>
         <div className={styles.header}>
+          <h1 className="is-page-title">{t("agentConfig.title")}</h1>
           <p className={styles.description}>{t("agentConfig.description")}</p>
         </div>
 

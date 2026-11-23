@@ -19,6 +19,7 @@ export interface SetupGuideAction {
   type?: "primary" | "default";
   danger?: boolean;
   title?: string;
+  cta?: boolean;
 }
 
 interface StreamSetupGuideProps {

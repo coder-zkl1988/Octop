@@ -39,7 +39,14 @@ while IFS= read -r line; do
 done < <(git diff --cached --name-only --diff-filter=ACMR || true)
 
 echo "[pre-commit] make precommit  (format-all + lint + typecheck + testmon-scoped test)"
-make precommit
+(
+  # Git fixtures create independent repositories with their own index and author.
+  while IFS= read -r var; do
+    unset "$var"
+  done < <(git rev-parse --local-env-vars)
+  unset GIT_{AUTHOR,COMMITTER}_{NAME,EMAIL,DATE}
+  make precommit
+)
 
 # If format rewrote files that were already staged, refresh the index so the
 # commit includes the formatted content (worktree vs index drift).

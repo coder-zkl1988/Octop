@@ -65,6 +65,131 @@ async def test_attach_sends_connected_with_proxy_credentials() -> None:
     assert view.online and view.model == "Pixel 9" and view.android_sdk == 35
 
 
+async def test_source_style_handshake_exposes_declared_policy_capabilities() -> None:
+    hub = _hub()
+    key, _ = hub.pairing.create(1)
+    raw = auth_frame("Pixel-1")
+    raw["capabilities"].update(
+        {
+            "devicePolicyMode": "enforce",
+            "skillBundleVersion": 66,
+            "skillSyncStatus": "current",
+            "supportedActions": [
+                "AWAKE",
+                "CLICK",
+                "WAIT",
+                "BACK",
+                "HOME",
+                "SCROLL",
+                "LOAD_SKILL",
+                "COMPLETE",
+                "ABORT",
+                "INFO",
+                "TYPE",
+                "SLIDE",
+            ],
+            "supportedApps": ["com.xingin.xhs"],
+        }
+    )
+    hello = parse_auth(raw)
+    assert hello is not None
+    await hub.attach(key, hello, FakePhone(), public_base_url=BASE)
+    view = hub.list_devices()[0]
+    assert view.policy_mode == "enforce"
+    assert view.skill_bundle_version == 66 and view.skill_sync_status == "current"
+    assert view.supported_apps == ("com.xingin.xhs",)
+
+
+async def test_device_info_refreshes_policy_skill_and_action_capabilities() -> None:
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    await hub.handle_message(
+        "Pixel-1",
+        phone,
+        {
+            "channel": "control",
+            "event": "device_info",
+            "policyMode": "enforce",
+            "skillBundleVersion": 66,
+            "skillSyncStatus": "current",
+            "supportedActions": ["CLICK", "TYPE"],
+            "supportedApps": ["com.xingin.xhs"],
+        },
+    )
+    view = hub.list_devices()[0]
+    assert view.policy_mode == "enforce"
+    assert view.skill_bundle_version == 66 and view.skill_sync_status == "current"
+    assert view.supported_actions == ("CLICK", "TYPE")
+
+
+async def test_skill_sync_requires_authorized_bundle_and_matching_ack() -> None:
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    bundle = {
+        "schemaVersion": 2,
+        "syncVersion": 66,
+        "bundleVersion": 66,
+        "minAppVersion": "1.0.15",
+        "digest": "a" * 64,
+        "bundleBase64": "e30=",
+        "skills": [{"id": "xhs-v1"}],
+    }
+
+    async def provider(user_id: int, device_id: str) -> dict[str, Any] | None:
+        assert (user_id, device_id) == (1, "Pixel-1")
+        return bundle
+
+    hub.skill_bundle_provider = provider
+    await hub.handle_message(
+        "Pixel-1",
+        phone,
+        {
+            "channel": "skill",
+            "method": "skill.hello",
+            "params": {"schemaVersion": 2, "bundleVersion": 0, "digest": ""},
+        },
+    )
+    sync = await phone.next_method("skill.sync")
+    assert sync["params"] == bundle
+    assert hub.list_devices()[0].skill_sync_status == "syncing"
+    await hub.handle_message(
+        "Pixel-1",
+        phone,
+        {
+            "channel": "skill",
+            "method": "skill.ack",
+            "params": {"schemaVersion": 2, "bundleVersion": 66, "digest": "wrong"},
+        },
+    )
+    assert hub.list_devices()[0].skill_sync_status == "error"
+    await hub.handle_message(
+        "Pixel-1",
+        phone,
+        {
+            "channel": "skill",
+            "method": "skill.ack",
+            "params": {"schemaVersion": 2, "bundleVersion": 66, "digest": "a" * 64},
+        },
+    )
+    assert hub.list_devices()[0].skill_sync_status == "current"
+
+
+async def test_skill_sync_without_authorized_provider_stays_unknown() -> None:
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    await hub.handle_message(
+        "Pixel-1",
+        phone,
+        {
+            "channel": "skill",
+            "method": "skill.hello",
+            "params": {"schemaVersion": 2, "bundleVersion": 12, "digest": "old"},
+        },
+    )
+    view = hub.list_devices()[0]
+    assert view.skill_bundle_version == 12 and view.skill_sync_status == "unknown"
+
+
 async def test_attach_rejects_foreign_key() -> None:
     hub = _hub()
     _phone, key = await _pair(hub)
@@ -90,6 +215,56 @@ async def test_task_completes_and_result_is_acked() -> None:
     assert ack["params"]["taskId"] == task_id
     assert hub.list_devices()[0].running_task_id is None
     assert hub.find_result(task_id) is not None
+
+
+async def test_run_task_forwards_policy_and_explicit_task_id() -> None:
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    task = asyncio.create_task(
+        hub.run_task("Pixel-1", "publish", task_id="xhs-1", task_policy={"policyMode": "enforce"})
+    )
+    execute = await phone.next_method("agent.execute")
+    assert execute["params"]["taskId"] == "xhs-1"
+    assert execute["params"]["taskPolicy"] == {"policyMode": "enforce"}
+    await hub.handle_message("Pixel-1", phone, result_frame("xhs-1"))
+    assert (await asyncio.wait_for(task, 5)).success  # type: ignore[union-attr]
+
+
+async def test_push_media_returns_receipts_and_timeout_per_file() -> None:
+    hub = _hub()
+    phone, _ = await _pair(hub)
+    sending = asyncio.create_task(
+        hub.push_media(
+            "Pixel-1",
+            [
+                {
+                    "mediaId": "m1",
+                    "filename": "a.png",
+                    "mimeType": "image/png",
+                    "dataBase64": "AQ==",
+                },
+                {
+                    "mediaId": "m2",
+                    "filename": "b.png",
+                    "mimeType": "image/png",
+                    "dataBase64": "Ag==",
+                },
+            ],
+            timeout_s=0.05,
+        )
+    )
+    first = await phone.next_method("media.push")
+    assert first["params"]["mediaId"] == "m1"
+    await hub.handle_message(
+        "Pixel-1", phone, {"id": "resp_media_m1", "result": {"mediaId": "m1", "success": True}}
+    )
+    second = await phone.next_method("media.push")
+    assert second["params"]["mediaId"] == "m2"
+    results = await asyncio.wait_for(sending, 5)
+    assert results == [
+        {"mediaId": "m1", "success": True},
+        {"mediaId": "m2", "success": False, "error": "MEDIA_TIMEOUT"},
+    ]
 
 
 async def test_replayed_result_is_acked_and_stored_once() -> None:
@@ -238,12 +413,19 @@ async def test_frames_update_snapshot_and_device_info() -> None:
     await hub.handle_message(
         "Pixel-1",
         phone,
-        {"channel": "control", "event": "device_info", "batteryLevel": 42, "isCharging": True},
+        {
+            "channel": "control",
+            "event": "device_info",
+            "batteryLevel": 42,
+            "isCharging": True,
+            "supportedApps": ["com.xingin.xhs"],
+        },
     )
     assert hub.snapshot("Pixel-1") == JPEG_BYTES
     [view] = hub.list_devices()
     assert view.current_app == "com.android.settings"
     assert view.battery_level == 42 and view.is_charging is True and view.has_snapshot
+    assert view.supported_apps == ("com.xingin.xhs",)
 
 
 async def test_unpair_closes_and_fails_running_task() -> None:

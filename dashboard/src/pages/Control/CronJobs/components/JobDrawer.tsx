@@ -40,6 +40,7 @@ import {
   MODEL_AUTO_VALUE,
   type ModelPickerOption,
 } from "../../../../utils/modelOptions";
+import styles from "../index.module.less";
 const { Text } = Typography;
 
 interface JobDrawerProps {
@@ -60,26 +61,16 @@ function SectionHeader({
   description?: string;
 }) {
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className={styles.formSection}>
       <Divider
         orientation="left"
         orientationMargin={0}
-        style={{ marginBottom: 4, fontSize: 14, fontWeight: 600 }}
+        className={styles.formSectionDivider}
       >
-        {title}
+        <span className="is-section-label">{title}</span>
       </Divider>
       {description && (
-        <Text
-          style={{
-            fontSize: 12,
-            lineHeight: 1.5,
-            display: "block",
-            marginBottom: 4,
-            color: "var(--fn-text-tertiary)",
-          }}
-        >
-          {description}
-        </Text>
+        <Text className={styles.formSectionDesc}>{description}</Text>
       )}
     </div>
   );
@@ -707,7 +698,7 @@ export function JobDrawer({
             }}
           >
             <Button onClick={onClose}>{t("common.cancel")}</Button>
-            <Button type="primary" htmlType="submit">
+            <Button type="primary" htmlType="submit" className="is-cta">
               {t("common.save")}
             </Button>
           </div>

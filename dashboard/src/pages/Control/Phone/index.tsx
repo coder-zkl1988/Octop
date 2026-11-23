@@ -65,6 +65,7 @@ export default function PhonePage() {
       title={`${t("phoneHub.title")} / ${t(`phoneHub.tabs.${activeTab}`)}`}
       subtitle={t("phoneHub.description")}
       fill
+      bare
       pathTabs={pathTabs}
     >
       <div className={styles.panels}>

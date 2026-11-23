@@ -8,7 +8,7 @@
 
 .workspaceRow {
   flex: 1;
-  min-height: 0;
+  min-height: clamp(680px, calc(100vh - 260px), 1800px);
   display: flex;
   align-items: stretch;
   gap: 0;
@@ -82,7 +82,7 @@
 
 .phoneViewport {
   flex: 1;
-  min-height: 0;
+  min-height: clamp(680px, calc(100vh - 260px), 1800px);
   display: flex;
   flex-direction: column;
   border: 1px solid var(--fn-border-secondary);
@@ -120,7 +120,13 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   flex-shrink: 0;
+}
+
+.deviceCommandActions {
+  flex-wrap: wrap;
 }
 
 .viewSwitcher {
@@ -346,7 +352,7 @@
   align-items: stretch;
   justify-content: stretch;
   background: var(--fn-bg-secondary);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .idleFill {
@@ -437,6 +443,7 @@
   padding: 20px;
   box-sizing: border-box;
   background: #111318;
+  overflow: auto;
 }
 
 .connectingStage {
@@ -479,15 +486,19 @@
   border: 3px solid #2a2d3d;
   border-radius: 28px;
   overflow: hidden;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
 .canvas {
   display: block;
   max-width: min(36vw, 420px);
-  max-height: calc(100% - 8px);
+  max-height: min(calc(100vh - 290px), 1600px);
   width: auto;
   height: auto;
+  object-fit: contain;
   border-radius: 22px;
   touch-action: none;
   outline: none;
@@ -679,6 +690,11 @@
   .deviceBarActions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .deviceCommandActions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .stage {

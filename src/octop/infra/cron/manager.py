@@ -622,7 +622,11 @@ class CronManager:
         if source is None or source.credential_blob is None:
             return
         cached = self._mail_auth_cache.get(source.instance_id)
-        if not refresh and cached is not None and time.monotonic() - cached[0] < _MAIL_AUTH_TTL_SECONDS:
+        if (
+            not refresh
+            and cached is not None
+            and time.monotonic() - cached[0] < _MAIL_AUTH_TTL_SECONDS
+        ):
             return
         await asyncio.to_thread(self._probe_mailbox_auth, source)
 
@@ -630,7 +634,9 @@ class CronManager:
         self._mailbox_authorized(source)
 
     async def _prime_mail_auth_for_rows(self, rows: list[Any]) -> None:
-        for spec in sorted({row.trigger for row in rows if str(row.trigger).startswith("agently:")}):
+        for spec in sorted(
+            {row.trigger for row in rows if str(row.trigger).startswith("agently:")}
+        ):
             await self._prime_mail_auth(spec)
 
     def _mail_source(self, spec: str, user_id: int) -> ConnectorRow | None:

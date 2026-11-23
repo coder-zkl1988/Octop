@@ -15,7 +15,7 @@ function clickDownloadAnchor(blob: Blob, filename: string): void {
 /**
  * Persist a blob as a user download.
  *
- * Both Chromium (browser) and the Electron shell honour ``<a download>`` — the
+ * Both browsers and desktop WebViews honour ``<a download>`` — the
  * shell's default download lands in the OS Downloads folder — so there is no
  * desktop-specific branch. In-app browsers (WeChat, …) refuse ``blob:``
  * downloads, so they get a short-lived link to open in the system browser.

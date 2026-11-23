@@ -113,6 +113,7 @@ async def test_install_reports_ready_and_keeps_log(tmp_path: Path) -> None:
         health_check=lambda: started,
         port_busy=lambda: False,
         starter=starter,
+        base_python=Path("python3.12"),
         health_timeout=1,
         poll_interval=0.01,
     )
@@ -144,6 +145,7 @@ async def test_install_keeps_failure_log_when_port_is_busy(tmp_path: Path) -> No
         runner=runner,
         health_check=lambda: False,
         port_busy=lambda: True,
+        base_python=Path("python3.12"),
     )
     events = await _events(runtime)
     assert called is False
@@ -178,6 +180,7 @@ async def test_install_reports_disk_shortage_without_downloading(tmp_path: Path)
         health_check=lambda: False,
         port_busy=lambda: False,
         free_bytes=lambda: 1024,
+        base_python=Path("python3.12"),
     )
     events = await _events(runtime)
     assert events[-1]["success"] is False

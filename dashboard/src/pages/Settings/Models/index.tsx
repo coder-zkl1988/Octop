@@ -28,6 +28,7 @@ import { useSearchParams } from "react-router-dom";
 import PageShell from "../../../layouts/PageShell";
 import { useCurrentUser } from "../../../hooks/useCurrentUser";
 import { userCan } from "../../../utils/permissions";
+import { useEnterprise } from "../../../enterprise/EnterpriseContext";
 import { useProviders, type ProviderRow } from "./useProviders";
 import { isEmbeddingProvider } from "./useProviders";
 import {
@@ -97,6 +98,8 @@ const { Title } = Typography;
 export default function ModelsPage() {
   const { t } = useTranslation();
   const user = useCurrentUser();
+  const enterpriseMode = import.meta.env.VITE_ENTERPRISE_MODE === "1";
+  const { snapshot: enterpriseSnapshot } = useEnterprise();
   const canProviders = userCan(user, "providers");
   const canOllama = userCan(user, "ollama_models");
   const canOnnx = userCan(user, "onnx_models");
@@ -105,9 +108,15 @@ export default function ModelsPage() {
   const canVoice = userCan(user, "voice");
   const canSearch = userCan(user, "search");
   // Companion-app phones' vision model (the phone agent's, not the chat one).
-  const canPhone = userCan(user, "mobile");
-  const canChat = canProviders || canOllama;
-  const canEmbedding = canProviders || canOnnx;
+  const canPhone = enterpriseMode
+    ? userCan(user, "model_phone")
+    : userCan(user, "mobile");
+  const canChat = enterpriseMode
+    ? userCan(user, "model_chat")
+    : canProviders || canOllama;
+  const canEmbedding = enterpriseMode
+    ? userCan(user, "model_embedding")
+    : canProviders || canOnnx;
   const {
     providers,
     presets,
@@ -298,6 +307,26 @@ export default function ModelsPage() {
         ) : null
       }
     >
+      {enterpriseMode && enterpriseSnapshot && (
+        <div className={styles.enterpriseScope}>
+          <div className={styles.enterpriseScopeTitle}>
+            {t("enterprise.settings.models.personalTitle")}
+          </div>
+          <p className={styles.enterpriseScopeDesc}>
+            {t("enterprise.settings.models.personalDesc")}
+          </p>
+          {enterpriseSnapshot.cloudModels.length > 0 && (
+            <div className={styles.enterpriseScopeModels}>
+              <span>{t("enterprise.settings.models.tenantModels")}</span>
+              {enterpriseSnapshot.cloudModels.map((model) => (
+                <span key={model.id} className="is-badge">
+                  {model.id}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <Tabs
         activeKey={modelCategory}
         onChange={setModelCategory}

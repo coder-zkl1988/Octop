@@ -90,7 +90,7 @@ export default function TerminalView({
     const term = new Terminal({
       fontFamily:
         '"JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", "Courier New", monospace',
-      fontSize: 14,
+      fontSize: 13,
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: "block",

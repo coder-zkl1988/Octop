@@ -355,6 +355,7 @@ class OctopServer:
         self.expert_catalog: ExpertCatalog | None = None
         self.subagent_catalog: SubagentCatalog | None = None
         self.plugin_manager: PluginManager | None = None
+        self.plugin_apps: Any | None = None
         self.wizard_tokens = WizardTokenStore(ttl_seconds=300)
         self._started = False
         self._started_at: int | None = None
@@ -567,6 +568,10 @@ class OctopServer:
             expert_catalog=self.expert_catalog,
             plugin_manager=self.plugin_manager,
         )
+        from octop.infra.plugin_apps.host import PluginAppHost  # noqa: PLC0415
+
+        self.plugin_apps = PluginAppHost(self)
+        registry.plugin_apps = self.plugin_apps
 
         from octop.infra.history.retire_v2 import migrate_history_v2  # noqa: PLC0415
 
@@ -714,6 +719,8 @@ class OctopServer:
             bridge_manager=bridge_mgr,
             companion_hub=companion_hub,
         )
+        self.plugin_apps.start()
+        companion_hub.set_skill_bundle_provider(self.plugin_apps.phone_skill_bundle)
         from octop.infra.knowledge.gate import (  # noqa: PLC0415
             warn_if_local_embedding_deps_missing,
         )
@@ -800,7 +807,7 @@ class OctopServer:
 
     def _emit_wizard_password(self, *, user_count: int) -> None:
         config = self.config
-        if config is None:
+        if config is None or config.enterprise_backend_url:
             return
         wizard_home = self.paths.root
         if config.require_setup_password:
@@ -857,6 +864,8 @@ class OctopServer:
                 await _shutdown_step("proactive scheduler", rt.proactive_scheduler.shutdown)
                 await _shutdown_step("cron", rt.cron_manager.shutdown)
                 await _shutdown_step("gateway", rt.gateway.shutdown)
+                if self.plugin_apps is not None:
+                    await _shutdown_step("plugin apps", self.plugin_apps.shutdown)
                 await _shutdown_step("agent registry", rt.agent_registry.shutdown)
                 await _shutdown_step("user manager", rt.user_manager.shutdown_all)
             from octop.infra.backend.browse import dispose_all_browse_sessions

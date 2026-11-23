@@ -2,7 +2,7 @@ import { getApiUrl } from "../../api/config";
 import { getAuthToken } from "../../api/request";
 import type { InstalledPlugin } from "../../api/modules/plugins";
 import { createPluginUiHost } from "./host";
-import { unregisterPluginRenderers } from "./registry";
+import { unregisterPluginPages, unregisterPluginRenderers } from "./registry";
 import type { PluginUiModule } from "./types";
 
 const loadedPlugins = new Set<string>();
@@ -59,6 +59,7 @@ export async function loadInstalledPluginUis(
     try {
       const mod = await importPluginEsm(plugin.id, plugin.ui.entry);
       unregisterPluginRenderers(plugin.id);
+      unregisterPluginPages(plugin.id);
       runSetup(mod, plugin.id);
       loadedPlugins.add(plugin.id);
     } catch (err) {
@@ -82,6 +83,7 @@ export async function reloadPluginToolUis(
 export function resetPluginUiLoader(): void {
   for (const id of loadedPlugins) {
     unregisterPluginRenderers(id);
+    unregisterPluginPages(id);
   }
   loadedPlugins.clear();
   while (blobUrls.length) {

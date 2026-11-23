@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import sqlite3
 import tarfile
@@ -16,6 +17,7 @@ from octop.infra.backup.system_archive import create_system_backup, restore_syst
 from octop.infra.db.migrate import run_migrations
 from octop.infra.db.pool import SqlitePool
 from octop.infra.errors import ErrorCode, OctopError
+from octop.infra.plugin_apps.assets import AssetStore
 from octop.infra.utils.paths import PathLayout
 
 
@@ -77,6 +79,10 @@ def test_roundtrip_backup(layout: PathLayout, tmp_path: Path) -> None:
     plugin_yaml = layout.plugins_dir / "weather" / "plugin.yaml"
     plugin_yaml.parent.mkdir(parents=True, exist_ok=True)
     plugin_yaml.write_text("id: weather\n", encoding="utf-8")
+    asset_scope = "plugin/tenant/member/local-user"
+    asset_store = AssetStore(layout.plugins_dir / ".app-assets", asset_scope)
+    image = b"\x89PNG\r\n\x1a\n"
+    asset = asset_store.save(base64.b64encode(image).decode(), "image/png")
     kb_doc = layout.knowledge_dir / "kb01" / "docs" / "doc1.md"
     kb_doc.parent.mkdir(parents=True, exist_ok=True)
     kb_doc.write_text("# note", encoding="utf-8")
@@ -113,7 +119,7 @@ def test_roundtrip_backup(layout: PathLayout, tmp_path: Path) -> None:
 
     assert result["agents"] == 1
     assert result["skill_package_files"] == 1
-    assert result["plugin_files"] == 1
+    assert result["plugin_files"] == 2
     assert result["knowledge_files"] == 1
     assert (restore_layout.agent_workspace("agent01") / "SOUL.md").read_text(
         encoding="utf-8"
@@ -126,6 +132,8 @@ def test_roundtrip_backup(layout: PathLayout, tmp_path: Path) -> None:
     assert (restore_layout.plugins_dir / "weather" / "plugin.yaml").read_text(
         encoding="utf-8"
     ) == "id: weather\n"
+    restored_store = AssetStore(restore_layout.plugins_dir / ".app-assets", asset_scope)
+    assert restored_store.load(asset["asset_id"])[0] == image
     assert (restore_layout.knowledge_dir / "kb01" / "docs" / "doc1.md").read_text(
         encoding="utf-8"
     ) == "# note"

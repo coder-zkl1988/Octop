@@ -8,24 +8,31 @@ import {
 } from "react";
 import {
   applyDesktopChrome,
+  installDesktopWindowDrag,
+  isDesktopShell as isWailsDesktopShell,
   resolveDesktopChromeStyle,
   type DesktopChromeStyle,
 } from "../utils/desktopChrome";
-import { getDesktopBridge, isDesktopShell } from "../utils/desktopBridge";
+import {
+  getDesktopBridge,
+  isDesktopShell as isLegacyDesktopBridge,
+} from "../utils/desktopBridge";
 
 const DesktopChromeContext = createContext<DesktopChromeStyle | null>(null);
 
 /**
- * Activate desktop window chrome when the Electron preload bridge is present.
- * macOS traffic lights and the Windows/Linux caption overlay sit on the page,
- * so this publishes how much space they need. Dragging stays pure CSS
- * (`app-region`), no JS listeners needed.
+ * Activate desktop window chrome when either supported desktop bridge is
+ * present. macOS traffic lights and the Windows/Linux caption overlay sit on
+ * the page, so this publishes how much space they need. Dragging stays pure
+ * CSS (`app-region`), no JS listeners needed.
  */
 export function useDesktopChrome(): DesktopChromeStyle | null {
   const [style, setStyle] = useState<DesktopChromeStyle | null>(null);
 
   useEffect(() => {
-    if (!isDesktopShell()) return;
+    const isWails = isWailsDesktopShell();
+    if (!isLegacyDesktopBridge() && !isWails) return;
+    if (isWails) installDesktopWindowDrag();
     const next = resolveDesktopChromeStyle();
     let fullscreen = false;
     const publish = () =>

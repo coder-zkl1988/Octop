@@ -32,6 +32,17 @@ def test_should_defer_when_sqlite_file_missing(tmp_path: Path):
     assert should_defer_control_plane_db(cfg, paths) is True
 
 
+def test_enterprise_mode_bootstraps_private_sqlite(tmp_path: Path):
+    root = tmp_path / ".octop"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"port": 8088, "enterprise_backend_url": "http://enterprise.test"})
+    )
+    paths = PathLayout(root)
+    cfg = load_config(paths.config)
+    assert should_defer_control_plane_db(cfg, paths) is False
+
+
 def test_should_not_defer_when_sqlite_exists(tmp_path: Path):
     root = tmp_path / ".octop"
     root.mkdir()

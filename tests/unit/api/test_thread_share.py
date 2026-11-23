@@ -83,6 +83,42 @@ def test_public_messages_keep_tools_and_thinking() -> None:
     assert "/api/" not in blob
 
 
+def test_public_messages_redact_nested_account_data_and_paths() -> None:
+    out = share_mod.public_conversation_messages(
+        [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "thinking",
+                        "thinking": "user_id=42 email=owner@example.com path=/Users/owner/secret.txt",
+                    },
+                    {
+                        "type": "tool_use",
+                        "name": "lookup",
+                        "input": {
+                            "account_id": "acct_123",
+                            "nested": {"member_email": "member@example.com"},
+                        },
+                    },
+                    {
+                        "type": "tool_result",
+                        "output": "owner_id: user_7 C:\\Users\\owner\\secret.txt",
+                    },
+                ],
+            }
+        ],
+        speaker_names={},
+        default_agent_id="",
+    )
+    blob = str(out)
+    assert "acct_123" not in blob
+    assert "member@example.com" not in blob
+    assert "user_7" not in blob
+    assert "/Users/owner" not in blob
+    assert "C:\\Users\\owner" not in blob
+
+
 @pytest.mark.asyncio
 async def test_public_share_hides_internal_ids(monkeypatch: pytest.MonkeyPatch) -> None:
     share = SimpleNamespace(

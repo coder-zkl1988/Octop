@@ -52,10 +52,12 @@ def install_plugin(source: str, force: bool) -> None:
     try:
         if path.is_dir():
             loaded = mgr.install_path(path, force=force)
+        elif path.is_file() and path.suffix.lower() == ".zip":
+            loaded = mgr.install_archive(path, force=force)
         elif source.startswith("http://") or source.startswith("https://"):
             loaded = mgr.install_url(source, force=force)
         else:
-            raise click.ClickException(f"not a directory or URL: {source}")
+            raise click.ClickException(f"not a directory, ZIP, or URL: {source}")
     except OctopError as exc:
         raise click.ClickException(exc.message) from exc
     click.echo(f"Installed plugin {loaded.manifest.id} v{loaded.manifest.version}")

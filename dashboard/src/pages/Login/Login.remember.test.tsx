@@ -28,14 +28,14 @@ vi.mock("./CaptchaField", () => ({
 import LoginPage from "./index";
 
 describe("Login remember-me checkbox", () => {
-  it("renders checked by default", () => {
+  it("renders checked by default", async () => {
     render(
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>,
     );
 
-    const checkbox = screen.getByRole("checkbox", {
+    const checkbox = await screen.findByRole("checkbox", {
       name: /login\.remember|记住登录状态|Remember me/,
     });
     expect(checkbox).toBeChecked();

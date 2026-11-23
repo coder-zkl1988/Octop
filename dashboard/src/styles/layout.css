@@ -77,7 +77,7 @@ html[data-octop-desktop-chrome="windows"] .octop-win-menu {
   background: var(--fn-bg-layout, #0e0e0e);
 }
 
-/* Linux caption buttons. Electron's overlay paints Adwaita circles; these
+/* Linux caption buttons. The native WebView overlay paints Adwaita circles; these
    are the Windows caption rectangles: 46×32, no radius, close turns red. */
 html[data-octop-desktop-chrome="windows"] .octop-linux-controls {
   position: absolute;

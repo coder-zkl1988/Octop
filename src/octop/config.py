@@ -155,6 +155,9 @@ class OctopConfig:
     # External origin when a TLS-terminating proxy omits X-Forwarded-Proto.
     # Empty means "use the request". No path, query, or fragment.
     public_base_url: str = ""
+    # Enterprise control-plane URL. When set, desktop auth can bridge to the
+    # tabby-enterprise login/MFA flow; self-hosted mode remains unchanged.
+    enterprise_backend_url: str | None = None
 
     @property
     def max_upload_bytes(self) -> int:
@@ -704,6 +707,8 @@ def load_config(path: Path) -> OctopConfig:
                 )
             ),
         )
+    if v := os.environ.get("OCTOP_ENTERPRISE_URL"):
+        merged["enterprise_backend_url"] = v.strip() or None
 
     capabilities = _parse_capabilities_section(raw.get("capabilities"))
     if v := os.environ.get("OCTOP_ENABLE_MOBILE"):
@@ -837,4 +842,9 @@ def load_config(path: Path) -> OctopConfig:
             ),
         ),
         public_base_url=public_base_url,
+        enterprise_backend_url=(
+            str(merged.get("enterprise_backend_url")).strip()
+            if merged.get("enterprise_backend_url")
+            else None
+        ),
     )

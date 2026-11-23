@@ -395,7 +395,7 @@ def _is_desktop_process() -> bool:
 
 
 def _reject_shell_updates() -> None:
-    """Reject self-update requests when the Electron shell owns this process."""
+    """Reject self-update requests when the desktop shell owns this process."""
     if desktop_shell_enabled():
         raise OctopError(ErrorCode.FORBIDDEN, _SHELL_UPDATE_FORBIDDEN)
 

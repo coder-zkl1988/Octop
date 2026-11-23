@@ -24,6 +24,7 @@ from octop.infra.db.repos.control_files import ControlFileRepo
 from octop.infra.db.repos.cron import CronJobRepo
 from octop.infra.db.repos.invites import InviteRepo
 from octop.infra.db.repos.knowledge import KnowledgeRepo
+from octop.infra.db.repos.plugin_state import PluginStateRepo
 from octop.infra.db.repos.proactive_care_config import ProactiveCareConfigRepo
 from octop.infra.db.repos.profile_avatars import ProfileAvatarRepo
 from octop.infra.db.repos.providers import ProviderRepo
@@ -142,6 +143,10 @@ class SharedServices:
     @property
     def db(self) -> DatabasePool:
         return self.repos.db
+
+    @property
+    def plugin_state_repo(self) -> PluginStateRepo:
+        return PluginStateRepo(self.repos.db)
 
     @property
     def user_repo(self) -> UserRepo:

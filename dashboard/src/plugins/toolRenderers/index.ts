@@ -24,6 +24,10 @@ export {
   listRegisteredRenderers,
   subscribeToolRenderers,
   getToolRendererVersion,
+  getPluginPage,
+  listPluginPages,
+  registerPluginPage,
+  unregisterPluginPages,
 } from "./registry";
 export { ensureBuiltinToolRenderers } from "./ensureBuiltins";
 export { usePluginToolUis } from "./usePluginToolUis";
@@ -32,6 +36,9 @@ export type {
   OctopPluginUIHost,
   ParsedToolOutput,
   PluginUiModule,
+  PluginLicense,
+  PluginPageProps,
+  PluginPageRegistration,
   ToolRenderProps,
   ToolRendererRegistration,
   ToolRenderStatus,

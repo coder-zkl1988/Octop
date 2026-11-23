@@ -98,6 +98,48 @@ def test_outbound_frames() -> None:
     assert protocol.connected_message("d", {"model": "m"})["vlm"] == {"model": "m"}
 
 
+def test_policy_capabilities_progress_metadata_and_media_wire() -> None:
+    info = protocol.parse_phone_info(
+        {
+            "devicePolicyMode": "enforce",
+            "bundleVersion": 66,
+            "skillSyncStatus": "current",
+            "supportedActions": ["CLICK", "TYPE"],
+            "supportedApps": ["com.xingin.xhs"],
+        }
+    )
+    assert info.policy_mode == "enforce"
+    assert info.skill_bundle_version == 66
+    assert info.skill_sync_status == "current"
+    assert info.supported_actions == ("CLICK", "TYPE")
+    assert info.supported_apps == ("com.xingin.xhs",)
+    execute = protocol.execute_message("t", "x", task_policy={"operationClass": "x"})
+    assert execute["params"]["taskPolicy"] == {"operationClass": "x"}
+    progress = protocol.parse_progress(
+        {
+            "channel": "task",
+            "method": "agent.progress",
+            "params": {
+                "taskId": "t",
+                "step": 1,
+                "runtime": {"policyMode": "enforce"},
+                "progressPercent": 50,
+            },
+        }
+    )
+    assert progress is not None and progress.metadata["policyMode"] == "enforce"
+    media = protocol.media_push_message("m1", "a.png", "image/png", "AQ==")
+    assert media["method"] == "media.push" and media["params"]["mediaId"] == "m1"
+    receipt = protocol.parse_media_result(
+        {
+            "channel": "task",
+            "id": "resp_media_m1",
+            "result": {"mediaId": "m1", "success": True, "savedUri": "content://x"},
+        }
+    )
+    assert receipt == {"mediaId": "m1", "success": True, "savedUri": "content://x"}
+
+
 def test_unknown_foreground_app_is_treated_as_empty() -> None:
     frame = protocol.parse_mirror_frame(mirror_frame(current_app="unknown"))
     assert frame is not None and frame.current_app == ""

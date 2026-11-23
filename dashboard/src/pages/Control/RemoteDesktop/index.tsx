@@ -12,6 +12,7 @@ export default function RemoteDesktopPage() {
       title={t("remoteDesktopHub.title")}
       subtitle={t("remoteDesktopHub.description")}
       fill
+      bare
     >
       <div className={styles.panels}>
         <div className={styles.panel}>

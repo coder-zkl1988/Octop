@@ -300,6 +300,9 @@ export default function MirrorPanel({ device, onClose }: Props) {
               aspectRatio: frame
                 ? `${frame.screenWidth}/${frame.screenHeight}`
                 : "9/20",
+              ["--screen-ratio" as string]: frame
+                ? frame.screenWidth / frame.screenHeight
+                : 9 / 20,
               opacity: isConnected ? 1 : 0.5,
             }}
             onPointerDown={isConnected ? onPointerDown : undefined}

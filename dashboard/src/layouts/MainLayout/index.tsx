@@ -23,7 +23,6 @@ import { useKeyboardOffset } from "../../hooks/useKeyboardOffset";
 import { useChatSidebarOpen } from "../../pages/Chat/hooks/useChatSidebarState";
 import { EXPAND_CHAT_RAIL_EVENT } from "../../pages/Chat/chatRailEvents";
 import RailEdgeControl from "../../components/RailEdgeControl";
-import DesktopWindowDragBand from "../../components/DesktopWindowDragBand";
 import { useTranslation } from "react-i18next";
 import {
   isMacPlatform,
@@ -262,10 +261,8 @@ export default function MainLayout() {
             } as React.CSSProperties
           }
         >
-          {/* macOS only: one drag strip beside the traffic lights. Windows drags
-              from the caption menu row, not from the page. */}
-          {shellTopBand > 0 && <DesktopWindowDragBand position="absolute" />}
-
+          {/* The global shell mounts the macOS drag strip; Windows drags from
+              the caption menu row, not from the page. */}
           <div
             style={{
               flex: 1,

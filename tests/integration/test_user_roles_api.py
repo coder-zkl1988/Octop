@@ -414,7 +414,7 @@ async def test_allowed_backend_types_limit_expert_create(env):
         headers=auth,
         json={
             "user_role_name": "沙箱",
-            "permissions": ["browser"],
+            "permissions": ["browser", "experts"],
             "policies": [
                 {"name": "allowed_backend_types", "value": "docker,opensandbox,filesystem"},
             ],

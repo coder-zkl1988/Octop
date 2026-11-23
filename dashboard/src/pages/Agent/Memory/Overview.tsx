@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Empty, Skeleton, Tooltip } from "antd";
 import {
   BrainCircuit,
@@ -38,8 +38,6 @@ import {
   type StatsCounts,
   type StatsGrowthResponse,
 } from "../../../api/modules/memoryDashboard";
-import { useTheme } from "../../../context/ThemeContext";
-import { brandPrimary } from "../../../styles/themePalettes";
 import styles from "./Overview.module.less";
 
 interface Props {
@@ -67,11 +65,15 @@ const INITIAL_STATE: PageState = {
   refreshing: false,
 };
 
-const KIND_COLOR_BASE: Record<string, string> = {
-  Task: "#f59e0b",
-  Fact: "#3b82f6",
-  Decision: "#8b5cf6",
-  ConflictCandidate: "#94a3b8",
+/** iSpace chart palette: near-black series, orange for preferences, warm greys. */
+const SERIES_LINE = "var(--accent)";
+const SERIES_BAR = "var(--accent-hover)";
+const KIND_COLOR: Record<string, string> = {
+  Fact: "var(--accent)",
+  Preference: "var(--tabby-orange)",
+  Task: "#8f8b84",
+  Decision: "#c9c3b8",
+  ConflictCandidate: "var(--border-tabby)",
 };
 
 export default function Overview({
@@ -81,12 +83,6 @@ export default function Overview({
   onOpenSettings,
 }: Props) {
   const { t } = useTranslation();
-  const { palette, isDark } = useTheme();
-  const brand = brandPrimary(palette, isDark);
-  const kindColor: Record<string, string> = useMemo(
-    () => ({ ...KIND_COLOR_BASE, Preference: brand }),
-    [brand],
-  );
   const [state, setState] = useState<PageState>(INITIAL_STATE);
   // Older running API processes do not return this newly-added field.  Match
   // the backend default and only show the disabled state for an explicit false.
@@ -259,9 +255,9 @@ export default function Overview({
                 <Line
                   type="monotone"
                   dataKey="turns"
-                  stroke={brand}
+                  stroke={SERIES_LINE}
                   strokeWidth={2}
-                  dot={{ r: 3, fill: brand, strokeWidth: 0 }}
+                  dot={{ r: 3, fill: SERIES_LINE, strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
                 />
               </LineChart>
@@ -312,7 +308,11 @@ export default function Overview({
                       t("memory.overview.atoms", "长期记忆"),
                     ]}
                   />
-                  <Bar dataKey="atoms" fill={brand} radius={[5, 5, 0, 0]} />
+                  <Bar
+                    dataKey="atoms"
+                    fill={SERIES_BAR}
+                    radius={[5, 5, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -346,7 +346,7 @@ export default function Overview({
                     {state.kinds.series.map((entry) => (
                       <Cell
                         key={entry.kind}
-                        fill={kindColor[entry.kind] ?? "#94a3b8"}
+                        fill={KIND_COLOR[entry.kind] ?? "#c9c3b8"}
                       />
                     ))}
                   </Pie>

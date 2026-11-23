@@ -96,7 +96,7 @@
 }
 
 .skillsListArea {
-  padding: 20px 0 40px;
+  padding: 16px 0 40px;
 }
 
 .skillPackagesLoading {
@@ -253,7 +253,7 @@
 .gridToolbarRight {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -265,53 +265,70 @@
 
 .gridCount {
   font-size: 13px;
-  color: var(--fn-text-tertiary);
+  color: var(--text-secondary);
+
+  :global(.octop-checkbox-wrapper) {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
 }
 
 .toolbarBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  font-size: 13px;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
   font-weight: 500;
-  border: 1px solid var(--fn-color-brand);
-  background: transparent;
-  color: var(--fn-color-brand);
-  border-radius: var(--fn-radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border-radius: var(--radius-8);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: border-color 0.15s;
 
-  &:hover {
-    background: var(--fn-color-brand-light, #e6f4ff);
+  &:hover:not(:disabled) {
+    border-color: var(--border-hover);
   }
 
   &:disabled {
-    opacity: 0.45;
+    opacity: 0.5;
     cursor: not-allowed;
+  }
 
-    &:hover {
-      background: transparent;
-    }
+  svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
+/* Create action: orange CTA. */
 .toolbarBtnPrimary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid var(--fn-color-brand);
-  background: var(--fn-color-brand);
-  color: #fff;
-  border-radius: var(--fn-radius-md);
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--cta);
+  background: var(--cta);
+  color: var(--cta-fg);
+  border-radius: var(--radius-8);
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 
   &:hover {
-    opacity: 0.92;
+    background: var(--cta-hover);
+    border-color: var(--cta-hover);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -319,25 +336,31 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid var(--fn-border-primary);
-  border-radius: var(--fn-radius-md);
-  background: transparent;
-  color: var(--fn-text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface-1);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 
   &:hover:not(:disabled) {
-    color: var(--fn-color-brand);
-    border-color: var(--fn-color-brand);
-    background: var(--fn-color-brand-light, #e6f4ff);
+    color: var(--text-heading);
+    border-color: var(--border-hover);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -486,7 +509,7 @@
 #skills-grid-layout() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  row-gap: 16px;
+  row-gap: 12px;
   column-gap: 12px;
 
   @media (max-width: 767px) {
@@ -501,42 +524,25 @@
 
 // Shared card chrome for installed + SkillHub marketplace grids.
 #skills-card-shell() {
-  background: var(--fn-bg-primary);
-  border: 1px solid var(--fn-card-border-normal);
-  border-radius: var(--fn-radius-lg);
-  box-shadow: var(--fn-card-shadow-normal);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-16);
+  box-shadow: var(--shadow-rest);
   cursor: pointer;
   overflow: hidden;
   outline: none;
   transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    border-color: color-mix(
-      in srgb,
-      var(--fn-color-brand) 22%,
-      var(--fn-card-border-normal)
-    );
-
-    @media (max-width: 767px) {
-      transform: none;
-      box-shadow: var(--fn-card-shadow-normal);
-      border-color: var(--fn-card-border-normal);
-    }
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-card);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--fn-color-brand);
+    outline: 2px solid var(--tabby-orange);
     outline-offset: 2px;
-  }
-
-  &:active {
-    transform: translateY(0);
-    transition-duration: 0.05s;
   }
 }
 
@@ -546,7 +552,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 20px;
   gap: 8px;
   #skills-card-shell();
 }
@@ -576,17 +582,19 @@
 }
 
 .iconWrapper {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--fn-radius-md);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-12);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  overflow: hidden;
 
-  .skillCard:hover & {
-    transform: scale(1.08);
+  img {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-12);
   }
 }
 
@@ -614,11 +622,11 @@
 }
 
 .cardTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--fn-text-primary);
-  letter-spacing: -0.01em;
-  line-height: 1.3;
+  color: var(--text-heading);
+  letter-spacing: 0;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -627,36 +635,45 @@
 .enabledBadge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 8px;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--fn-color-brand);
-  background: var(--fn-color-brand-bg);
-  border: 1px solid var(--fn-color-brand-border, rgba(99, 91, 255, 0.25));
-  border-radius: 999px;
+  color: var(--success);
+  background: var(--success-subtle);
+  border: none;
+  border-radius: var(--radius-pill);
   width: fit-content;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 }
 
 .builtinBadge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 8px;
+  height: 20px;
+  padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--fn-text-secondary);
-  background: var(--fn-bg-tertiary);
-  border: 1px solid var(--fn-border-secondary);
-  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: none;
+  border-radius: var(--radius-pill);
   width: fit-content;
 }
 
 .cardDesc {
   flex: 1;
   font-size: 13px;
-  color: var(--fn-text-secondary);
-  line-height: 1.55;
+  color: var(--text-secondary);
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -671,6 +688,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
+  padding-top: 4px;
 }
 
 .detailBtn {
@@ -679,14 +697,14 @@
   gap: 5px;
   padding: 0;
   font-size: 12px;
-  color: var(--fn-text-quaternary);
+  color: var(--text-tertiary);
   background: transparent;
   border: none;
   cursor: pointer;
   transition: color 0.15s ease;
 
   &:hover {
-    color: var(--fn-text-secondary);
+    color: var(--text-heading);
   }
 }
 
@@ -737,24 +755,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   font-size: 13px;
-  color: var(--fn-text-tertiary);
-  background: transparent;
-  border: 1px solid var(--fn-border-primary);
-  border-radius: var(--fn-radius-sm);
+  color: var(--text-tertiary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
   cursor: pointer;
   transition:
-    background 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease;
 
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
   &:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.08);
-    color: var(--fn-color-danger);
-    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--danger);
   }
 
   &:disabled {
@@ -764,10 +784,11 @@
 }
 
 .applyBtn {
-  padding: 6px 16px;
-  font-size: 13px;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
   font-weight: 500;
-  border-radius: var(--fn-radius-sm);
+  border-radius: var(--radius-8);
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -778,25 +799,23 @@
 }
 
 .applyActiveBtn {
-  color: #fff;
-  background: var(--fn-color-brand);
-  border: 1px solid var(--fn-color-brand);
+  color: var(--accent-fg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
 
   &:hover {
-    background: color-mix(in srgb, var(--fn-color-brand) 85%, #000);
-    box-shadow: 0 2px 8px
-      color-mix(in srgb, var(--fn-color-brand) 30%, transparent);
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
   }
 }
 
 .appliedBtn {
-  color: var(--fn-text-tertiary);
-  background: transparent;
-  border: 1px solid var(--fn-border-primary);
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
 
   &:hover {
-    background: var(--fn-bg-secondary);
-    color: var(--fn-text-secondary);
+    border-color: var(--border-hover);
   }
 }
 

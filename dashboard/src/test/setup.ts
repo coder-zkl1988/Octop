@@ -59,6 +59,23 @@ afterEach(() => {
 });
 
 if (typeof window !== "undefined") {
+  // pdfjs-dist expects the browser's geometry matrix in its canvas module;
+  // jsdom does not provide it, but these tests only need module initialisation.
+  if (!(globalThis as typeof globalThis & { DOMMatrix?: unknown }).DOMMatrix) {
+    class _DOMMatrix {
+      a = 1;
+      b = 0;
+      c = 0;
+      d = 1;
+      e = 0;
+      f = 0;
+    }
+    Object.defineProperty(globalThis, "DOMMatrix", {
+      value: _DOMMatrix,
+      writable: true,
+      configurable: true,
+    });
+  }
   // matchMedia
   if (!window.matchMedia) {
     Object.defineProperty(window, "matchMedia", {

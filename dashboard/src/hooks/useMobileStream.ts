@@ -1,7 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import { getAuthToken } from "../api/request";
 import { resolveWsUrl } from "../utils/desktopWsUrl";
-import { H264CanvasDecoder, parseVideoInit } from "../utils/h264CanvasDecoder";
+import {
+  canDecodeAvc,
+  H264CanvasDecoder,
+  parseVideoInit,
+} from "../utils/h264CanvasDecoder";
+
+const H264_PTS_MARKER = 0xa5;
 
 export type MobileStreamState =
   | "idle"
@@ -14,10 +20,18 @@ export interface MobileStreamOptions {
   device?: string;
   quality?: number;
   maxFps?: number;
-  /** Longest JPEG edge; 0 keeps native resolution. */
+  /** Longest JPEG edge; 0 keeps native resolution when JPEG is used. */
   maxSide?: number;
-  /** Prefer H.264 when the host encoder is known to be fast. Default JPEG. */
+  /** Prefer the persistent H.264 stream. JPEG remains the compatibility fallback. */
   codec?: "jpeg" | "h264";
+}
+
+/** Pick the lowest-overhead codec supported by this browser shell. */
+export function resolveMobileStreamCodec(
+  requested?: MobileStreamOptions["codec"],
+): "jpeg" | "h264" {
+  if (requested === "jpeg") return "jpeg";
+  return canDecodeAvc() ? "h264" : "jpeg";
 }
 
 function buildWsUrl(): string {
@@ -67,6 +81,7 @@ export function useMobileStream() {
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
       ws.onopen = () => {
+        const codec = resolveMobileStreamCodec(opts.codec);
         ws.send(
           JSON.stringify({
             type: "start",
@@ -75,8 +90,7 @@ export function useMobileStream() {
             quality: opts.quality ?? 75,
             max_fps: opts.maxFps ?? 10,
             max_side: opts.maxSide ?? 1080,
-            // JPEG first: emulator screenrecord often stalls and starves adb taps.
-            codec: opts.codec ?? "jpeg",
+            codec,
           }),
         );
       };
@@ -85,7 +99,18 @@ export function useMobileStream() {
           const bytes = new Uint8Array(ev.data);
           if (bytes.length < 2) return;
           const key = bytes[0] === 1;
-          decoderRef.current.decode(bytes.subarray(1), key);
+          let sample = bytes.subarray(1);
+          let timestampUs: number | undefined;
+          if (bytes.length >= 10 && bytes[1] === H264_PTS_MARKER) {
+            const view = new DataView(
+              bytes.buffer,
+              bytes.byteOffset,
+              bytes.byteLength,
+            );
+            timestampUs = view.getUint32(2) * 0x1_0000_0000 + view.getUint32(6);
+            sample = bytes.subarray(10);
+          }
+          decoderRef.current.decode(sample, key, timestampUs);
           setStatus("streaming");
           return;
         }
@@ -101,14 +126,18 @@ export function useMobileStream() {
             action?: string;
             ok?: boolean;
             rotation?: number;
+            screen_width?: number;
+            screen_height?: number;
           };
           if (msg.type === "video_init") {
             const init = parseVideoInit(msg);
             if (!init) return;
             try {
               decoderRef.current.configure(init);
-              if (init.width > 0 && init.height > 0) {
-                callbacks.onVideoSize?.(init.width, init.height);
+              const screenWidth = init.screenWidth || init.width;
+              const screenHeight = init.screenHeight || init.height;
+              if (screenWidth > 0 && screenHeight > 0) {
+                callbacks.onVideoSize?.(screenWidth, screenHeight);
               }
               setStatus("streaming");
             } catch (err) {

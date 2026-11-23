@@ -22,8 +22,8 @@ interface HeaderProps {
 export default function Header({ onToggle, isMobile }: HeaderProps) {
   const { isDark } = useTheme();
   const mobileLogoSrc = isDark
-    ? publicUrl("happytabby-logo-white.png")
-    : publicUrl("happytabby-logo.png");
+    ? publicUrl("logo_horizontal_white.png")
+    : publicUrl("logo_horizontal_dark.png");
 
   if (!isMobile) return null;
 
@@ -79,7 +79,7 @@ export default function Header({ onToggle, isMobile }: HeaderProps) {
         )}
         <img
           src={mobileLogoSrc}
-          alt="HappyTabby"
+          alt="Tabby"
           style={{
             height: 36,
             width: "auto",

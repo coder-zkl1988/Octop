@@ -175,7 +175,7 @@ describe("<CompanionPhonesPanel />", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Octop 只监听本机，手机无法通过 Wi-Fi 连接"),
+      screen.getByText("Tabby 只监听本机，手机无法通过 Wi-Fi 连接"),
     ).toBeInTheDocument();
   });
 

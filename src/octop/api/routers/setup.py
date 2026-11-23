@@ -310,18 +310,24 @@ async def validate_wizard_token(
 @router.get("/setup/status", summary="Setup wizard status")
 async def status(server: Any = Depends(get_server)) -> dict[str, Any]:
     """Whether initial setup is still required, and whether the desktop local account exists."""
+    cfg = server.services.config if server.services else getattr(server, "config", None)
+    enterprise_mode = bool(getattr(cfg, "enterprise_backend_url", None))
     wizard_path = str(_wizard.resolve_password_path(server.paths.root, legacy_home=Path.home()))
-    password_required = _setup_password_required(server)
+    password_required = not enterprise_mode and _setup_password_required(server)
     um = server.user_manager
-    setup_required = um is None or um.count() == 0
+    setup_required = not enterprise_mode and (um is None or um.count() == 0)
     database_driver = None
     if server.database_bound and server.services is not None:
         database_driver = server.services.config.database.driver
     local_account = (
-        desktop_shell_enabled() and um is not None and um.get(LOCAL_DESKTOP_USERNAME) is not None
+        not enterprise_mode
+        and desktop_shell_enabled()
+        and um is not None
+        and um.get(LOCAL_DESKTOP_USERNAME) is not None
     )
     return {
         "setup_required": setup_required,
+        "enterprise_mode": enterprise_mode,
         "local_account": local_account,
         "wizard_password_required": password_required,
         "wizard_password_exists": (

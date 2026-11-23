@@ -258,11 +258,13 @@ interface TerminalPageProps {
   isVisible?: boolean;
   /** Hide standalone page chrome when hosted inside Workbench. */
   embedded?: boolean;
+  card?: boolean;
 }
 
 export default function TerminalPage({
   isVisible = true,
   embedded = false,
+  card: _card = false,
 }: TerminalPageProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();

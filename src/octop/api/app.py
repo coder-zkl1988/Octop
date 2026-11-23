@@ -41,8 +41,6 @@ def dashboard_cache_control(full_path: str) -> str | None:
     # Vite emits content-hashed files under assets/ — safe to pin forever.
     if full_path.startswith("assets/"):
         return "public, max-age=31536000, immutable"
-    # monaco-editor's min/vs tree is copied unhashed. Revalidate so an upgrade
-    # does not keep an editor.main.js that points at removed worker names.
     if full_path.startswith("monaco/"):
         return "no-cache"
     return None
@@ -57,12 +55,7 @@ def _dashboard_response(path: Path, full_path: str) -> FileResponse:
 
 
 def is_dashboard_asset_path(full_path: str) -> bool:
-    """True for build artifacts that must 404 instead of falling back to the SPA.
-
-    ``/assets/*`` are content-hashed scripts. ``/monaco/*`` is the vendored
-    editor tree. Returning ``index.html`` for either makes the browser treat
-    HTML as a script or worker.
-    """
+    """True for hashed build artifacts that must 404 instead of falling back."""
     return full_path.startswith(("assets/", "monaco/"))
 
 
@@ -188,6 +181,8 @@ def build_app(server: OctopServer) -> FastAPI:
         connectors,
         cron,
         desktop,
+        enterprise,
+        enterprise_internal,
         envs,
         experts,
         file_checkpoints,
@@ -205,6 +200,7 @@ def build_app(server: OctopServer) -> FastAPI:
         mobile,
         ollama_models,
         onnx_models,
+        plugin_apps,
         plugins,
         preferences,
         proactive_care,
@@ -228,6 +224,7 @@ def build_app(server: OctopServer) -> FastAPI:
         voice,
         workspace,
         workspace_git,
+        xhs_ops,
     )
     from octop.api.routers.decision import router as decision_router
     from octop.api.routers.filesystem import router as filesystem_router
@@ -246,6 +243,8 @@ def build_app(server: OctopServer) -> FastAPI:
             _RouterMount(auth.router, "/api/auth", ["auth"]),
             _RouterMount(auth_mfa.router, "/api/auth", ["auth"]),
             _RouterMount(auth_device.router, "/api/auth", ["auth"]),
+            _RouterMount(enterprise.router, "/api/enterprise", ["enterprise"]),
+            _RouterMount(enterprise_internal.router, "/api", ["enterprise-internal"]),
             _RouterMount(auth_oidc.router, "/api/auth", ["auth"]),
             _RouterMount(auth_oauth.router, "/api/auth", ["auth"]),
             _RouterMount(auth_ldap.router, "/api/auth", ["auth"]),
@@ -320,6 +319,8 @@ def build_app(server: OctopServer) -> FastAPI:
             _RouterMount(ollama_models.router, "/api", ["ollama"]),
             _RouterMount(onnx_models.router, "/api", ["onnx"]),
             _RouterMount(plugins.router, "/api", ["plugins"]),
+            _RouterMount(plugin_apps.router, "/api", ["plugins"]),
+            _RouterMount(xhs_ops.router, "/api", ["xhs-ops"]),
             _RouterMount(mobile.companion_router, "/api", ["mobile"]),
         ],
     )
