@@ -131,6 +131,9 @@ async def request(
                 "billing_unavailable",
                 "invalid_gateway_response",
                 "upstream_error",
+                "tenant_quota_exceeded",
+                "member_quota_exceeded",
+                "license_required",
             }:
                 reason = candidate
         except ValueError:

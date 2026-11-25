@@ -190,7 +190,7 @@ OPENAPI_TAGS: list[dict[str, str]] = [
     },
     {
         "name": "xhs-ops",
-        "description": "Typed resource facade for the licensed 小红书运营 application.",
+        "description": "Typed resource facade for the licensed 小红薯运营 application.",
     },
 ]
 

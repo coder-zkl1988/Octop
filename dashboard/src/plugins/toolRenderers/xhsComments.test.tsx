@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import React, { type ComponentType } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { openXhsTab } from "./xhsNav";
 import type { OctopPluginUIHost, PluginPageProps } from "./types";
 
 const source = readFileSync(
@@ -173,7 +174,7 @@ function fixture(status = "pending", readOnly = false) {
   return { snapshot, posts, request, host };
 }
 async function openComments() {
-  fireEvent.click(await screen.findByRole("button", { name: "评论审核" }));
+  await openXhsTab("评论审核");
 }
 
 describe("paid comment review through the actual plugin page", () => {
@@ -364,9 +365,7 @@ describe("paid comment review through the actual plugin page", () => {
     snapshot.license.features = ["xhs.takeover"];
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     try {
-      fireEvent.click(
-        await screen.findByRole("button", { name: "诊断与变更" }),
-      );
+      await openXhsTab("老号接管");
       fireEvent.change(screen.getByRole("combobox", { name: "" }), {
         target: { value: "a1" },
       });

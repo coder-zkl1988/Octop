@@ -22,6 +22,10 @@ class PluginLicense(BaseModel):
         description="Authority-provided history scope after revocation or expiry; never grants execution.",
     )
     limits: dict[str, int] = Field(default_factory=dict)
+    policy: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Authority-provided operating policy (platform caps, tenant rules, member quota and usage).",
+    )
     expires_at: datetime | None = None
 
     @field_validator("expires_at")

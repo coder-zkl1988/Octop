@@ -1,4 +1,4 @@
 {
-  "pages": [{ "id": "main", "title": "小红书运营" }],
+  "pages": [{ "id": "main", "title": "小红薯运营" }],
   "renderers": [{ "id": "xhs_workbench", "tools": ["xhs_workbench"] }]
 }

@@ -43,7 +43,7 @@ function useStyle() {
   useEffect(() => {
     const node = document.createElement("style");
     node.dataset.octopXhsOps = "1";
-    node.textContent = css;
+    node.textContent = css + css2;
     document.head.appendChild(node);
     return () => node.remove();
   }, []);
@@ -119,7 +119,7 @@ function operationError(error, locale) {
       "生图响应超过大小上限，已停止读取。请检查模型生成结果。",
     image_response_encoding_invalid:
       "生图服务返回了不支持的响应编码，请检查服务配置。",
-    account_identity_required: "请先在账号与设备中填写并核对目标小红书号。",
+    account_identity_required: "请先在账号与设备中填写并核对目标小红薯号。",
     invalid_input: "输入格式有误，请检查字段、日期和版本后重试。",
     existing_account_requires_takeover:
       "已有账号的资料修改请使用诊断与变更流程。",
@@ -161,7 +161,7 @@ function operationError(error, locale) {
       "请重新核对日常预算并明确启用定时运营。",
     phone_interaction_required: "请在手机上处理登录或验证码，再重新核对账号。",
     account_identity_mismatch:
-      "手机当前账号与绑定的小红书号不符，请本人处理后重新核对。",
+      "手机当前账号与绑定的小红薯号不符，请本人处理后重新核对。",
     account_paused: "账号已暂停，请先处理暂停原因并重新核对后恢复。",
     device_busy: "手机仍被任务占用，请等任务结束或完成停止对账。",
     asset_invalid: "素材文件校验失败，请重新上传原图。",
@@ -186,7 +186,7 @@ function operationError(error, locale) {
     comment_outside_window: "评论仅在服务器时区08:00–23:00之间派发。",
     comment_browse_gap_required: "请等待浏览结束至少10分钟后再发评论。",
     comment_target_required:
-      "请记录有效笔记标题和作者，或正确的小红书笔记链接。",
+      "请记录有效笔记标题和作者，或正确的小红薯笔记链接。",
     comment_source_unverified: "该帖子缺少完整浏览回执，无法生成候选。",
     comment_source_changed: "来源或账号已变化，请重新核对。",
     comment_generation_failed: "候选生成失败，已保留草稿，可手写后审核。",
@@ -204,6 +204,48 @@ function operationError(error, locale) {
       "该资料字段仍在滚动变更预算冷却期，请先查看预算状态。",
     observation_required: "请先完成上一项资料变更的观察与复核。",
     rollback_not_available: "当前资料变更还没有可用的独立回滚单。",
+    enterprise_paused: "企业管理员已暂停全部自动任务，恢复前不会执行养号、发布和回复。",
+    member_paused: "你已暂停全部自动任务，请先在页面右上角恢复。",
+    precheck_blocking: "发布前检查有未通过项，请先修改或一键补上标识与披露。",
+    compliance_review_required: "高风险内容需要合规复核通过后才能发布。",
+    compliance_record_incomplete: "请填写复核人、审批单号和结论。",
+    pace_outside_publish_window: "排期不在允许发布的时段内。",
+    pace_min_interval: "同一账号两篇之间的间隔不足，请调整时间。",
+    pace_weekly_max: "该账号这一周的发布篇数已到上限。",
+    pace_marketing_ratio: "营销内容占比将超过上限，请换成生活或知识内容。",
+    pace_profile_change_day: "该账号当天有资料变更，按规则不安排发布。",
+    pace_device_required: "该账号还没有绑定手机，排期的发布无法执行。",
+    schedule_in_past: "排期时间已过，请选择之后的时间。",
+    draft_already_published: "已发布的内容不能再修改排期或状态。",
+    auto_reply_not_allowed: "企业未开启闲聊类自动回复，只能起草后等你通过。",
+    automation_above_enterprise: "自动化程度不能高于企业设定的上限。",
+    automation_manual: "当前为手动档，AI 不会主动准备内容。",
+    tenant_quota_exceeded: "企业本月额度已用完，可以向管理员申请增加。",
+    member_quota_exceeded: "你本月的额度已用完，可以在能力与配额里向管理员申请。",
+    enterprise_backend_unavailable: "暂时连不上企业后台，请稍后重试。",
+    enterprise_request_rejected: "企业后台拒绝了这次请求，请联系管理员。",
+    enterprise_response_invalid: "企业后台返回的数据不完整，请稍后重试。",
+    authorization_not_active: "所选授权已撤回、过期或缺少授权书。",
+    authorization_scope_exceeded: "素材绑定的账号超出了授权范围。",
+    authorization_withdrawn: "素材关联的授权已撤回，不能再使用。",
+    experience_must_stay_with_its_owner: "真实个人经历不能放进公共素材库，请绑定到授权人的账号。",
+    material_empty: "请填写素材内容或上传图片。",
+    material_analysis_invalid: "AI 整理结果不完整，素材已原样保留。",
+    stages_invalid: "冷启动阶段的天数需要连续且不重叠。",
+    cold_start_new_accounts_only: "冷启动方案只用于新账号。",
+    task_not_open: "这个内容任务已在制作或已忽略。",
+    plan_empty: "AI 没有拆出可用的内容任务，请把要求写得更具体一些。",
+    plan_invalid: "AI 返回的计划不完整，请重试。",
+    project_required: "请先建立项目并绑定账号。",
+    structure_required: "请填写这篇内容的结构。",
+    negative_not_drafted: "负面与投诉不自动起草，请手写回复或忽略。",
+    negative_needs_handwritten_reply: "负面与投诉需要你手写回复。",
+    reply_text_invalid: "回复需在 30 字以内，不留联系方式，不承诺效果。",
+    reply_draft_rejected: "AI 起草的回复未通过检查，请手写。",
+    reply_not_editable: "这条回复已发送或正在发送，不能修改。",
+    reply_not_sent: "只有已发送的回复才能删除。",
+    notice_required: "请填写平台通知内容。",
+    duplicate_operation: "相同的任务已在执行。",
   };
   try {
     const envelope = JSON.parse(raw.slice(raw.indexOf("{")));
@@ -1763,7 +1805,7 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
           h(
             "p",
             null,
-            `目标小红书号：${account.platform_account_id || "待核对"}`,
+            `目标小红薯号：${account.platform_account_id || "待核对"}`,
           ),
           h(
             "p",
@@ -1798,7 +1840,7 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
                   }),
                 disabled: phoneDisabled,
               },
-              account.authorized_at ? "读取接管身份" : "只读核对小红书号",
+              account.authorized_at ? "读取接管身份" : "只读核对小红薯号",
             ),
             h(
               Button,
@@ -1834,7 +1876,7 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
             h(
               "p",
               null,
-              `手机回读的小红书号：${account.profile_identity.account_id}。请与目标账号核对后，在账号与设备中确认绑定。`,
+              `手机回读的小红薯号：${account.profile_identity.account_id}。请与目标账号核对后，在账号与设备中确认绑定。`,
             ),
           account.pending_identity &&
             h(
@@ -1853,7 +1895,7 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
                   onClick: async () => {
                     const value =
                       account.pending_identity.account_id ||
-                      window.prompt("请输入截图中核对后的小红书号") ||
+                      window.prompt("请输入截图中核对后的小红薯号") ||
                       "";
                     if (!value.trim()) return;
                     await act("takeover.identity.confirm", {
@@ -2183,7 +2225,7 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
             h(
               "p",
               null,
-              `目标小红书号：${account.platform_account_id} · 手机：${preview.device_id}`,
+              `目标小红薯号：${account.platform_account_id} · 手机：${preview.device_id}`,
             ),
             rows(preview.diffs).map((diff) =>
               h(
@@ -2451,7 +2493,10 @@ function DraftPanel({ snapshot, host, readOnly, refresh, modelRef }) {
     try {
       if (images.length + files.length > 9)
         throw new Error("每篇最多上传 9 张图片。");
-      const added = await readImageFiles(files);
+      const added = (await readImageFiles(files)).map((image) => ({
+        ...image,
+        origin: "upload",
+      }));
       setImages((current) => [...current, ...added]);
     } catch (error) {
       window.dispatchEvent(
@@ -2486,7 +2531,20 @@ function DraftPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                 "div",
                 null,
                 h("strong", null, text(d.title, "未命名草稿")),
-                h("div", { className: "xhs-meta" }, text(d.status, "草稿")),
+                h(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      gap: 5,
+                      flexWrap: "wrap",
+                      marginTop: 4,
+                    },
+                  },
+                  srcPill(d.source),
+                  pill(REVIEW_LABELS[d.review_status || "pending_review"]),
+                  checkPills(d.checks),
+                ),
               ),
               h(Button, { onClick: () => open(d), disabled: readOnly }, "编辑"),
             ),
@@ -2763,6 +2821,9 @@ function DraftPanel({ snapshot, host, readOnly, refresh, modelRef }) {
           h(Button, { onClick: () => setDraft(null) }, "取消"),
         ),
       ),
+    draft &&
+      draft.id &&
+      h(DraftMeta, { snapshot, host, readOnly, refresh, draftId: draft.id }),
   );
 }
 
@@ -3572,7 +3633,7 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
         text(clock.date) +
         " · 时区 " +
         text(clock.timezone) +
-        "。每段先只读核对小红书号；同一手机串行，登录或账号不符时停止，不自动切换账号。",
+        "。每段先只读核对小红薯号；同一手机串行，登录或账号不符时停止，不自动切换账号。",
     ),
     h(
       "label",
@@ -3699,7 +3760,7 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
               h(
                 "p",
                 null,
-                "目标小红书号：" +
+                "目标小红薯号：" +
                   text(day.account_snapshot?.platform_account_id) +
                   " · 手机：" +
                   text(day.account_snapshot?.device_id),
@@ -3797,7 +3858,7 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
                   checked: acknowledged,
                   onChange: (event) => setAcknowledged(event.target.checked),
                 }),
-                "我已核对目标小红书号、手机、每段计划与互动预算",
+                "我已核对目标小红薯号、手机、每段计划与互动预算",
               ),
               h(
                 "div",
@@ -5498,7 +5559,7 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                 h(
                   "p",
                   null,
-                  `待确认小红书号：${account.pending_identity.account_id || "未读到"}`,
+                  `待确认小红薯号：${account.pending_identity.account_id || "未读到"}`,
                 ),
                 h(
                   Button,
@@ -5508,7 +5569,7 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                     onClick: async () => {
                       const value =
                         account.pending_identity.account_id ||
-                        window.prompt("请输入截图中核对后的小红书号") ||
+                        window.prompt("请输入截图中核对后的小红薯号") ||
                         "";
                       if (!value.trim()) return;
                       await cmd("takeover.identity.confirm", {
@@ -5913,13 +5974,3921 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Workbench (round 4): 总览, 执行队列, 异常与告警, 冷启动方案, 内容计划, 素材库,
+// 内容母版, 业务资料, 排期日历, 笔记维护, 自动化与风控, 授权台账, 能力与配额.
+// Every action goes through the plugin command endpoint; the backend owns the rules.
+// ---------------------------------------------------------------------------
+
+// 小红薯 wordmark (112×56), inlined so the page needs no extra asset request.
+const XHS_LOGO =
+  "data:image/png;base64,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";
+
+const css2 = `
+  .xhs-groups { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+  .xhs-group { display:inline-flex; align-items:center; gap:5px; }
+  .xhs-group.active { background:#182230; border-color:#182230; color:#fff; }
+  .xhs-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:12px; }
+  .xhs-stat-value { font-size:20px; font-weight:700; margin-top:4px; }
+  .xhs-two { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:12px; align-items:start; }
+  .xhs-two.even { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .xhs-stack { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .xhs-pill.ok { color:${C.green}; } .xhs-pill.warn { color:${C.amber}; } .xhs-pill.bad { color:${C.red}; }
+  .xhs-pill.lock { background:#f1f0fb; color:#5b4fc7; }
+  .xhs-pill.src-ai { background:#eef4ff; color:#2f5bd7; } .xhs-pill.src-instruction { background:#fff4e5; color:${C.amber}; } .xhs-pill.src-material { background:#eaf7ee; color:${C.green}; }
+  .xhs-tbl { width:100%; border-collapse:collapse; }
+  .xhs-tbl th, .xhs-tbl td { text-align:left; padding:7px 8px; border-bottom:1px solid ${C.line}; font-size:12px; vertical-align:top; }
+  .xhs-tbl th { color:${C.muted}; font-weight:500; }
+  .xhs-tbl .xhs-btn { white-space:nowrap; }
+  .xhs-app textarea { font:inherit; }
+  .xhs-steps { display:grid; gap:10px 8px; margin:4px 0 10px; }
+  .xhs-step { display:flex; gap:7px; align-items:flex-start; }
+  .xhs-step-n { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex:none; background:${C.soft}; color:${C.muted}; }
+  .xhs-step-n.done { background:#eaf7ee; color:${C.green}; } .xhs-step-n.cur { background:${C.red}; color:#fff; }
+  .xhs-lane { position:relative; height:26px; border-radius:6px; background:${C.soft}; margin:2px 0 8px; overflow:hidden; }
+  .xhs-blk { position:absolute; top:3px; bottom:3px; border-radius:4px; font-size:10px; line-height:20px; padding:0 5px; white-space:nowrap; overflow:hidden; box-sizing:border-box; }
+  .xhs-blk.publish { background:#ffe3e7; color:#d81b3c; } .xhs-blk.nurture, .xhs-blk.browse { background:#eef4ff; color:#2f5bd7; } .xhs-blk.reply, .xhs-blk.inbox { background:#eaf7ee; color:${C.green}; } .xhs-blk.paused { background:repeating-linear-gradient(45deg,#ececec,#ececec 5px,#f7f7f7 5px,#f7f7f7 10px); color:${C.muted}; }
+  .xhs-now { position:absolute; top:0; bottom:0; width:2px; background:#182230; }
+  .xhs-axis { display:flex; justify-content:space-between; font-size:10px; color:${C.muted}; }
+  .xhs-bar { height:6px; border-radius:3px; background:${C.soft}; overflow:hidden; margin-top:5px; }
+  .xhs-bar > span { display:block; height:100%; background:${C.red}; }
+  .xhs-bar.ent > span { background:#5b4fc7; }
+  .xhs-level { border:1px solid ${C.line}; border-radius:10px; padding:12px; cursor:pointer; background:${C.surface}; text-align:left; color:${C.ink}; font:inherit; }
+  .xhs-level.active { border-color:${C.red}; }
+  .xhs-level:disabled { opacity:.5; cursor:not-allowed; }
+  .xhs-check { display:flex; gap:6px; align-items:flex-start; margin:6px 0; }
+  .xhs-cal td { min-width:96px; }
+  .xhs-chip { display:block; border-radius:6px; padding:4px 6px; margin-bottom:4px; font-size:11px; background:${C.soft}; }
+  .xhs-chip.marketing { background:#ffe3e7; } .xhs-chip.life { background:#eaf7ee; } .xhs-chip.knowledge { background:#eef4ff; }
+  .xhs-banner { display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-left:3px solid #5b4fc7; }
+  .xhs-banner.paused { border-left-color:${C.red}; background:#fff0f2; }
+  @media (max-width:900px) { .xhs-stats, .xhs-two, .xhs-two.even { grid-template-columns:1fr; } }
+`;
+
+async function send(host, command, payload) {
+  return host.request("/plugin-apps/xhs-ops/commands", {
+    method: "POST",
+    body: JSON.stringify({ command, payload }),
+  });
+}
+function pill(label, tone) {
+  return h("span", { className: `xhs-pill${tone ? " " + tone : ""}` }, label);
+}
+function Lock({ children = "企业规则" }) {
+  return h("span", { className: "xhs-pill lock" }, "🔒 ", children);
+}
+function Card({ title, right, hint, children, style }) {
+  return h(
+    "section",
+    { className: "xhs-card", style },
+    (title || right) &&
+      h(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 9,
+          },
+        },
+        h("h3", { style: { margin: 0, flex: 1 }, title: hint }, title),
+        right,
+      ),
+    children,
+  );
+}
+function Stat({ label, value, sub }) {
+  return h(
+    "div",
+    { className: "xhs-card" },
+    h("div", { className: "xhs-meta" }, label),
+    h("div", { className: "xhs-stat-value" }, value),
+    sub && h("div", { className: "xhs-meta" }, sub),
+  );
+}
+function Table({ head, body, empty = "暂无数据" }) {
+  return body.length
+    ? h(
+        "table",
+        { className: "xhs-tbl" },
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            head.map((cell, i) => h("th", { key: i }, cell)),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          body.map((row, i) =>
+            h(
+              "tr",
+              { key: i },
+              row.map((cell, j) => h("td", { key: j }, cell)),
+            ),
+          ),
+        ),
+      )
+    : h("div", { className: "xhs-empty" }, empty);
+}
+function Select({ label, value, onChange, options, disabled }) {
+  return h(
+    "label",
+    { className: "xhs-field" },
+    label && h("div", { className: "xhs-label" }, label),
+    h(
+      "select",
+      {
+        className: "xhs-select",
+        value: value ?? "",
+        disabled,
+        onChange: (e) => onChange(e.target.value),
+      },
+      options.map(([v, l]) => h("option", { key: v, value: v }, l)),
+    ),
+  );
+}
+function Check({ label, checked, onChange, disabled }) {
+  return h(
+    "label",
+    { className: "xhs-check" },
+    h("input", {
+      type: "checkbox",
+      checked: !!checked,
+      disabled,
+      onChange: (e) => onChange(e.target.checked),
+    }),
+    h("span", null, label),
+  );
+}
+function NumberField({ label, value, onChange, disabled, hint }) {
+  return h(
+    "label",
+    { className: "xhs-field" },
+    h("div", { className: "xhs-label" }, label),
+    h("input", {
+      className: "xhs-input",
+      type: "number",
+      value: value ?? 0,
+      disabled,
+      onChange: (e) => onChange(Number(e.target.value)),
+    }),
+    hint && h("div", { className: "xhs-meta" }, hint),
+  );
+}
+function Bar({ ratio, ent }) {
+  return h(
+    "div",
+    { className: `xhs-bar${ent ? " ent" : ""}` },
+    h("span", {
+      style: { width: `${Math.min(100, Math.round((ratio || 0) * 100))}%` },
+    }),
+  );
+}
+function tz(snapshot) {
+  return (
+    snapshot.data?.operation_clock?.timezone ||
+    snapshot.data?.comment_clock?.timezone ||
+    "Asia/Shanghai"
+  );
+}
+function fmt(
+  value,
+  zone,
+  opts = {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  },
+) {
+  if (!value) return "—";
+  try {
+    return new Intl.DateTimeFormat("zh-CN", { timeZone: zone, ...opts }).format(
+      new Date(value),
+    );
+  } catch {
+    return String(value);
+  }
+}
+function accountName(snapshot, id) {
+  const account = rows(snapshot.data.accounts).find((a) => a.id === id);
+  return account
+    ? account.name || account.label || id
+    : id
+    ? "已删除的账号"
+    : "暂不指定";
+}
+const SOURCE_LABELS = {
+  ai: "AI 主动",
+  instruction: "运营指令",
+  manual: "手动创作",
+  material: "素材",
+};
+const NATURE_LABELS = { marketing: "营销", life: "生活", knowledge: "知识" };
+const LEVEL_LABELS = { manual: "手动", semi: "半自动", full: "全自动" };
+const FREQ_LABELS = { off: "关闭", weekly: "每周一次", daily: "每天一次" };
+const REVIEW_LABELS = {
+  to_make: "待制作",
+  pending_review: "待审核",
+  returned: "退回修改",
+  approved: "待发布",
+  scheduled: "待发布",
+  published: "已发布",
+  failed: "发布失败",
+  paused: "已暂停",
+};
+const KIND_LABELS = {
+  small_talk: "闲聊",
+  question: "咨询",
+  intent: "意向",
+  negative: "负面",
+  unclear: "待判断",
+};
+const RUN_LABELS = {
+  publish: "发布",
+  nurture: "养号",
+  browse: "养号",
+  reply: "回复",
+  inbox: "读取新评论",
+  reply_delete: "删除回复",
+  audit: "账号审计",
+  comment: "评论",
+  profile: "资料变更",
+};
+function srcPill(source) {
+  return pill(SOURCE_LABELS[source] || "手动创作", `src-${source || "manual"}`);
+}
+function checkPills(checks) {
+  if (!checks) return pill("未检查");
+  if (checks.stale) return pill("内容已改，需重新检查", "warn");
+  const bad = rows(checks.items).filter((i) => i.level === "bad");
+  const warn = rows(checks.items).filter((i) => i.level === "warn");
+  return h(
+    "span",
+    { style: { display: "inline-flex", gap: 4, flexWrap: "wrap" } },
+    !bad.length && !warn.length && pill("✓ 发布前检查通过", "ok"),
+    bad.map((i) =>
+      h(
+        "span",
+        { key: i.key, className: "xhs-pill bad", title: i.detail },
+        "✕ " + i.label,
+      ),
+    ),
+    warn.map((i) =>
+      h(
+        "span",
+        { key: i.key, className: "xhs-pill warn", title: i.detail },
+        "! " + i.label,
+      ),
+    ),
+    checks.high_risk && pill("需合规复核", "lock"),
+  );
+}
+
+// ---- 总览 ----
+function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
+  const data = snapshot.data;
+  const drafts = rows(data.drafts);
+  const pending = drafts.filter(
+    (d) => (d.review_status || "pending_review") === "pending_review",
+  );
+  const scheduled = drafts.filter((d) => d.review_status === "scheduled");
+  const alerts = rows(data.alerts).filter((a) => a.level === "action");
+  const [instruction, setInstruction] = useState("");
+  const eff = data.effective_policy || {};
+  const plan = data.last_plan;
+  const health = rows(data.account_health);
+  const zone = tz(snapshot);
+  const suggestions = [
+    "最近几个账号生活内容偏少，加一些咖啡和探店",
+    "这个月效果好的选题，继续准备下一批",
+    "给新号各准备 2 篇人设类内容",
+  ];
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-stats" },
+      h(Stat, {
+        label: "待审核内容",
+        value: pending.length,
+        sub: `其中 ${
+          pending.filter((d) => d.source === "ai").length
+        } 篇来自 AI 主动`,
+      }),
+      h(Stat, {
+        label: "已排期",
+        value: scheduled.length,
+        sub: `覆盖 ${new Set(scheduled.map((d) => d.account_id)).size} 个账号`,
+      }),
+      h(Stat, {
+        label: "今日任务",
+        value: rows(data.queue).length,
+        sub: `${
+          rows(data.queue).filter((q) =>
+            ["running", "preparing"].includes(q.status),
+          ).length
+        } 个执行中`,
+      }),
+      h(Stat, {
+        label: "待处理异常",
+        value: alerts.length,
+        sub: alerts[0] ? alerts[0].label : "无",
+      }),
+    ),
+    h(
+      "div",
+      { className: "xhs-two" },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          {
+            title: "AI 运营助手",
+            hint: "像聊天一样下发运营要求，系统拆成内容任务放进内容计划，等你审核。",
+          },
+          eff.automation_level === "manual" &&
+            h(
+              "div",
+              { className: "xhs-meta" },
+              "当前为手动档，AI 不会准备内容。可在 设置 › 自动化与风控 调整。",
+            ),
+          h("textarea", {
+            className: "xhs-textarea",
+            style: { minHeight: 64 },
+            value: instruction,
+            disabled: readOnly || eff.automation_level === "manual",
+            placeholder:
+              "例如：下周重点推广秋冬通勤大衣，准备 10 篇不同角度的内容",
+            onChange: (e) => setInstruction(e.target.value),
+          }),
+          h(
+            "div",
+            {
+              style: {
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                marginTop: 8,
+              },
+            },
+            suggestions.map((s) =>
+              h(
+                "button",
+                {
+                  key: s,
+                  className: "xhs-pill",
+                  style: { border: 0, cursor: "pointer" },
+                  onClick: () => setInstruction(s),
+                },
+                s,
+              ),
+            ),
+          ),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                primary: true,
+                disabled:
+                  readOnly ||
+                  !instruction.trim() ||
+                  eff.automation_level === "manual",
+                onClick: async () => {
+                  await send(host, "plan.generate", {
+                    instruction,
+                    model_ref: modelRef || undefined,
+                  });
+                  setInstruction("");
+                  await refresh();
+                },
+              },
+              "发送给 AI",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly || eff.automation_level === "manual",
+                onClick: async () => {
+                  await send(host, "plan.generate", {
+                    model_ref: modelRef || undefined,
+                  });
+                  await refresh();
+                },
+              },
+              "让 AI 主动准备一批",
+            ),
+            h(Button, { onClick: () => go("content", "editor") }, "手动创作"),
+            h(
+              Button,
+              { onClick: () => go("content", "materials") },
+              "添加素材",
+            ),
+            h(Button, { onClick: () => go("content", "plan") }, "查看内容计划"),
+          ),
+        ),
+        h(
+          Card,
+          {
+            title: "系统已为你准备好",
+            hint: "按账号人设、近期发布和素材准备的草稿。通过前会再做一次发布前检查。",
+          },
+          pending.slice(0, 6).map((d) =>
+            h(
+              "div",
+              { key: d.id, className: "xhs-row" },
+              h(
+                "div",
+                { style: { minWidth: 0 } },
+                h("b", null, d.title),
+                h(
+                  "div",
+                  { className: "xhs-meta" },
+                  accountName(snapshot, d.account_id),
+                  " · ",
+                  NATURE_LABELS[d.nature] || "未标注",
+                ),
+                h(
+                  "div",
+                  {
+                    style: {
+                      marginTop: 5,
+                      display: "flex",
+                      gap: 5,
+                      flexWrap: "wrap",
+                    },
+                  },
+                  srcPill(d.source),
+                  checkPills(d.checks),
+                ),
+              ),
+              h(
+                "div",
+                { style: { display: "flex", gap: 6 } },
+                h(
+                  Button,
+                  {
+                    primary: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "plan.update", {
+                        action: "approve",
+                        ids: [d.id],
+                      });
+                      await refresh();
+                    },
+                  },
+                  "通过",
+                ),
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "plan.update", {
+                        action: "return",
+                        ids: [d.id],
+                      });
+                      await refresh();
+                    },
+                  },
+                  "退回",
+                ),
+              ),
+            ),
+          ),
+          !pending.length &&
+            h("div", { className: "xhs-empty" }, "没有待审核的内容"),
+          pending.length > 6 &&
+            h(
+              "div",
+              { className: "xhs-actions" },
+              h(
+                Button,
+                { onClick: () => go("content", "plan") },
+                `全部 ${pending.length} 篇`,
+              ),
+            ),
+        ),
+      ),
+      h(
+        "div",
+        { className: "xhs-stack" },
+        plan &&
+          h(
+            Card,
+            { title: "上一条指令的结果" },
+            h(
+              "div",
+              { className: "xhs-meta" },
+              plan.instruction ? `“${plan.instruction}”` : "AI 主动准备",
+              " · ",
+              fmt(plan.at, zone),
+            ),
+            h(
+              "div",
+              { className: "xhs-row" },
+              h(
+                "div",
+                null,
+                h("b", null, `已拆成 ${plan.count} 个内容任务`),
+                h(
+                  "div",
+                  { className: "xhs-meta" },
+                  `用到 ${rows(plan.templates).length} 种母版`,
+                ),
+              ),
+              h(
+                Button,
+                { primary: true, onClick: () => go("content", "plan") },
+                "去制作",
+              ),
+            ),
+          ),
+        h(
+          Card,
+          { title: "今天" },
+          h(
+            "div",
+            { className: "xhs-row" },
+            h(
+              "div",
+              null,
+              h("b", null, "执行队列"),
+              h(
+                "div",
+                { className: "xhs-meta" },
+                `${rows(data.queue).length} 项 · ${
+                  rows(data.queue).filter((q) => q.status === "paused").length
+                } 项已暂停`,
+              ),
+            ),
+            h(Button, { onClick: () => go("home", "queue") }, "查看"),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            h(
+              "div",
+              null,
+              h("b", null, "笔记维护"),
+              h(
+                "div",
+                { className: "xhs-meta" },
+                `${
+                  rows(data.reply_items).filter((i) => i.status === "new")
+                    .length
+                } 条待你审核 · 已自动回复 ${
+                  rows(data.reply_items).filter(
+                    (i) => i.auto && i.status === "sent",
+                  ).length
+                } 条`,
+              ),
+            ),
+            h(Button, { onClick: () => go("publish", "upkeep") }, "查看"),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            h(
+              "div",
+              null,
+              h("b", null, "需要处理"),
+              h(
+                "div",
+                { className: "xhs-meta" },
+                alerts[0] ? alerts[0].label : "没有需要你处理的异常",
+              ),
+            ),
+            alerts.length > 0 &&
+              h(
+                Button,
+                { danger: true, onClick: () => go("home", "alerts") },
+                "去处理",
+              ),
+          ),
+        ),
+      ),
+    ),
+    h(
+      Card,
+      { title: "账号概览" },
+      h(Table, {
+        head: ["账号", "接入", "手机", "阶段", "近 7 天发布", "状态"],
+        body: rows(data.accounts).map((a) => {
+          const hl = health.find((x) => x.account_id === a.id) || {};
+          const stage = (data.cold_start_status || {})[a.id];
+          const device = rows(snapshot.devices).find(
+            (d) => d.device_id === a.device_id,
+          );
+          return [
+            a.name || a.id,
+            a.entry_mode === "existing" ? "已有账号" : "新账号",
+            device
+              ? device.name || device.device_id
+              : a.device_id
+              ? a.device_id
+              : "未绑定",
+            stage
+              ? stage.graduated
+                ? "日常运营"
+                : `冷启动 · ${stage.name} · 第 ${stage.day} 天`
+              : a.entry_mode === "existing"
+              ? "接管"
+              : "建号",
+            `${hl.publish_ok ?? 0} 篇`,
+            pill(
+              hl.state === "healthy"
+                ? "正常"
+                : hl.state === "paused"
+                ? "已暂停"
+                : "待配置",
+              hl.state === "healthy"
+                ? "ok"
+                : hl.state === "paused"
+                ? "bad"
+                : "warn",
+            ),
+          ];
+        }),
+      }),
+    ),
+  );
+}
+
+// ---- 执行队列 ----
+function QueuePanel({ snapshot }) {
+  const zone = tz(snapshot);
+  const queue = rows(snapshot.data.queue);
+  const devices = [...new Set(queue.map((q) => q.device_id).filter(Boolean))];
+  const unbound = rows(snapshot.data.accounts).filter((a) => !a.device_id);
+  const hour = (iso) => {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .format(new Date(iso))
+      .split(":");
+    return Number(parts[0]) + Number(parts[1]) / 60;
+  };
+  const nowH = hour(new Date().toISOString());
+  const pos = (v) => `${Math.max(0, Math.min(100, ((v - 8) / 15) * 100))}%`;
+  const eff = snapshot.data.effective_policy || {};
+  const settings = snapshot.data.member_settings || {};
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-stats" },
+      h(Stat, {
+        label: "今日任务",
+        value: queue.length,
+        sub: `${devices.length} 台手机`,
+      }),
+      h(Stat, {
+        label: "执行中",
+        value: queue.filter((q) => ["running", "preparing"].includes(q.status))
+          .length,
+      }),
+      h(Stat, {
+        label: "排队",
+        value: queue.filter((q) =>
+          ["queued", "planned", "awaiting_confirmation"].includes(q.status),
+        ).length,
+      }),
+      h(Stat, {
+        label: "已暂停",
+        value: queue.filter((q) => q.status === "paused").length,
+        sub: eff.enterprise_paused
+          ? "企业已暂停"
+          : eff.member_paused
+          ? "你已暂停"
+          : "",
+      }),
+    ),
+    h(
+      "div",
+      { className: "xhs-two" },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        devices.length === 0 &&
+          h(
+            Card,
+            { title: "今天还没有任务" },
+            h(
+              "div",
+              { className: "xhs-empty" },
+              "到点的发布、养号和回复会出现在这里。",
+            ),
+          ),
+        devices.map((deviceId) => {
+          const items = queue.filter((q) => q.device_id === deviceId);
+          const device = rows(snapshot.devices).find(
+            (d) => d.device_id === deviceId,
+          );
+          return h(
+            Card,
+            {
+              key: deviceId,
+              title: `${device?.name || deviceId} · ${accountName(
+                snapshot,
+                items[0]?.account_id,
+              )}`,
+              right: pill(
+                items.some((i) => i.status === "running")
+                  ? "执行中"
+                  : items.some((i) => i.status === "paused")
+                  ? "已暂停"
+                  : "排队",
+                items.some((i) => i.status === "paused") ? "bad" : "ok",
+              ),
+            },
+            h(
+              "div",
+              { className: "xhs-axis" },
+              [8, 11, 14, 17, 20, 23].map((x) =>
+                h("span", { key: x }, `${String(x).padStart(2, "0")}:00`),
+              ),
+            ),
+            h(
+              "div",
+              { className: "xhs-lane" },
+              items.map((i) =>
+                h(
+                  "span",
+                  {
+                    key: i.id,
+                    className: `xhs-blk ${
+                      i.status === "paused" ? "paused" : i.kind
+                    }`,
+                    style: { left: pos(hour(i.at)), width: "7%" },
+                    title: RUN_LABELS[i.kind] || i.kind,
+                  },
+                  RUN_LABELS[i.kind] || i.kind,
+                ),
+              ),
+              h("span", { className: "xhs-now", style: { left: pos(nowH) } }),
+            ),
+            items.map((i) =>
+              h(
+                "div",
+                { key: i.id, className: "xhs-row" },
+                h(
+                  "div",
+                  null,
+                  h(
+                    "b",
+                    null,
+                    `${fmt(i.at, zone, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })} ${RUN_LABELS[i.kind] || i.kind}`,
+                  ),
+                  i.title &&
+                    h("div", { className: "xhs-meta" }, `「${i.title}」`),
+                  i.error &&
+                    h("div", { className: "xhs-meta xhs-danger" }, i.error),
+                ),
+                pill(
+                  i.status === "awaiting_confirmation"
+                    ? "到点待你确认"
+                    : statusLabel(i.status),
+                  i.status === "paused" || i.status === "unknown"
+                    ? "bad"
+                    : i.status === "running"
+                    ? "ok"
+                    : "",
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+      h(
+        "div",
+        { className: "xhs-stack" },
+        unbound.length > 0 &&
+          h(
+            Card,
+            { title: "不在队列里" },
+            unbound.map((a) =>
+              h(
+                "div",
+                { key: a.id, className: "xhs-row" },
+                h(
+                  "div",
+                  null,
+                  h("b", null, a.name),
+                  h(
+                    "div",
+                    { className: "xhs-meta" },
+                    "未绑定手机，到点的发布无法执行",
+                  ),
+                ),
+              ),
+            ),
+          ),
+        h(
+          Card,
+          {
+            title: "排队规则",
+            hint: "这里只排队和提示冲突，不改你定好的发布时间。",
+          },
+          h(
+            "div",
+            { className: "xhs-row" },
+            h("b", null, "同一台手机一次只执行一个任务"),
+            h(Lock, { children: "固定" }),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            h(
+              "b",
+              null,
+              "手机离线或登录失效时暂停这台手机的队列，不换手机执行",
+            ),
+            h(Lock, { children: "固定" }),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            h("b", null, "到点的发布需要你确认后才执行"),
+            h(Lock, { children: "固定" }),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            h("b", null, "资料变更当天"),
+            pill(
+              settings.profile_change_day === "publish_only"
+                ? "只发布"
+                : "不发布、不养号",
+            ),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            h("b", null, "每个账号每天自动操作时长上限"),
+            pill(`${settings.daily_minutes_cap || 60} 分钟`),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// ---- 异常与告警 ----
+function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
+  const zone = tz(snapshot);
+  const list = rows(snapshot.data.alerts);
+  const action = list.filter((a) => a.level === "action");
+  const auto = list.filter((a) => a.level !== "action");
+  const health = rows(snapshot.data.account_health);
+  const [notice, setNotice] = useState({
+    account_id: "",
+    text: "",
+    restricted: false,
+  });
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-stats" },
+      h(Stat, { label: "待处理", value: action.length }),
+      h(Stat, { label: "提醒", value: auto.length }),
+      h(Stat, {
+        label: "已暂停账号",
+        value: health.filter((x) => x.state === "paused").length,
+      }),
+      h(Stat, {
+        label: "健康账号",
+        value: `${health.filter((x) => x.state === "healthy").length} / ${
+          health.length
+        }`,
+      }),
+    ),
+    h(
+      "div",
+      { className: "xhs-two" },
+      h(
+        Card,
+        {
+          title: "待处理",
+          hint: "出现平台提示、验证码或登录失效时，系统只会停下来等你处理，不会重试、换设备或换账号继续。",
+        },
+        action.map((a) =>
+          h(
+            "div",
+            { key: a.id, className: "xhs-row", style: { display: "block" } },
+            h(
+              "div",
+              null,
+              pill("需要你处理", "bad"),
+              " ",
+              h(
+                "b",
+                null,
+                `${accountName(snapshot, a.account_id)} · ${a.label}`,
+              ),
+            ),
+            h(
+              "div",
+              { className: "xhs-meta" },
+              fmt(a.at, zone),
+              " · ",
+              RUN_LABELS[a.kind] || a.kind,
+            ),
+            h(
+              "div",
+              { className: "xhs-actions" },
+              [
+                "login_required",
+                "phone_interaction_required",
+                "account_paused",
+              ].includes(a.code) &&
+                h(
+                  Button,
+                  { primary: true, onClick: () => go("build", "accounts") },
+                  "我已在手机上处理，去重新核对身份",
+                ),
+              ["unknown", "interrupted"].includes(a.code) &&
+                h(Button, { onClick: () => go("publish", "runs") }, "去对账"),
+              a.kind === "authorization" &&
+                h(
+                  Button,
+                  { onClick: () => go("settings", "consent") },
+                  "去处理",
+                ),
+            ),
+          ),
+        ),
+        !action.length &&
+          h("div", { className: "xhs-empty" }, "没有需要你处理的异常"),
+      ),
+      h(
+        Card,
+        { title: "提醒与已自动处理" },
+        h(Table, {
+          head: ["时间", "账号", "内容"],
+          body: auto
+            .slice(0, 12)
+            .map((a) => [
+              fmt(a.at, zone),
+              accountName(snapshot, a.account_id),
+              a.label,
+            ]),
+          empty: "近期没有提醒",
+        }),
+      ),
+    ),
+    h(
+      Card,
+      {
+        title: "账号健康",
+        hint: "平台通知由你在手机上查看后登记；系统只读取页面上显示的内容，不推断是否被限流。",
+      },
+      h(Table, {
+        head: [
+          "账号",
+          "登录",
+          "7 天养号完成率",
+          "7 天发布",
+          "平台通知",
+          "状态",
+        ],
+        body: health.map((x) => [
+          accountName(snapshot, x.account_id),
+          pill(
+            x.login === "ok"
+              ? "正常"
+              : x.login === "lost"
+              ? "登录失效"
+              : "未绑定",
+            x.login === "ok" ? "ok" : "bad",
+          ),
+          x.nurture_rate == null ? "—" : `${x.nurture_rate}%`,
+          `${x.publish_ok} / ${x.publish_total}${
+            x.publish_unknown ? ` · ${x.publish_unknown} 篇结果不明` : ""
+          }`,
+          rows(x.notices).length ? rows(x.notices).slice(-1)[0].text : "无",
+          pill(
+            x.state === "healthy"
+              ? "健康"
+              : x.state === "paused"
+              ? "已暂停"
+              : "待配置",
+            x.state === "healthy"
+              ? "ok"
+              : x.state === "paused"
+              ? "bad"
+              : "warn",
+          ),
+        ]),
+      }),
+      h(
+        "div",
+        { className: "xhs-two even", style: { marginTop: 12 } },
+        h(Select, {
+          label: "登记平台通知 · 账号",
+          value: notice.account_id,
+          onChange: (v) => setNotice({ ...notice, account_id: v }),
+          options: [
+            ["", "选择账号"],
+            ...rows(snapshot.data.accounts).map((a) => [a.id, a.name || a.id]),
+          ],
+        }),
+        h(Field, {
+          label: "通知内容",
+          value: notice.text,
+          onChange: (v) => setNotice({ ...notice, text: v }),
+          placeholder: "照手机上显示的抄写",
+        }),
+      ),
+      h(Check, {
+        label:
+          "这是限制或违规提示（会暂停该账号的养号、发布和回复至少 72 小时）",
+        checked: notice.restricted,
+        onChange: (v) => setNotice({ ...notice, restricted: v }),
+      }),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          {
+            disabled: readOnly || !notice.account_id || !notice.text.trim(),
+            onClick: async () => {
+              await send(host, "notice.record", notice);
+              setNotice({ account_id: "", text: "", restricted: false });
+              await refresh();
+            },
+          },
+          "登记平台通知",
+        ),
+      ),
+    ),
+  );
+}
+
+// ---- 冷启动方案 ----
+function ColdStartPanel({ snapshot, host, readOnly, refresh }) {
+  const settings = snapshot.data.member_settings || {};
+  const [stages, setStages] = useState(rows(settings.cold_start));
+  useEffect(
+    () => setStages(rows((snapshot.data.member_settings || {}).cold_start)),
+    [JSON.stringify((snapshot.data.member_settings || {}).cold_start)],
+  );
+  const status = snapshot.data.cold_start_status || {};
+  const set = (i, key, value) =>
+    setStages(stages.map((s, j) => (j === i ? { ...s, [key]: value } : s)));
+  const fresh = rows(snapshot.data.accounts).filter(
+    (a) => a.entry_mode === "new",
+  );
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      Card,
+      {
+        title: "冷启动方案",
+        hint: "新号完成资料核验后，先按较低的强度养号，再过渡到账号日常预算。每一档仍要先生成计划、预检、由你确认后才执行。",
+      },
+      h(Table, {
+        head: [
+          "阶段",
+          "天数",
+          "每日浏览",
+          "分段",
+          "搜索占比 %",
+          "点赞（开 / 上限 / %）",
+          "收藏（开 / 上限 / %）",
+          "关注",
+        ],
+        body: stages.map((s, i) => [
+          s.name,
+          `第 ${s.day_from}–${s.day_to} 天`,
+          h("input", {
+            className: "xhs-input",
+            type: "number",
+            value: s.daily_target_posts,
+            disabled: readOnly,
+            onChange: (e) =>
+              set(i, "daily_target_posts", Number(e.target.value)),
+          }),
+          h("input", {
+            className: "xhs-input",
+            type: "number",
+            value: s.segments,
+            disabled: readOnly,
+            onChange: (e) => set(i, "segments", Number(e.target.value)),
+          }),
+          h("input", {
+            className: "xhs-input",
+            type: "number",
+            value: s.search_ratio_percent,
+            disabled: readOnly,
+            onChange: (e) =>
+              set(i, "search_ratio_percent", Number(e.target.value)),
+          }),
+          ...["like", "collect"].map((k) =>
+            h(
+              "span",
+              {
+                key: k,
+                style: { display: "flex", gap: 4, alignItems: "center" },
+              },
+              h("input", {
+                type: "checkbox",
+                checked: !!s[k][0],
+                disabled: readOnly,
+                onChange: (e) =>
+                  set(i, k, [e.target.checked, s[k][1], s[k][2]]),
+              }),
+              h("input", {
+                className: "xhs-input",
+                style: { width: 52, marginTop: 0 },
+                type: "number",
+                value: s[k][1],
+                disabled: readOnly,
+                onChange: (e) =>
+                  set(i, k, [s[k][0], Number(e.target.value), s[k][2]]),
+              }),
+              h("input", {
+                className: "xhs-input",
+                style: { width: 52, marginTop: 0 },
+                type: "number",
+                value: s[k][2],
+                disabled: readOnly,
+                onChange: (e) =>
+                  set(i, k, [s[k][0], s[k][1], Number(e.target.value)]),
+              }),
+            ),
+          ),
+          "关闭",
+        ]),
+      }),
+      h(
+        "div",
+        { className: "xhs-meta", style: { marginTop: 8 } },
+        "第 15 天起按账号日常预算。评论只发送评论审核里逐条批准过的原文。",
+      ),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly,
+            onClick: async () => {
+              await send(host, "coldstart.save", { stages });
+              await refresh();
+            },
+          },
+          "保存为默认方案",
+        ),
+      ),
+    ),
+    h(
+      Card,
+      { title: "新号进度" },
+      fresh.map((a) => {
+        const s = status[a.id];
+        return h(
+          "div",
+          { key: a.id, className: "xhs-row" },
+          h(
+            "div",
+            null,
+            h("b", null, a.name),
+            h(
+              "div",
+              { className: "xhs-meta" },
+              s
+                ? s.graduated
+                  ? `第 ${s.day} 天 · 已转日常`
+                  : `第 ${s.day} 天 · ${s.name}`
+                : "未开始",
+            ),
+          ),
+          h(
+            "div",
+            { style: { display: "flex", gap: 6 } },
+            !s &&
+              h(
+                Button,
+                {
+                  primary: true,
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "coldstart.apply", { account_id: a.id });
+                    await refresh();
+                  },
+                },
+                "开始冷启动",
+              ),
+            s &&
+              !s.graduated &&
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "coldstart.apply", {
+                      account_id: a.id,
+                      graduate: true,
+                    });
+                    await refresh();
+                  },
+                },
+                "提前转日常",
+              ),
+          ),
+        );
+      }),
+      !fresh.length && h("div", { className: "xhs-empty" }, "还没有新账号"),
+    ),
+  );
+}
+
+// ---- 内容计划 ----
+function PlanPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
+  const zone = tz(snapshot);
+  const drafts = rows(snapshot.data.drafts);
+  const tasks = rows(snapshot.data.content_tasks).filter(
+    (t) => t.status === "to_make" || t.status === "making",
+  );
+  const [filter, setFilter] = useState("pending_review");
+  const [selected, setSelected] = useState([]);
+  const [when, setWhen] = useState("");
+  const [assignTo, setAssignTo] = useState("");
+  const [review, setReview] = useState(null);
+  const buckets = {
+    to_make: tasks.length,
+    pending_review: drafts.filter((d) =>
+      ["pending_review", "returned", undefined].includes(d.review_status),
+    ).length,
+    approved: drafts.filter((d) =>
+      ["approved", "scheduled"].includes(d.review_status),
+    ).length,
+    published: drafts.filter((d) => d.review_status === "published").length,
+    failed: drafts.filter((d) => d.review_status === "failed").length,
+  };
+  const shown = drafts.filter((d) => {
+    const s = d.review_status || "pending_review";
+    if (filter === "pending_review")
+      return ["pending_review", "returned"].includes(s);
+    if (filter === "approved") return ["approved", "scheduled"].includes(s);
+    return s === filter;
+  });
+  const batch = async (action, extra = {}) => {
+    await send(host, "plan.update", { action, ids: selected, ...extra });
+    setSelected([]);
+    await refresh();
+  };
+  const toggle = (id, on) =>
+    setSelected(
+      on ? [...new Set([...selected, id])] : selected.filter((x) => x !== id),
+    );
+  const accounts = rows(snapshot.data.accounts);
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      Card,
+      {
+        title: "内容任务池",
+        hint: "AI 主动生成、运营指令、素材和手动创作的内容都在这里，使用同一套审核、排期和发布。",
+      },
+      h(
+        "div",
+        { className: "xhs-tabs", style: { marginBottom: 10 } },
+        [
+          ["to_make", "待制作"],
+          ["pending_review", "待审核"],
+          ["approved", "待发布"],
+          ["published", "已发布"],
+          ["failed", "发布失败"],
+        ].map(([k, l]) =>
+          h(
+            "button",
+            {
+              key: k,
+              className: `xhs-tab${filter === k ? " active" : ""}`,
+              onClick: () => {
+                setFilter(k);
+                setSelected([]);
+              },
+            },
+            `${l} ${buckets[k]}`,
+          ),
+        ),
+      ),
+      filter === "to_make"
+        ? h(Table, {
+            head: ["选题", "来源", "账号", "性质", "为什么这样安排", ""],
+            body: tasks.map((t) => [
+              h("b", null, t.title),
+              srcPill(t.source),
+              accountName(snapshot, t.account_id),
+              NATURE_LABELS[t.nature],
+              h("span", { className: "xhs-meta" }, t.reason || "—"),
+              t.status === "making"
+                ? pill("制作中")
+                : h(
+                    "span",
+                    { style: { display: "flex", gap: 6 } },
+                    h(
+                      Button,
+                      {
+                        primary: true,
+                        disabled: readOnly,
+                        onClick: async () => {
+                          await send(host, "task.generate", {
+                            id: t.id,
+                            model_ref: modelRef || undefined,
+                          });
+                          await refresh();
+                        },
+                      },
+                      "生成草稿",
+                    ),
+                    h(
+                      Button,
+                      {
+                        disabled: readOnly,
+                        onClick: async () => {
+                          await send(host, "task.dismiss", { id: t.id });
+                          await refresh();
+                        },
+                      },
+                      "忽略",
+                    ),
+                  ),
+            ]),
+            empty:
+              "没有待制作的任务。可以在工作台让 AI 准备一批，或在素材库用素材生成。",
+          })
+        : h(
+            "div",
+            null,
+            selected.length > 0 &&
+              h(
+                "div",
+                {
+                  className: "xhs-actions",
+                  style: {
+                    alignItems: "flex-end",
+                    marginTop: 0,
+                    marginBottom: 8,
+                  },
+                },
+                h(
+                  "span",
+                  { className: "xhs-meta" },
+                  `已选 ${selected.length} 篇`,
+                ),
+                filter === "pending_review" &&
+                  h(
+                    Button,
+                    {
+                      primary: true,
+                      disabled: readOnly,
+                      onClick: () => batch("approve"),
+                    },
+                    "批量通过",
+                  ),
+                filter === "pending_review" &&
+                  h(
+                    Button,
+                    { disabled: readOnly, onClick: () => batch("return") },
+                    "退回修改",
+                  ),
+                h("input", {
+                  className: "xhs-input",
+                  style: { width: 200, marginTop: 0 },
+                  type: "datetime-local",
+                  value: when,
+                  onChange: (e) => setWhen(e.target.value),
+                }),
+                h(
+                  Button,
+                  {
+                    disabled: readOnly || !when,
+                    onClick: () =>
+                      batch("schedule", {
+                        scheduled_at: new Date(when).toISOString(),
+                      }),
+                  },
+                  "批量排期",
+                ),
+                h(
+                  "select",
+                  {
+                    className: "xhs-select",
+                    style: { width: 160, marginTop: 0 },
+                    value: assignTo,
+                    onChange: (e) => setAssignTo(e.target.value),
+                  },
+                  h("option", { value: "" }, "换到账号…"),
+                  accounts.map((a) =>
+                    h("option", { key: a.id, value: a.id }, a.name || a.id),
+                  ),
+                ),
+                h(
+                  Button,
+                  {
+                    disabled: readOnly || !assignTo,
+                    onClick: () => batch("assign", { account_id: assignTo }),
+                  },
+                  "批量换账号",
+                ),
+                h(
+                  Button,
+                  { disabled: readOnly, onClick: () => batch("pause") },
+                  "暂停",
+                ),
+              ),
+            h(Table, {
+              head: [
+                "",
+                "选题",
+                "来源",
+                "账号",
+                "排期",
+                "发布前检查",
+                "状态",
+                "",
+              ],
+              body: shown.map((d) => [
+                h("input", {
+                  type: "checkbox",
+                  checked: selected.includes(d.id),
+                  onChange: (e) => toggle(d.id, e.target.checked),
+                }),
+                h("b", null, d.title),
+                srcPill(d.source),
+                accountName(snapshot, d.account_id),
+                d.scheduled_at ? fmt(d.scheduled_at, zone) : "未排期",
+                checkPills(d.checks),
+                pill(
+                  REVIEW_LABELS[d.review_status || "pending_review"],
+                  d.review_status === "failed" ? "bad" : "",
+                ),
+                h(
+                  "span",
+                  { style: { display: "flex", gap: 6 } },
+                  h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "content.precheck", { id: d.id });
+                        await refresh();
+                      },
+                    },
+                    "检查",
+                  ),
+                  d.checks?.blocking &&
+                    h(
+                      Button,
+                      {
+                        disabled: readOnly,
+                        onClick: async () => {
+                          await send(host, "content.meta", {
+                            id: d.id,
+                            meta: {},
+                            fix_labels: true,
+                          });
+                          await refresh();
+                        },
+                      },
+                      "补上标识与披露",
+                    ),
+                  d.checks?.high_risk &&
+                    h(
+                      Button,
+                      {
+                        disabled: readOnly,
+                        onClick: () =>
+                          setReview({
+                            id: d.id,
+                            reviewer:
+                              snapshot.data.effective_policy?.reviewer_name ||
+                              "",
+                            reference: "",
+                            decision: "approved",
+                          }),
+                      },
+                      "记录合规复核",
+                    ),
+                ),
+              ]),
+              empty: "这里没有内容",
+            }),
+          ),
+      review &&
+        h(
+          "div",
+          {
+            className: "xhs-card",
+            style: { marginTop: 12, borderColor: "#5b4fc7" },
+          },
+          h("h4", { style: { marginTop: 0 } }, "记录合规复核"),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            "高风险内容由企业指定的复核人在审批流程里签字，这里记录结论和单号。内容再改动需要重新复核。",
+          ),
+          h(
+            "div",
+            { className: "xhs-two even" },
+            h(Field, {
+              label: "复核人",
+              value: review.reviewer,
+              onChange: (v) => setReview({ ...review, reviewer: v }),
+            }),
+            h(Field, {
+              label: "审批单号或链接",
+              value: review.reference,
+              onChange: (v) => setReview({ ...review, reference: v }),
+            }),
+          ),
+          h(Select, {
+            label: "结论",
+            value: review.decision,
+            onChange: (v) => setReview({ ...review, decision: v }),
+            options: [
+              ["approved", "通过"],
+              ["rejected", "退回"],
+            ],
+          }),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: !review.reviewer.trim() || !review.reference.trim(),
+                onClick: async () => {
+                  await send(host, "compliance.record", review);
+                  setReview(null);
+                  await refresh();
+                },
+              },
+              "保存",
+            ),
+            h(Button, { onClick: () => setReview(null) }, "取消"),
+          ),
+        ),
+    ),
+    h(
+      Card,
+      { title: "审核流" },
+      h(
+        "div",
+        { className: "xhs-row" },
+        h(
+          "div",
+          null,
+          h("b", null, "普通内容"),
+          h("div", { className: "xhs-meta" }, "生活、知识类"),
+        ),
+        pill("运营本人"),
+      ),
+      h(
+        "div",
+        { className: "xhs-row" },
+        h(
+          "div",
+          null,
+          h("b", null, "营销内容"),
+          h("div", { className: "xhs-meta" }, "补全商业推广披露后才能通过"),
+        ),
+        pill("运营本人"),
+      ),
+      h(
+        "div",
+        { className: "xhs-row" },
+        h(
+          "div",
+          null,
+          h("b", null, "高风险内容"),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            "效果描述、案例、对比类；医疗美容内容一律走这一档",
+          ),
+        ),
+        h(Lock, {
+          children: `合规复核人${
+            snapshot.data.effective_policy?.reviewer_name
+              ? " · " + snapshot.data.effective_policy.reviewer_name
+              : ""
+          }`,
+        }),
+      ),
+    ),
+  );
+}
+
+// ---- 素材库 ----
+function MaterialsPanel({ snapshot, host, readOnly, refresh, go }) {
+  const materials = rows(snapshot.data.materials);
+  const consents = rows(snapshot.data.authorizations).filter(
+    (c) => c.status === "active",
+  );
+  const accounts = rows(snapshot.data.accounts);
+  const blank = {
+    kind: "experience",
+    title: "",
+    text: "",
+    owner: "public",
+    account_ids: [],
+    origin: "spoken",
+    consent_id: "",
+    images: [],
+  };
+  const [form, setForm] = useState(blank);
+  const [kind, setKind] = useState("");
+  const shown = materials.filter((m) => !kind || m.kind === kind);
+  const KINDS = {
+    experience: "生活经历",
+    image: "图片",
+    business: "产品与项目资料",
+    reference: "内容参考",
+    topic: "内容选题",
+    file: "语音与文件",
+  };
+  const ORIGINS = {
+    real: "真实拍摄",
+    ai: "AI 生成",
+    ai_reconstruct: "AI 重现",
+    upload: "运营上传",
+    spoken: "本人口述",
+  };
+  const save = async () => {
+    await send(host, "material.save", {
+      ...form,
+      id: form.id || "",
+      version: form.version ?? null,
+    });
+    setForm(blank);
+    await refresh();
+  };
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(
+        Card,
+        {
+          title: "添加素材",
+          hint: "文字、图片、文件都可以。不用马上做成笔记，系统会先整理保存，之后做内容计划时自动匹配。",
+        },
+        h(Field, {
+          label: "标题（可选）",
+          value: form.title,
+          onChange: (v) => setForm({ ...form, title: v }),
+        }),
+        h(Field, {
+          label: "内容",
+          multiline: true,
+          value: form.text,
+          onChange: (v) => setForm({ ...form, text: v }),
+          placeholder:
+            "例如：小王周末去了天坛，下午阳光很好，想分享一下秋天的景色，但是没有拍照。",
+        }),
+        h(
+          "div",
+          { className: "xhs-two even" },
+          h(Select, {
+            label: "类型",
+            value: form.kind,
+            onChange: (v) => setForm({ ...form, kind: v }),
+            options: Object.entries(KINDS),
+          }),
+          h(Select, {
+            label: "来源",
+            value: form.origin,
+            onChange: (v) => setForm({ ...form, origin: v }),
+            options: Object.entries(ORIGINS),
+          }),
+          h(Select, {
+            label: "归属",
+            value: form.owner,
+            onChange: (v) =>
+              setForm({
+                ...form,
+                owner: v,
+                account_ids: v === "public" ? [] : form.account_ids,
+              }),
+            options: [
+              ["public", "公共素材库"],
+              ["account", "绑定账号"],
+              ["shared", "多账号共用"],
+            ],
+          }),
+          h(Select, {
+            label: "授权（真实人物或经历时必选）",
+            value: form.consent_id,
+            onChange: (v) => setForm({ ...form, consent_id: v }),
+            options: [
+              ["", "不涉及个人授权"],
+              ...consents.map((c) => [c.id, `${c.person} · 至 ${c.valid_to}`]),
+            ],
+          }),
+        ),
+        form.owner !== "public" &&
+          h(
+            "div",
+            { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
+            accounts.map((a) =>
+              h(Check, {
+                key: a.id,
+                label: a.name || a.id,
+                checked: form.account_ids.includes(a.id),
+                onChange: (on) =>
+                  setForm({
+                    ...form,
+                    account_ids: on
+                      ? [...form.account_ids, a.id]
+                      : form.account_ids.filter((x) => x !== a.id),
+                  }),
+              }),
+            ),
+          ),
+        h(
+          "label",
+          { className: "xhs-field" },
+          h(
+            "div",
+            { className: "xhs-label" },
+            `图片（${form.images.length}/9）`,
+          ),
+          h("input", {
+            type: "file",
+            accept: "image/png,image/jpeg,image/webp",
+            multiple: true,
+            disabled: readOnly,
+            onChange: async (e) => {
+              const added = await readImageFiles([...e.target.files]);
+              setForm({
+                ...form,
+                images: [...form.images, ...added].slice(0, 9),
+              });
+            },
+          }),
+        ),
+        h(
+          "div",
+          { className: "xhs-actions" },
+          h(
+            Button,
+            {
+              primary: true,
+              disabled: readOnly || (!form.text.trim() && !form.images.length),
+              onClick: save,
+            },
+            "保存素材",
+          ),
+        ),
+      ),
+      h(
+        Card,
+        { title: "使用边界" },
+        h(
+          "div",
+          { className: "xhs-row" },
+          h(
+            "b",
+            null,
+            "真实个人经历、人物照片只能用于授权人对应的账号，不能改写成其他账号的亲身经历",
+          ),
+          h(Lock, { children: "固定" }),
+        ),
+        h(
+          "div",
+          { className: "xhs-row" },
+          h("b", null, "AI 重现的图片保留来源标记，不当作现场实拍"),
+          h(Lock, { children: "固定" }),
+        ),
+        h(
+          "div",
+          { className: "xhs-row" },
+          h("b", null, "第三方内容只作参考，提炼结构，不复制原文和原图"),
+          h(Lock, { children: "固定" }),
+        ),
+      ),
+    ),
+    h(
+      Card,
+      {
+        title: "素材资产库",
+        right: h(
+          "select",
+          {
+            className: "xhs-select",
+            style: { width: 180, marginTop: 0 },
+            value: kind,
+            onChange: (e) => setKind(e.target.value),
+          },
+          h("option", { value: "" }, "全部类型"),
+          Object.entries(KINDS).map(([k, l]) =>
+            h("option", { key: k, value: k }, l),
+          ),
+        ),
+      },
+      h(Table, {
+        head: [
+          "素材",
+          "类型",
+          "归属",
+          "来源",
+          "状态",
+          "已使用",
+          "系统整理",
+          "",
+        ],
+        body: shown.map((m) => [
+          h(
+            "div",
+            null,
+            h("b", null, m.title || (m.text || "").slice(0, 20) || "图片素材"),
+            h("div", { className: "xhs-meta" }, (m.text || "").slice(0, 60)),
+          ),
+          KINDS[m.kind],
+          m.owner === "public"
+            ? "公共素材库"
+            : rows(m.account_ids)
+                .map((id) => accountName(snapshot, id))
+                .join("、"),
+          ORIGINS[m.origin] || m.origin,
+          pill(
+            m.status === "frozen" ? "已冻结（授权撤回）" : "可用",
+            m.status === "frozen" ? "bad" : "ok",
+          ),
+          `${m.used || 0} 次`,
+          m.analysis
+            ? h(
+                "span",
+                { className: "xhs-meta" },
+                [
+                  rows(m.analysis.formats).join("、"),
+                  m.analysis.missing?.length
+                    ? `缺：${m.analysis.missing.join("、")}`
+                    : "",
+                  m.analysis.boundary,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              )
+            : "—",
+          h(
+            "span",
+            { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+            h(
+              Button,
+              {
+                disabled: readOnly || m.status === "frozen",
+                onClick: async () => {
+                  await send(host, "material.organize", { id: m.id });
+                  await refresh();
+                },
+              },
+              "AI 整理",
+            ),
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly || m.status === "frozen",
+                onClick: async () => {
+                  await send(host, "task.add", {
+                    title: (m.title || m.text || "素材选题").slice(0, 40),
+                    account_id:
+                      rows(m.account_ids)[0] ||
+                      rows(m.analysis?.suggested_account_ids)[0] ||
+                      "",
+                    nature: "life",
+                    material_ids: [m.id],
+                    source: "material",
+                  });
+                  await refresh();
+                  go("content", "plan");
+                },
+              },
+              "用它生成内容",
+            ),
+            h(
+              Button,
+              {
+                danger: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "material.delete", { id: m.id });
+                  await refresh();
+                },
+              },
+              "删除",
+            ),
+          ),
+        ]),
+        empty: "还没有素材",
+      }),
+    ),
+  );
+}
+
+// ---- 内容母版 ----
+function TemplatesPanel({ snapshot, host, readOnly, refresh }) {
+  const cache = snapshot.data.catalog_cache || {};
+  const templates = rows(cache.templates);
+  const subs = rows(snapshot.data.template_submissions);
+  const drafts = rows(snapshot.data.drafts).filter(
+    (d) =>
+      d.review_status === "published" ||
+      d.review_status === "approved" ||
+      d.review_status === "scheduled",
+  );
+  const [submit, setSubmit] = useState({ id: "", structure: "", metrics: "" });
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      Card,
+      {
+        title: "内容母版库",
+        hint: "母版 = 运营经验 + 文案结构 + 图片形式 + 适用条件。系统按运营目标、账号人设和现有素材自动匹配，你也可以手动切换。",
+        right: h(
+          "span",
+          { style: { display: "flex", gap: 6, alignItems: "center" } },
+          cache.fetched_at &&
+            h(
+              "span",
+              { className: "xhs-meta" },
+              `同步于 ${fmt(cache.fetched_at, tz(snapshot))}`,
+            ),
+          h(
+            Button,
+            {
+              disabled: readOnly,
+              onClick: async () => {
+                await send(host, "catalog.refresh", {});
+                await refresh();
+              },
+            },
+            "从企业同步",
+          ),
+        ),
+      },
+      !templates.length &&
+        h(
+          "div",
+          { className: "xhs-empty" },
+          "还没有同步母版。点“从企业同步”获取平台为企业开通的母版和词库。",
+        ),
+      h(
+        "div",
+        { className: "xhs-grid" },
+        templates.map((t) =>
+          h(
+            "div",
+            {
+              key: t.id,
+              className: "xhs-card",
+              style: t.available === false ? { opacity: 0.55 } : undefined,
+            },
+            h("h3", null, t.name),
+            h(
+              "div",
+              {
+                style: {
+                  display: "flex",
+                  gap: 5,
+                  flexWrap: "wrap",
+                  marginBottom: 6,
+                },
+              },
+              pill(t.kind),
+              t.compliance !== "通用" && pill(t.compliance, "warn"),
+              t.available === false && h(Lock, { children: "企业未开通" }),
+            ),
+            h("div", { className: "xhs-meta" }, "结构：", t.structure),
+            h(
+              "div",
+              { className: "xhs-meta", style: { marginTop: 4 } },
+              "配图：",
+              t.visual || "—",
+            ),
+            h(
+              "div",
+              { className: "xhs-meta", style: { marginTop: 4 } },
+              "需要素材：",
+              t.required_material || "—",
+            ),
+          ),
+        ),
+      ),
+    ),
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(
+        Card,
+        {
+          title: "提交优质内容为母版候选",
+          hint: "提交的是结构和做法，平台审核时会去掉账号信息；被采纳后，范围内的企业都能用。",
+        },
+        h(Select, {
+          label: "内容",
+          value: submit.id,
+          onChange: (v) => setSubmit({ ...submit, id: v }),
+          options: [
+            ["", "选择一篇已通过或已发布的内容"],
+            ...drafts.map((d) => [d.id, d.title]),
+          ],
+        }),
+        h(Field, {
+          label: "结构",
+          value: submit.structure,
+          onChange: (v) => setSubmit({ ...submit, structure: v }),
+          placeholder: "例如：误区 → 为什么不对 → 正确做法",
+        }),
+        h(Field, {
+          label: "表现数据（可选）",
+          value: submit.metrics,
+          onChange: (v) => setSubmit({ ...submit, metrics: v }),
+          placeholder: "例如：阅读 1.2 万 · 互动率约 7%",
+        }),
+        h(
+          "div",
+          { className: "xhs-actions" },
+          h(
+            Button,
+            {
+              primary: true,
+              disabled: readOnly || !submit.id,
+              onClick: async () => {
+                await send(host, "template.submit", submit);
+                setSubmit({ id: "", structure: "", metrics: "" });
+                await refresh();
+              },
+            },
+            "提交",
+          ),
+        ),
+      ),
+      h(
+        Card,
+        { title: "我提交的母版候选" },
+        h(Table, {
+          head: ["内容", "提交时间", "平台审核"],
+          body: subs.map((s) => [
+            s.title,
+            fmt(s.created_at, tz(snapshot)),
+            pill(
+              s.status === "adopted"
+                ? "已采纳"
+                : s.status === "rejected"
+                ? "未采纳"
+                : "平台审核中",
+              s.status === "adopted"
+                ? "ok"
+                : s.status === "pending"
+                ? "warn"
+                : "",
+            ),
+          ]),
+          empty: "还没有提交",
+        }),
+      ),
+    ),
+  );
+}
+
+// ---- 业务资料 ----
+function BizDocsPanel({ snapshot, host, readOnly, refresh }) {
+  const docs = rows(snapshot.data.biz_docs);
+  const [kind, setKind] = useState("org");
+  const TEMPLATES = {
+    org: ["主营业务", "机构介绍", "门店与服务地区", "资质文件"],
+    project: ["核心卖点", "价格", "适用条件", "注意事项"],
+    person: ["身份", "可公开信息", "资质", "授权"],
+  };
+  const blank = (k) => ({
+    kind: k,
+    name: "",
+    fields: Object.fromEntries(TEMPLATES[k].map((f) => [f, ""])),
+    source: "",
+  });
+  const [form, setForm] = useState(blank("org"));
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      Card,
+      {
+        title: "业务资料",
+        hint: "生成内容时，价格、功效、适用条件等信息只从这里取，取不到就不写。发布前检查也会用它核对价格。",
+      },
+      h(
+        "div",
+        { className: "xhs-tabs", style: { marginBottom: 10 } },
+        [
+          ["org", "机构资料"],
+          ["project", "项目资料"],
+          ["person", "医生与人员资料"],
+        ].map(([k, l]) =>
+          h(
+            "button",
+            {
+              key: k,
+              className: `xhs-tab${kind === k ? " active" : ""}`,
+              onClick: () => {
+                setKind(k);
+                setForm(blank(k));
+              },
+            },
+            l,
+          ),
+        ),
+      ),
+      h(Table, {
+        head: ["名称", ...TEMPLATES[kind], "资料来源", ""],
+        body: docs
+          .filter((d) => d.kind === kind)
+          .map((d) => [
+            h("b", null, d.name),
+            ...TEMPLATES[kind].map((f) => (d.fields || {})[f] || "—"),
+            d.source || "—",
+            h(
+              "span",
+              { style: { display: "flex", gap: 6 } },
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: () =>
+                    setForm({
+                      ...d,
+                      fields: {
+                        ...Object.fromEntries(
+                          TEMPLATES[kind].map((f) => [f, ""]),
+                        ),
+                        ...d.fields,
+                      },
+                    }),
+                },
+                "编辑",
+              ),
+              h(
+                Button,
+                {
+                  danger: true,
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "bizdoc.delete", { id: d.id });
+                    await refresh();
+                  },
+                },
+                "删除",
+              ),
+            ),
+          ]),
+        empty: "还没有资料",
+      }),
+      h("h4", null, form.id ? `编辑 · ${form.name}` : "添加"),
+      h(Field, {
+        label: "名称",
+        value: form.name,
+        onChange: (v) => setForm({ ...form, name: v }),
+      }),
+      h(
+        "div",
+        { className: "xhs-two even" },
+        Object.keys(form.fields).map((f) =>
+          h(Field, {
+            key: f,
+            label: f,
+            value: form.fields[f],
+            onChange: (v) =>
+              setForm({ ...form, fields: { ...form.fields, [f]: v } }),
+          }),
+        ),
+      ),
+      h(Field, {
+        label: "资料来源",
+        value: form.source,
+        onChange: (v) => setForm({ ...form, source: v }),
+        placeholder: "例如：产品部 · 10-20",
+      }),
+      kind === "person" &&
+        h(
+          "div",
+          { className: "xhs-meta" },
+          "医疗、医美机构在这里录入医生资料与执业资质；内容里出现的专业信息必须能在这里找到来源。",
+        ),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly || !form.name.trim(),
+            onClick: async () => {
+              await send(host, "bizdoc.save", {
+                id: form.id || "",
+                version: form.version ?? null,
+                kind: form.kind,
+                name: form.name,
+                fields: form.fields,
+                source: form.source || "",
+              });
+              setForm(blank(kind));
+              await refresh();
+            },
+          },
+          "保存",
+        ),
+        form.id &&
+          h(Button, { onClick: () => setForm(blank(kind)) }, "取消编辑"),
+      ),
+    ),
+  );
+}
+
+// ---- 排期日历 ----
+function CalendarPanel({ snapshot }) {
+  const zone = tz(snapshot);
+  const [offset, setOffset] = useState(0);
+  const start = new Date();
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) + offset * 7);
+  const days = [...Array(7)].map((_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return fmt(d.toISOString(), zone, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  });
+  const key = (iso) =>
+    fmt(iso, zone, { year: "numeric", month: "2-digit", day: "2-digit" });
+  const drafts = rows(snapshot.data.drafts).filter((d) => d.scheduled_at);
+  const eff = snapshot.data.effective_policy || {};
+  const warnings = [];
+  rows(snapshot.data.accounts).forEach((a) => {
+    const mine = drafts
+      .filter((d) => d.account_id === a.id)
+      .sort((x, y) => (x.scheduled_at < y.scheduled_at ? -1 : 1));
+    mine.forEach((d, i) => {
+      if (
+        i > 0 &&
+        (new Date(d.scheduled_at) - new Date(mine[i - 1].scheduled_at)) /
+          3600000 <
+          eff.min_interval_hours
+      )
+        warnings.push(
+          `${a.name}：「${d.title}」与上一篇间隔不足 ${eff.min_interval_hours} 小时`,
+        );
+    });
+    if (!a.device_id && mine.length)
+      warnings.push(`${a.name}：未绑定手机，排期的发布无法执行`);
+  });
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      Card,
+      {
+        title: "排期日历",
+        right: h(
+          "span",
+          { style: { display: "flex", gap: 6, alignItems: "center" } },
+          h(Button, { onClick: () => setOffset(offset - 1) }, "上一周"),
+          h("span", { className: "xhs-meta" }, `${days[0]} 至 ${days[6]}`),
+          h(Button, { onClick: () => setOffset(offset + 1) }, "下一周"),
+        ),
+      },
+      h(
+        "div",
+        { className: "xhs-cal", style: { overflowX: "auto" } },
+        h(Table, {
+          head: ["账号", ...days.map((d) => d.slice(5))],
+          body: rows(snapshot.data.accounts).map((a) => [
+            h("b", null, a.name),
+            ...days.map((day) =>
+              h(
+                "div",
+                { key: day },
+                drafts
+                  .filter(
+                    (d) => d.account_id === a.id && key(d.scheduled_at) === day,
+                  )
+                  .map((d) =>
+                    h(
+                      "span",
+                      {
+                        key: d.id,
+                        className: `xhs-chip ${d.nature || ""}`,
+                        title: d.title,
+                      },
+                      `${NATURE_LABELS[d.nature] || ""} ${fmt(
+                        d.scheduled_at,
+                        zone,
+                        { hour: "2-digit", minute: "2-digit" },
+                      )} ${d.title}`,
+                    ),
+                  ),
+              ),
+            ),
+          ]),
+        }),
+      ),
+      h(
+        "div",
+        { className: "xhs-meta", style: { marginTop: 8 } },
+        `不要求每个账号每天发帖。排期必须在 ${
+          eff.publish_window || "08:00-22:30"
+        } 之内，同一账号间隔至少 ${
+          eff.min_interval_hours || 48
+        } 小时，每周最多 ${
+          eff.weekly_max_posts ?? 4
+        } 篇；到点的发布需要你确认后执行。`,
+      ),
+    ),
+    h(
+      Card,
+      { title: "排期提醒" },
+      warnings.length
+        ? warnings.map((w) =>
+            h(
+              "div",
+              { key: w, className: "xhs-row" },
+              w,
+              pill("需要调整", "warn"),
+            ),
+          )
+        : h("div", { className: "xhs-empty" }, "本周排期没有冲突"),
+    ),
+  );
+}
+
+// ---- 笔记维护 ----
+function UpkeepPanel({ snapshot, host, readOnly, refresh }) {
+  const zone = tz(snapshot);
+  const items = rows(snapshot.data.reply_items);
+  const leads = rows(snapshot.data.leads);
+  const eff = snapshot.data.effective_policy || {};
+  const pending = items.filter(
+    (i) => i.status === "new" || i.status === "failed",
+  );
+  const autoSent = items.filter(
+    (i) =>
+      i.auto &&
+      ["sent", "sending", "auto_queued", "unknown"].includes(i.status),
+  );
+  const [edits, setEdits] = useState({});
+  const accounts = rows(snapshot.data.accounts).filter((a) => a.device_id);
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-stats" },
+      h(Stat, {
+        label: "新评论",
+        value: items.filter((i) => i.status !== "ignored").length,
+      }),
+      h(Stat, {
+        label: "已自动回复",
+        value: autoSent.filter((i) => i.status === "sent").length,
+        sub: eff.auto_reply
+          ? `闲聊类 · 每账号每天 ≤ ${eff.auto_reply_daily} 条`
+          : "未开启",
+      }),
+      h(Stat, { label: "待你审核", value: pending.length }),
+      h(Stat, {
+        label: "意向线索",
+        value: leads.filter((l) => l.status === "new").length,
+      }),
+    ),
+    h(
+      Card,
+      {
+        title: "读取新评论",
+        hint: "在手机上只读打开本人作品页，读取近 3 天的新评论；不点赞、不回复、不删除。",
+      },
+      accounts.map((a) =>
+        h(
+          "div",
+          { key: a.id, className: "xhs-row" },
+          h(
+            "div",
+            null,
+            h("b", null, a.name),
+            h(
+              "div",
+              { className: "xhs-meta" },
+              a.inbox_checked_at
+                ? `上次读取 ${fmt(a.inbox_checked_at, zone)}`
+                : "还没有读取过",
+            ),
+          ),
+          h(
+            Button,
+            {
+              disabled: readOnly,
+              onClick: async () => {
+                await send(host, "inbox.collect", { account_id: a.id });
+                await refresh();
+              },
+            },
+            "读取新评论",
+          ),
+        ),
+      ),
+      !accounts.length &&
+        h("div", { className: "xhs-empty" }, "没有绑定手机的账号"),
+    ),
+    h(
+      Card,
+      {
+        title: "待你审核",
+        hint: eff.auto_reply
+          ? "闲聊类已按规则自动回复，不在这里。咨询和意向起草后等你通过；负面评价不起草。"
+          : "所有回复都要你通过后才发送。",
+      },
+      pending.map((i) => {
+        const draft = edits[i.id] ?? i.draft ?? "";
+        return h(
+          "div",
+          { key: i.id, className: "xhs-row", style: { display: "block" } },
+          h("div", null, h("b", null, `“${i.text}”`)),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            `${i.author} · 笔记「${i.note_title}」· ${accountName(
+              snapshot,
+              i.account_id,
+            )}`,
+          ),
+          h(
+            "div",
+            { style: { display: "flex", gap: 6, margin: "5px 0" } },
+            pill(
+              KIND_LABELS[i.kind] || i.kind,
+              i.kind === "negative" ? "bad" : i.kind === "intent" ? "ok" : "",
+            ),
+            i.error && pill(i.error, "bad"),
+          ),
+          i.kind !== "negative" || edits[i.id] !== undefined
+            ? h("input", {
+                className: "xhs-input",
+                value: draft,
+                maxLength: 30,
+                disabled: readOnly,
+                placeholder: "回复草稿（30 字以内，不留联系方式，不承诺效果）",
+                onChange: (e) => setEdits({ ...edits, [i.id]: e.target.value }),
+              })
+            : h("div", { className: "xhs-meta" }, "负面与投诉不自动起草"),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            i.kind !== "negative" &&
+              !draft &&
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "reply.draft", { id: i.id });
+                    await refresh();
+                  },
+                },
+                "AI 起草",
+              ),
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly || !draft.trim(),
+                onClick: async () => {
+                  let current = i;
+                  if (edits[i.id] !== undefined && edits[i.id] !== i.draft) {
+                    const result = await send(host, "reply.save", {
+                      id: i.id,
+                      version: i.version,
+                      draft: edits[i.id],
+                    });
+                    current =
+                      rows(result.data?.reply_items).find(
+                        (x) => x.id === i.id,
+                      ) || i;
+                  }
+                  await send(host, "reply.approve", {
+                    id: i.id,
+                    version: current.version,
+                    handwritten: i.kind === "negative",
+                  });
+                  setEdits({ ...edits, [i.id]: undefined });
+                  await refresh();
+                },
+              },
+              "通过并发送",
+            ),
+            i.kind === "negative" &&
+              edits[i.id] === undefined &&
+              h(
+                Button,
+                { onClick: () => setEdits({ ...edits, [i.id]: "" }) },
+                "手写回复",
+              ),
+            (i.kind === "intent" || i.kind === "question") &&
+              !i.lead &&
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "reply.lead", { id: i.id });
+                    await refresh();
+                  },
+                },
+                "记为线索",
+              ),
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "reply.ignore", { id: i.id });
+                  await refresh();
+                },
+              },
+              "忽略",
+            ),
+          ),
+        );
+      }),
+      !pending.length &&
+        h("div", { className: "xhs-empty" }, "没有待审核的评论"),
+    ),
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(
+        Card,
+        {
+          title: "已自动回复",
+          hint: "闲聊类按规则直接发送，这里是事后清单。发得不合适可以删除回复，或在自动化与风控里改回“等我通过”。",
+        },
+        h(Table, {
+          head: ["评论", "自动回复", "账号", "时间", "状态", ""],
+          body: autoSent.map((i) => [
+            `“${i.text}”`,
+            i.sent_text || i.draft,
+            accountName(snapshot, i.account_id),
+            fmt(i.sent_at || i.created_at, zone, {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            pill(
+              i.status === "sent"
+                ? "已发送"
+                : i.status === "auto_queued"
+                ? "排队中"
+                : statusLabel(i.status),
+              i.status === "sent" ? "ok" : i.status === "unknown" ? "bad" : "",
+            ),
+            i.status === "sent"
+              ? h(
+                  Button,
+                  {
+                    danger: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "reply.delete", { id: i.id });
+                      await refresh();
+                    },
+                  },
+                  "删除回复",
+                )
+              : null,
+          ]),
+          empty: eff.auto_reply ? "今天还没有自动回复" : "闲聊类自动回复未开启",
+        }),
+      ),
+      h(
+        Card,
+        {
+          title: "意向线索",
+          hint: "只记录公开评论内容和昵称，不采集个人信息；跟进由同事在平台内完成。",
+        },
+        h(Table, {
+          head: ["评论", "来源笔记", "账号", "状态", ""],
+          body: leads.map((l) => [
+            `“${l.comment}”`,
+            l.note_title,
+            accountName(snapshot, l.account_id),
+            pill(
+              {
+                new: "新",
+                transferred: `已转交${l.assignee ? " · " + l.assignee : ""}`,
+                contacted: "已联系",
+                closed: "已关闭",
+              }[l.status],
+              l.status === "new" ? "warn" : "ok",
+            ),
+            h(
+              "select",
+              {
+                className: "xhs-select",
+                style: { marginTop: 0, width: 110 },
+                value: l.status,
+                disabled: readOnly,
+                onChange: async (e) => {
+                  await send(host, "lead.update", {
+                    id: l.id,
+                    status: e.target.value,
+                    assignee: l.assignee || "",
+                  });
+                  await refresh();
+                },
+              },
+              [
+                ["new", "新"],
+                ["transferred", "已转交"],
+                ["contacted", "已联系"],
+                ["closed", "已关闭"],
+              ].map(([v, t]) => h("option", { key: v, value: v }, t)),
+            ),
+          ]),
+          empty: "还没有线索",
+        }),
+      ),
+    ),
+  );
+}
+
+// ---- 自动化与风控 ----
+function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
+  const eff = snapshot.data.effective_policy || {};
+  const saved = snapshot.data.member_settings || {};
+  const [form, setForm] = useState(saved);
+  useEffect(
+    () => setForm(snapshot.data.member_settings || {}),
+    [saved.version],
+  );
+  const set = (k, v) => setForm({ ...form, [k]: v });
+  const capRank = ["manual", "semi", "full"].indexOf(
+    eff.automation_cap || "full",
+  );
+  const payload = Object.fromEntries(
+    Object.entries(form).filter(
+      ([k]) =>
+        ![
+          "paused",
+          "paused_at",
+          "paused_scope",
+          "cold_start",
+          "updated_at",
+        ].includes(k),
+    ),
+  );
+  const save = async () => {
+    await send(host, "settings.save", payload);
+    await refresh();
+  };
+  const level = (key, name, hint, items) =>
+    h(
+      "button",
+      {
+        key,
+        className: `xhs-level${form.automation_level === key ? " active" : ""}`,
+        disabled: readOnly || ["manual", "semi", "full"].indexOf(key) > capRank,
+        onClick: () => set("automation_level", key),
+      },
+      h("b", null, name),
+      h("div", { className: "xhs-meta", style: { margin: "6px 0" } }, hint),
+      items.map((x) => h("div", { key: x, style: { fontSize: 12 } }, x)),
+    );
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "section",
+      {
+        className: `xhs-card xhs-banner${
+          eff.enterprise_paused ? " paused" : ""
+        }`,
+      },
+      h(Lock, {
+        children: eff.enterprise_paused
+          ? "企业已暂停全部自动任务"
+          : "企业规则生效中",
+      }),
+      h(
+        "span",
+        { style: { flex: 1 } },
+        eff.enterprise_paused
+          ? eff.enterprise_paused_reason ||
+              "管理员暂停了全企业的养号、发布和回复。"
+          : "自动化上限、发布节奏、禁用词和高风险复核人由管理员在后台设定，这里只能设得更严。",
+      ),
+      h(
+        Button,
+        { onClick: () => go("settings", "entitlement") },
+        "查看能力与配额",
+      ),
+    ),
+    h(
+      Card,
+      {
+        title: "自动化程度",
+        hint: "三档共用同一个工作台、草稿库和审核发布流程，区别只在系统替你做多少。发布、改资料和养号评论都要你确认。",
+      },
+      h(
+        "div",
+        {
+          style: {
+            display: "grid",
+            gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+            gap: 10,
+          },
+        },
+        level("manual", "手动", "你来写、你来排", [
+          "任务：手动指定账号和时间",
+          "文案：自己写",
+          "配图：自己上传",
+        ]),
+        level("semi", "半自动", "AI 帮你写和配图，你来安排", [
+          "任务：手动指定账号和时间",
+          "文案：套母版或仿写参考",
+          "配图：平台 AI 生图，可带参考图",
+        ]),
+        level("full", "全自动", "AI 主动准备，你只审核", [
+          "任务：自动匹配账号、类型、时间",
+          "文案与配图：自动生成",
+          "维护：闲聊回复可自动发，其余等你通过",
+        ]),
+      ),
+      h(
+        "div",
+        { className: "xhs-two even" },
+        h(Select, {
+          label: "AI 主动准备内容",
+          value: form.ai_proactive,
+          onChange: (v) => set("ai_proactive", v),
+          options: Object.entries(FREQ_LABELS),
+        }),
+        h(NumberField, {
+          label: "每次最多准备（篇）",
+          value: form.max_per_run,
+          onChange: (v) => set("max_per_run", v),
+        }),
+      ),
+    ),
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          { title: "发布节奏" },
+          h(
+            "div",
+            { className: "xhs-two even" },
+            h(NumberField, {
+              label: "同一账号发布最小间隔（小时）",
+              value: form.min_interval_hours,
+              onChange: (v) => set("min_interval_hours", v),
+              hint: `生效：${eff.min_interval_hours} 小时`,
+            }),
+            h(NumberField, {
+              label: "每账号每周最多发布（篇）",
+              value: form.weekly_max_posts,
+              onChange: (v) => set("weekly_max_posts", v),
+              hint: `生效：${eff.weekly_max_posts} 篇`,
+            }),
+            h(NumberField, {
+              label: "营销内容占比上限（%）",
+              value: form.marketing_ratio_max,
+              onChange: (v) => set("marketing_ratio_max", v),
+              hint: `生效：${eff.marketing_ratio_max}%`,
+            }),
+            h(Field, {
+              label: "允许发布的时段",
+              value: form.publish_window,
+              onChange: (v) => set("publish_window", v),
+            }),
+            h(Select, {
+              label: "资料变更当天",
+              value: form.profile_change_day,
+              onChange: (v) => set("profile_change_day", v),
+              options: [
+                ["hold", "不发布、不养号"],
+                ["publish_only", "只发布"],
+              ],
+            }),
+            h(Select, {
+              label: "发布失败后",
+              value: form.on_publish_failure,
+              onChange: (v) => set("on_publish_failure", v),
+              options: [
+                ["stop", "停下，等人工处理"],
+                ["retry_once", "下个时段重试一次"],
+              ],
+            }),
+          ),
+        ),
+        h(
+          Card,
+          { title: "敏感词" },
+          h(
+            "div",
+            { className: "xhs-row" },
+            h(
+              "div",
+              null,
+              h("b", null, "企业禁用词与行业词库"),
+              h(
+                "div",
+                { className: "xhs-meta" },
+                `${rows(eff.banned_words).length} 个企业词 · 词库：${
+                  rows(eff.libraries).join("、") || "未同步"
+                }`,
+              ),
+            ),
+            h(Lock, { children: "只读" }),
+          ),
+          h(Field, {
+            label: "我补充的敏感词（每行一个）",
+            multiline: true,
+            value: rows(form.my_words).join("\n"),
+            onChange: (v) => set("my_words", v.split("\n")),
+          }),
+        ),
+      ),
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          {
+            title: "回复规则",
+            hint: "闲聊类可以自动发送，事后在清单和对话卡片里通知你；其余类型起草后等你通过。",
+          },
+          h(Select, {
+            label: "闲聊类回复",
+            value: form.small_talk,
+            disabled: !eff.auto_reply_enterprise && form.small_talk !== "auto",
+            onChange: (v) => set("small_talk", v),
+            options: [
+              ["review", "起草后等我通过"],
+              [
+                "auto",
+                eff.auto_reply_enterprise
+                  ? "自动发送，事后通知我"
+                  : "自动发送（企业未开启）",
+              ],
+            ],
+          }),
+          h(Select, {
+            label: "自动回复用语",
+            value: form.reply_wording,
+            onChange: (v) => set("reply_wording", v),
+            options: [
+              ["phrases", "只用我审核过的短句"],
+              ["ai", "AI 自拟，15 字以内"],
+            ],
+          }),
+          h(Field, {
+            label: "审核过的短句（每行一个）",
+            multiline: true,
+            value: rows(form.reply_phrases).join("\n"),
+            onChange: (v) => set("reply_phrases", v.split("\n")),
+          }),
+          h(
+            "div",
+            { className: "xhs-two even" },
+            h(NumberField, {
+              label: "每个账号每小时最多自动回复",
+              value: form.auto_reply_hourly,
+              onChange: (v) => set("auto_reply_hourly", v),
+            }),
+            h(NumberField, {
+              label: "每个账号每天最多自动回复",
+              value: form.auto_reply_daily,
+              onChange: (v) => set("auto_reply_daily", v),
+              hint: `生效：${eff.auto_reply_daily} 条`,
+            }),
+          ),
+          h(Select, {
+            label: "回复口吻",
+            value: form.reply_tone,
+            onChange: (v) => set("reply_tone", v),
+            options: [
+              ["persona", "跟随账号人设"],
+              ["service", "统一客服口吻"],
+            ],
+          }),
+          [
+            "咨询、意向：起草后等你通过",
+            "负面与投诉：不起草，转人工",
+            "分类拿不准或命中敏感词：不自动发",
+            "账号有异常或已暂停：停止自动回复",
+            "不留联系方式，不承诺效果",
+          ].map((x) =>
+            h(
+              "div",
+              { key: x, className: "xhs-row" },
+              x,
+              h(Lock, { children: "固定" }),
+            ),
+          ),
+        ),
+        h(
+          Card,
+          {
+            title: "账号保护",
+            hint: "出现平台提示、验证码或登录失效时，系统只会停下来等你处理，不会重试、换设备或换账号继续。",
+          },
+          h(
+            "div",
+            { className: "xhs-row" },
+            "账号受限或平台提示违规：暂停该账号至少 72 小时",
+            h(Lock, { children: "固定" }),
+          ),
+          h(
+            "div",
+            { className: "xhs-row" },
+            "登录失效或要求验证码：暂停这台手机的队列",
+            h(Lock, { children: "固定" }),
+          ),
+          h(
+            "div",
+            { className: "xhs-two even" },
+            h(NumberField, {
+              label: "每个账号每天自动操作时长上限（分钟）",
+              value: form.daily_minutes_cap,
+              onChange: (v) => set("daily_minutes_cap", v),
+            }),
+            h(Select, {
+              label: "恢复后的前 3 天",
+              value: form.resume_mode,
+              onChange: (v) => set("resume_mode", v),
+              options: [
+                ["start_stage", "按“起步”档执行"],
+                ["keep", "按原预算执行"],
+              ],
+            }),
+          ),
+        ),
+      ),
+    ),
+    h(
+      "div",
+      { className: "xhs-actions" },
+      h(
+        Button,
+        { primary: true, disabled: readOnly, onClick: save },
+        "保存设置",
+      ),
+    ),
+  );
+}
+
+// ---- 授权台账 ----
+function ConsentPanel({ snapshot, host, readOnly, refresh }) {
+  const list = rows(snapshot.data.authorizations);
+  const accounts = rows(snapshot.data.accounts);
+  const today = new Date().toISOString().slice(0, 10);
+  const blank = {
+    person: "",
+    role: "employee",
+    covers: ["portrait", "experience"],
+    account_ids: [],
+    usage: "own_account_no_rewrite",
+    valid_from: today,
+    valid_to: "",
+    proof_asset: "",
+  };
+  const [form, setForm] = useState(blank);
+  const COVERS = {
+    portrait: "肖像",
+    experience: "真实经历",
+    account: "账号使用",
+    case: "案例或病例资料",
+  };
+  const ROLES = {
+    employee: "员工",
+    customer: "顾客",
+    partner: "合作方",
+    organization: "机构",
+  };
+  const days = (d) => Math.round((new Date(d) - new Date()) / 86400000);
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-stats" },
+      h(Stat, {
+        label: "有效授权",
+        value: list.filter((c) => c.status === "active").length,
+      }),
+      h(Stat, {
+        label: "30 天内到期",
+        value: list.filter(
+          (c) => c.status === "active" && days(c.valid_to) <= 30,
+        ).length,
+      }),
+      h(Stat, {
+        label: "已撤回",
+        value: list.filter((c) => c.status === "withdrawn").length,
+      }),
+      h(Stat, {
+        label: "待补授权书",
+        value: list.filter((c) => c.status === "proof_missing").length,
+      }),
+    ),
+    h(
+      Card,
+      {
+        title: "授权台账",
+        hint: "人物形象、真实经历、托管账号和案例资料的授权都登记在这里。撤回后，关联的素材冻结，未发布的草稿退回待制作，已发布的列出来由你处理。",
+      },
+      h(Table, {
+        head: [
+          "授权人",
+          "授权内容",
+          "可用账号",
+          "有效期",
+          "证明文件",
+          "关联",
+          "状态",
+          "",
+        ],
+        body: list.map((c) => [
+          h(
+            "div",
+            null,
+            h("b", null, c.person),
+            h("div", { className: "xhs-meta" }, ROLES[c.role]),
+          ),
+          rows(c.covers)
+            .map((x) => COVERS[x])
+            .join("、"),
+          rows(c.account_ids)
+            .map((id) => accountName(snapshot, id))
+            .join("、") || "—",
+          `${c.valid_from} 至 ${c.valid_to}`,
+          c.proof_asset || pill("待上传", "warn"),
+          `素材 ${
+            rows(snapshot.data.materials).filter((m) => m.consent_id === c.id)
+              .length
+          }`,
+          pill(
+            c.status === "withdrawn"
+              ? "已撤回"
+              : c.status === "proof_missing"
+              ? "待补授权书"
+              : days(c.valid_to) <= 30
+              ? `${Math.max(0, days(c.valid_to))} 天后到期`
+              : "有效",
+            c.status === "withdrawn"
+              ? "bad"
+              : c.status === "active" && days(c.valid_to) > 30
+              ? "ok"
+              : "warn",
+          ),
+          c.status === "withdrawn"
+            ? !c.published_handled &&
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "consent.handled", { id: c.id });
+                    await refresh();
+                  },
+                },
+                `已处理 ${rows(c.published_drafts).length} 篇已发布内容`,
+              )
+            : h(
+                "span",
+                { style: { display: "flex", gap: 6 } },
+                h(
+                  Button,
+                  { disabled: readOnly, onClick: () => setForm({ ...c }) },
+                  c.status === "proof_missing" ? "补授权书" : "续期或修改",
+                ),
+                h(
+                  Button,
+                  {
+                    danger: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "consent.revoke", {
+                        id: c.id,
+                        reason: "授权人撤回",
+                      });
+                      await refresh();
+                    },
+                  },
+                  "撤回",
+                ),
+              ),
+        ]),
+        empty: "还没有登记授权",
+      }),
+    ),
+    h(
+      Card,
+      { title: form.id ? `修改授权 · ${form.person}` : "登记新授权" },
+      h(
+        "div",
+        { className: "xhs-two even" },
+        h(Field, {
+          label: "授权人",
+          value: form.person,
+          onChange: (v) => setForm({ ...form, person: v }),
+        }),
+        h(Select, {
+          label: "身份",
+          value: form.role,
+          onChange: (v) => setForm({ ...form, role: v }),
+          options: Object.entries(ROLES),
+        }),
+        h(Field, {
+          label: "生效日期",
+          type: "date",
+          value: form.valid_from,
+          onChange: (v) => setForm({ ...form, valid_from: v }),
+        }),
+        h(Field, {
+          label: "到期日期",
+          type: "date",
+          value: form.valid_to,
+          onChange: (v) => setForm({ ...form, valid_to: v }),
+        }),
+      ),
+      h("div", { className: "xhs-label" }, "授权内容"),
+      h(
+        "div",
+        { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+        Object.entries(COVERS).map(([k, l]) =>
+          h(Check, {
+            key: k,
+            label: l,
+            checked: form.covers.includes(k),
+            onChange: (on) =>
+              setForm({
+                ...form,
+                covers: on
+                  ? [...form.covers, k]
+                  : form.covers.filter((x) => x !== k),
+              }),
+          }),
+        ),
+      ),
+      h("div", { className: "xhs-label" }, "可用账号（不选表示不限定）"),
+      h(
+        "div",
+        { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+        accounts.map((a) =>
+          h(Check, {
+            key: a.id,
+            label: a.name || a.id,
+            checked: form.account_ids.includes(a.id),
+            onChange: (on) =>
+              setForm({
+                ...form,
+                account_ids: on
+                  ? [...form.account_ids, a.id]
+                  : form.account_ids.filter((x) => x !== a.id),
+              }),
+          }),
+        ),
+      ),
+      h(Select, {
+        label: "可用内容",
+        value: form.usage,
+        onChange: (v) => setForm({ ...form, usage: v }),
+        options: [
+          ["own_account_no_rewrite", "图文，不可改写成他人经历"],
+          ["image_and_reference", "图文与生图参考"],
+        ],
+      }),
+      h(Field, {
+        label: "授权书（文件名或存档编号）",
+        value: form.proof_asset,
+        onChange: (v) => setForm({ ...form, proof_asset: v }),
+        placeholder: "没有授权书时状态为“待补授权书”，关联素材暂不可用",
+      }),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled:
+              readOnly ||
+              !form.person.trim() ||
+              !form.valid_to ||
+              !form.covers.length,
+            onClick: async () => {
+              const body = Object.fromEntries(
+                [
+                  "person",
+                  "role",
+                  "covers",
+                  "account_ids",
+                  "usage",
+                  "valid_from",
+                  "valid_to",
+                  "proof_asset",
+                ].map((k) => [k, form[k]]),
+              );
+              await send(host, "consent.save", {
+                ...body,
+                id: form.id || "",
+                version: form.version ?? null,
+              });
+              setForm(blank);
+              await refresh();
+            },
+          },
+          "保存",
+        ),
+        form.id && h(Button, { onClick: () => setForm(blank) }, "取消"),
+      ),
+      h(
+        "div",
+        { className: "xhs-meta", style: { marginTop: 8 } },
+        "AI 虚拟角色不需要个人授权；图片带“虚拟人物”标记，不能写成真实消费体验或效果证明。案例与病例资料需要当事人书面授权，医疗美容内容还需医疗广告审查。",
+      ),
+    ),
+  );
+}
+
+// ---- 能力与配额 ----
+const FEATURE_INFO = [
+  [
+    "xhs.content",
+    "内容创作",
+    "内容计划 · 创作编辑器 · 素材库 · 内容母版 · 业务资料 · AI 生图",
+  ],
+  ["xhs.publish", "内容发布", "排期日历 · 批量发布 · 发布与历史 · 执行队列"],
+  [
+    "xhs.ops",
+    "运营管理",
+    "项目与画像 · 人设规划 · 账号与设备 · 新号资料 · 日常运营 · 冷启动方案 · 异常与告警",
+  ],
+  ["xhs.comment", "评论互动", "评论审核 · 笔记维护（回复评论）· 意向线索"],
+  ["xhs.takeover", "账号托管", "老号接管 · 账号审计 · 诊断 · 资料变更单"],
+  ["xhs.analytics", "数据分析", "复盘报表 · 数据同步"],
+];
+function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
+  const license = snapshot.license || {};
+  const policy = license.policy || {};
+  const caps = policy.caps || {};
+  const rules = policy.rules || {};
+  const usage = policy.usage || {};
+  const quota = policy.member_quota || {};
+  const requests = rows(snapshot.data.member_requests);
+  const [req, setReq] = useState({ kinds: ["posts"], amount: "", note: "" });
+  const q = (label, mine, mineCap, ent, entCap, unit) =>
+    h(
+      "div",
+      {
+        key: label,
+        style: { padding: "9px 0", borderBottom: `1px solid ${C.line}` },
+      },
+      h(
+        "div",
+        { style: { display: "flex", justifyContent: "space-between" } },
+        h("b", null, label),
+        h(
+          "span",
+          { className: "xhs-meta" },
+          `我 ${mine ?? 0}${
+            mineCap != null ? " / " + mineCap : ""
+          } ${unit} · 企业 ${ent ?? 0} / ${entCap ?? "—"} ${unit}`,
+        ),
+      ),
+      mineCap != null && h(Bar, { ratio: (mine || 0) / (mineCap || 1) }),
+      h(Bar, { ratio: (ent || 0) / (entCap || 1), ent: true }),
+    );
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "section",
+      {
+        className: "xhs-card",
+        style: {
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+        },
+      },
+      h("b", null, "小红薯运营许可"),
+      h(
+        "span",
+        { className: "xhs-meta" },
+        `状态 ${
+          {
+            active: "有效",
+            expired: "已过期",
+            revoked: "已撤销",
+            read_only: "只读",
+          }[license.status] || statusLabel(license.status)
+        } · ${
+          license.expires_at
+            ? "至 " + String(license.expires_at).slice(0, 10)
+            : "不限期"
+        } · 平台授予，企业管理员分配`,
+      ),
+      h("span", { style: { flex: 1 } }),
+      pill(`自动化上限 ${LEVEL_LABELS[caps.automation_cap] || "—"}`, "ok"),
+      pill(`母版范围 ${rows(caps.template_scope).join(" + ") || "—"}`),
+    ),
+    h(
+      "div",
+      { className: "xhs-grid" },
+      FEATURE_INFO.map(([key, label, unlocks]) =>
+        h(
+          "div",
+          {
+            key,
+            className: "xhs-card",
+            style: hasFeature(license, key) ? undefined : { opacity: 0.6 },
+          },
+          h(
+            "div",
+            { style: { display: "flex", gap: 8, alignItems: "center" } },
+            h("b", { style: { flex: 1 } }, label),
+            hasFeature(license, key)
+              ? pill("已分配给我", "ok")
+              : h(Lock, { children: "未分配" }),
+          ),
+          h("div", { className: "xhs-meta", style: { marginTop: 6 } }, unlocks),
+        ),
+      ),
+    ),
+    h(
+      "div",
+      { className: "xhs-meta" },
+      "不需要单独分配：工作台、授权台账、自动化与风控、能力与配额。",
+    ),
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(
+        Card,
+        {
+          title: "我的用量与企业额度",
+          hint: "红色是我的用量，紫色是企业合计。",
+        },
+        q(
+          "本月内容",
+          usage.member?.posts,
+          quota.monthly_posts,
+          usage.tenant?.posts,
+          caps.monthly_posts,
+          "篇",
+        ),
+        q(
+          "本月生图",
+          usage.member?.images,
+          quota.monthly_images,
+          usage.tenant?.images,
+          caps.monthly_images,
+          "张",
+        ),
+        h(
+          "div",
+          { style: { padding: "9px 0" } },
+          h("b", null, "账号与手机"),
+          h(
+            "span",
+            { className: "xhs-meta" },
+            ` 企业上限 ${license.limits?.accounts ?? 0} 个账号 · ${
+              license.limits?.devices ?? 0
+            } 台手机${
+              quota.accounts != null ? ` · 我最多 ${quota.accounts} 个账号` : ""
+            }`,
+          ),
+        ),
+      ),
+      h(
+        Card,
+        { title: "企业规则", right: h(Lock, { children: "只读" }) },
+        h(Table, {
+          head: ["规则", "企业设定", "我可以"],
+          body: [
+            [
+              "自动化程度",
+              LEVEL_LABELS[rules.automation_level] || "—",
+              "选更保守的一档",
+            ],
+            [
+              "发布最小间隔",
+              `≥ ${rules.min_interval_hours ?? "—"} 小时`,
+              "设得更长",
+            ],
+            [
+              "每账号每周发布",
+              `≤ ${rules.weekly_max_posts ?? "—"} 篇`,
+              "设得更少",
+            ],
+            [
+              "营销内容占比",
+              `≤ ${rules.marketing_ratio_max ?? "—"}%`,
+              "设得更低",
+            ],
+            [
+              "企业禁用词",
+              `${rows(rules.banned_words).length} 个`,
+              "补充自己的词",
+            ],
+            [
+              "高风险内容",
+              `人工审核${
+                rules.reviewer_name ? " + 复核人" + rules.reviewer_name : ""
+              }`,
+              "—",
+            ],
+            [
+              "闲聊类回复自动发送",
+              rules.auto_reply_enabled
+                ? `允许 · 每账号每天 ≤ ${rules.auto_reply_daily_cap} 条`
+                : "不允许",
+              rules.auto_reply_enabled ? "关闭，或设得更少" : "—",
+            ],
+            ["紧急暂停", rules.paused ? "已暂停" : "未暂停", "暂停自己的任务"],
+          ],
+        }),
+      ),
+    ),
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(
+        Card,
+        { title: "向管理员申请" },
+        h(
+          "div",
+          { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+          [
+            ["posts", "更多内容额度"],
+            ["images", "更多生图额度"],
+            ["accounts", "更多账号"],
+            ["feature", "未分配的能力"],
+            ["templates", "更多母版范围"],
+          ].map(([k, l]) =>
+            h(Check, {
+              key: k,
+              label: l,
+              checked: req.kinds.includes(k),
+              onChange: (on) =>
+                setReq({
+                  ...req,
+                  kinds: on
+                    ? [...req.kinds, k]
+                    : req.kinds.filter((x) => x !== k),
+                }),
+            }),
+          ),
+        ),
+        h(Field, {
+          label: "期望数量",
+          value: req.amount,
+          onChange: (v) => setReq({ ...req, amount: v }),
+          placeholder: "例如：每月内容 80 篇",
+        }),
+        h(Field, {
+          label: "说明",
+          value: req.note,
+          onChange: (v) => setReq({ ...req, note: v }),
+        }),
+        h(
+          "div",
+          { className: "xhs-actions" },
+          h(
+            Button,
+            {
+              primary: true,
+              disabled: readOnly || !req.kinds.length,
+              onClick: async () => {
+                await send(host, "request.create", req);
+                setReq({ kinds: ["posts"], amount: "", note: "" });
+                await refresh();
+              },
+            },
+            "提交申请",
+          ),
+          h(
+            Button,
+            {
+              onClick: async () => {
+                await send(host, "catalog.refresh", {});
+                await refresh();
+              },
+            },
+            "刷新申请状态",
+          ),
+        ),
+      ),
+      h(
+        Card,
+        { title: "我的申请" },
+        h(Table, {
+          head: ["申请", "时间", "状态"],
+          body: requests.map((r) => [
+            `${rows(r.kinds).join("、")} ${r.amount || ""}`,
+            fmt(r.created_at, tz(snapshot)),
+            pill(
+              r.status === "pending"
+                ? "管理员处理中"
+                : r.status === "approved"
+                ? "已通过"
+                : "已拒绝",
+              r.status === "approved"
+                ? "ok"
+                : r.status === "pending"
+                ? "warn"
+                : "",
+            ),
+          ]),
+          empty: "还没有申请",
+        }),
+      ),
+    ),
+  );
+}
+
+// ---- 创作编辑器补充：性质、母版、披露、检查 ----
+function DraftMeta({ snapshot, host, readOnly, refresh, draftId }) {
+  const draft = rows(snapshot.data.drafts).find((d) => d.id === draftId);
+  if (!draft) return null;
+  const templates = rows(snapshot.data.catalog_cache?.templates).filter(
+    (t) => t.available !== false,
+  );
+  const meta = async (patch, fix = false) => {
+    await send(host, "content.meta", {
+      id: draft.id,
+      meta: patch,
+      fix_labels: fix,
+    });
+    await refresh();
+  };
+  return h(
+    "div",
+    { className: "xhs-card", style: { marginTop: 12 } },
+    h("h3", null, "发布前检查与内容性质"),
+    h(
+      "div",
+      { className: "xhs-two even" },
+      h(Select, {
+        label: "内容性质",
+        value: draft.nature || "",
+        disabled: readOnly,
+        onChange: (v) => meta({ nature: v }),
+        options: [
+          ["", "请选择"],
+          ["marketing", "营销内容 · 需披露"],
+          ["life", "生活内容"],
+          ["knowledge", "知识内容"],
+        ],
+      }),
+      h(Select, {
+        label: "内容母版",
+        value: draft.template_id || "",
+        disabled: readOnly,
+        onChange: (v) => meta({ template_id: v }),
+        options: [["", "不使用母版"], ...templates.map((t) => [t.id, t.name])],
+      }),
+    ),
+    rows(draft.checks?.items).map((i) =>
+      h(
+        "div",
+        { key: i.key, className: "xhs-row" },
+        h("span", null, i.label),
+        h(
+          "span",
+          {
+            className: `xhs-pill ${
+              i.level === "ok" ? "ok" : i.level === "bad" ? "bad" : "warn"
+            }`,
+          },
+          (i.level === "ok" ? "✓ " : i.level === "bad" ? "✕ " : "! ") +
+            i.detail,
+        ),
+      ),
+    ),
+    !draft.checks && h("div", { className: "xhs-meta" }, "还没有检查"),
+    h(
+      "div",
+      { className: "xhs-actions" },
+      h(
+        Button,
+        { disabled: readOnly, onClick: () => meta({}, true) },
+        "一键补上标识与披露",
+      ),
+      h(
+        Button,
+        {
+          disabled: readOnly,
+          onClick: async () => {
+            await send(host, "content.precheck", { id: draft.id });
+            await refresh();
+          },
+        },
+        "重新检查",
+      ),
+      h(
+        Button,
+        {
+          primary: true,
+          disabled: readOnly || draft.checks?.blocking,
+          onClick: async () => {
+            await send(host, "plan.update", {
+              action: "approve",
+              ids: [draft.id],
+            });
+            await refresh();
+          },
+        },
+        "提交审核并通过",
+      ),
+    ),
+    rows(draft.review_log).length > 0 &&
+      h(
+        "div",
+        { style: { marginTop: 8 } },
+        rows(draft.review_log).map((x, i) =>
+          h(
+            "div",
+            { key: i, className: "xhs-meta" },
+            `${fmt(x.at, tz(snapshot))} · ${x.event}`,
+          ),
+        ),
+      ),
+  );
+}
+
+// ---- 暂停全部自动任务 ----
+function PauseButton({ snapshot, host, readOnly, refresh }) {
+  const settings = snapshot.data.member_settings || {};
+  const eff = snapshot.data.effective_policy || {};
+  const paused = Boolean(settings.paused);
+  return h(
+    "span",
+    { style: { display: "inline-flex", gap: 6, alignItems: "center" } },
+    eff.enterprise_paused && pill("企业已暂停", "bad"),
+    h(
+      "span",
+      { className: "xhs-pill ok" },
+      `${LEVEL_LABELS[eff.automation_level] || "半自动"} · 关键动作需你确认`,
+    ),
+    h(
+      Button,
+      {
+        danger: !paused,
+        disabled: readOnly,
+        onClick: async () => {
+          if (
+            !paused &&
+            !window.confirm(
+              "暂停你的全部养号、发布和回复？正在执行的任务会在当前这一步结束后停下，已排期的内容保留。",
+            )
+          )
+            return;
+          await send(host, "pause.set", { paused: !paused });
+          await refresh();
+        },
+      },
+      paused ? "恢复自动任务" : "暂停全部自动任务",
+    ),
+  );
+}
+
+// ---- 对话卡片：在对话里看待审核内容、自动回复和异常 ----
+function WorkbenchCards({ host }) {
+  useStyle();
+  const [snapshot, setSnapshot] = useState(null);
+  const [error, setError] = useState("");
+  const locale = String(host.getToolContext().locale || "zh");
+  const load = async () => {
+    if (typeof host.request !== "function") {
+      setError("unavailable");
+      return;
+    }
+    try {
+      setSnapshot(await host.request("/plugin-apps/xhs-ops/snapshot"));
+      setError("");
+    } catch (e) {
+      setError(operationError(e, locale));
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  if (
+    error ||
+    (snapshot && snapshot.data?.effective_policy?.chat_cards === false)
+  )
+    return h(WorkbenchLink, { host });
+  if (!snapshot)
+    return h("div", { className: "xhs-meta" }, "正在读取小红薯运营…");
+  const data = snapshot.data;
+  const readOnly = Boolean(snapshot.read_only);
+  const pending = rows(data.drafts)
+    .filter((d) => (d.review_status || "pending_review") === "pending_review")
+    .slice(0, 3);
+  const auto = rows(data.reply_items)
+    .filter((i) => i.auto && i.status === "sent")
+    .slice(-3);
+  const replies = rows(data.reply_items)
+    .filter((i) => i.status === "new" && i.draft)
+    .slice(0, 2);
+  const alerts = rows(data.alerts)
+    .filter((a) => a.level === "action")
+    .slice(0, 2);
+  const card = (title, state, body) =>
+    h(
+      "section",
+      { className: "xhs-card", style: { maxWidth: 760, marginBottom: 10 } },
+      h(
+        "div",
+        {
+          style: {
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            marginBottom: 8,
+          },
+        },
+        h("b", { style: { flex: 1 } }, title),
+        state,
+      ),
+      body,
+    );
+  return h(
+    "div",
+    { className: "xhs-app" },
+    pending.length > 0 &&
+      card(
+        `内容草稿审核 · ${pending.length} 篇`,
+        pill("需要你确认", "warn"),
+        pending.map((d) =>
+          h(
+            "div",
+            { key: d.id, className: "xhs-row" },
+            h(
+              "div",
+              null,
+              h("b", null, d.title),
+              h(
+                "div",
+                { className: "xhs-meta" },
+                accountName(snapshot, d.account_id),
+              ),
+              checkPills(d.checks),
+            ),
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "plan.update", {
+                    action: "approve",
+                    ids: [d.id],
+                  });
+                  await load();
+                },
+              },
+              "通过",
+            ),
+          ),
+        ),
+      ),
+    auto.length > 0 &&
+      card(
+        `已自动回复 · ${auto.length} 条闲聊评论`,
+        pill("已发送 · 事后通知", "ok"),
+        auto.map((i) =>
+          h(
+            "div",
+            { key: i.id, className: "xhs-row" },
+            h(
+              "div",
+              null,
+              `“${i.text}” → ${i.sent_text}`,
+              h(
+                "div",
+                { className: "xhs-meta" },
+                accountName(snapshot, i.account_id),
+              ),
+            ),
+            h(
+              Button,
+              {
+                danger: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "reply.delete", { id: i.id });
+                  await load();
+                },
+              },
+              "删除回复",
+            ),
+          ),
+        ),
+      ),
+    replies.length > 0 &&
+      card(
+        `回复审核 · ${replies.length} 条`,
+        pill("需要你确认", "warn"),
+        replies.map((i) =>
+          h(
+            "div",
+            { key: i.id, className: "xhs-row" },
+            h(
+              "div",
+              null,
+              `“${i.text}”`,
+              h("div", { className: "xhs-meta" }, `回复：${i.draft}`),
+            ),
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "reply.approve", {
+                    id: i.id,
+                    version: i.version,
+                  });
+                  await load();
+                },
+              },
+              "通过并发送",
+            ),
+          ),
+        ),
+      ),
+    alerts.length > 0 &&
+      card(
+        "账号异常",
+        pill("需要你处理", "bad"),
+        alerts.map((a) =>
+          h(
+            "div",
+            { key: a.id, className: "xhs-row" },
+            `${accountName(snapshot, a.account_id)} · ${a.label}`,
+          ),
+        ),
+      ),
+    h("div", { className: "xhs-actions" }, h(WorkbenchLink, { host })),
+  );
+}
+
 function XhsOpsPage({ host, license }) {
   useStyle();
   const [textModels, setTextModels] = useState([]);
   const [modelRef, setModelRef] = useState("");
   const [snapshot, setSnapshot] = useState(null);
   const effectiveLicense = snapshot?.license || license;
-  const [tab, setTab] = useState("projects");
+  const [tab, setTab] = useState("overview");
   const [error, setError] = useState("");
   const locale = String(host.getToolContext().locale || "zh");
   const readOnly =
@@ -5974,19 +9943,72 @@ function XhsOpsPage({ host, license }) {
     const timer = setInterval(refresh, active ? 5000 : 15000);
     return () => clearInterval(timer);
   }, [snapshot && snapshot.data.version]);
-  const tabs = useMemo(
+  const groups = useMemo(
     () => [
-      { id: "projects", label: "项目" },
-      { id: "personas", label: "人设规划" },
-      { id: "accounts", label: "账号与设备" },
-      { id: "profiles", label: "新号资料" },
-      { id: "operations", label: "日常运营" },
-      { id: "drafts", label: "内容草稿" },
-      { id: "batches", label: "批量发布" },
-      { id: "runs", label: "发布与历史" },
-      { id: "comments", label: "评论审核" },
-      { id: "audits", label: "诊断与变更" },
-      { id: "reports", label: "复盘报表" },
+      {
+        id: "home",
+        label: "工作台",
+        tabs: [
+          { id: "overview", label: "总览" },
+          { id: "queue", label: "执行队列" },
+          { id: "alerts", label: "异常与告警" },
+        ],
+      },
+      {
+        id: "build",
+        label: "建号",
+        tabs: [
+          { id: "projects", label: "项目与画像" },
+          { id: "personas", label: "人设规划", feature: "xhs.ops" },
+          { id: "accounts", label: "账号与设备", feature: "xhs.ops" },
+          { id: "profiles", label: "新号资料", feature: "xhs.ops" },
+          { id: "audits", label: "老号接管", feature: "xhs.takeover" },
+        ],
+      },
+      {
+        id: "nurture",
+        label: "养号",
+        tabs: [
+          { id: "operations", label: "日常运营", feature: "xhs.ops" },
+          { id: "coldstart", label: "冷启动方案", feature: "xhs.ops" },
+          { id: "comments", label: "评论审核", feature: "xhs.comment" },
+        ],
+      },
+      {
+        id: "content",
+        label: "内容",
+        tabs: [
+          { id: "plan", label: "内容计划", feature: "xhs.content" },
+          { id: "editor", label: "创作编辑器", feature: "xhs.content" },
+          { id: "materials", label: "素材库", feature: "xhs.content" },
+          { id: "templates", label: "内容母版", feature: "xhs.content" },
+          { id: "bizdocs", label: "业务资料", feature: "xhs.content" },
+        ],
+      },
+      {
+        id: "publish",
+        label: "发布",
+        tabs: [
+          { id: "calendar", label: "排期日历", feature: "xhs.publish" },
+          { id: "batches", label: "批量发布", feature: "xhs.publish" },
+          { id: "runs", label: "发布与历史", feature: "runs" },
+          { id: "upkeep", label: "笔记维护", feature: "xhs.comment" },
+        ],
+      },
+      {
+        id: "review",
+        label: "复盘",
+        tabs: [{ id: "reports", label: "复盘报表", feature: "xhs.analytics" }],
+      },
+      {
+        id: "settings",
+        label: "设置",
+        tabs: [
+          { id: "settings", label: "自动化与风控" },
+          { id: "consent", label: "授权台账" },
+          { id: "entitlement", label: "能力与配额" },
+        ],
+      },
     ],
     [],
   );
@@ -5998,7 +10020,7 @@ function XhsOpsPage({ host, license }) {
       h(
         "div",
         { className: "xhs-card" },
-        h("h3", null, "小红书运营"),
+        h("h3", null, "小红薯运营"),
         h(
           "div",
           { className: "xhs-empty" },
@@ -6009,7 +10031,7 @@ function XhsOpsPage({ host, license }) {
         h(
           "div",
           { className: "xhs-meta" },
-          "项目管理、内容草稿、发布运行、评论协作与审计能力",
+          "建号、养号、内容计划与创作、排期发布、笔记维护、老号接管和复盘",
         ),
       ),
     );
@@ -6025,25 +10047,6 @@ function XhsOpsPage({ host, license }) {
       { className: "xhs-app" },
       h("div", { className: "xhs-empty" }, "正在加载应用数据…"),
     );
-  const feature =
-    tab === "projects"
-      ? null
-      : tab === "accounts" ||
-          tab === "personas" ||
-          tab === "profiles" ||
-          tab === "operations"
-        ? "xhs.ops"
-        : tab === "drafts"
-          ? "xhs.content"
-          : tab === "batches"
-            ? "xhs.publish"
-            : tab === "comments"
-              ? "xhs.comment"
-              : tab === "audits"
-                ? "xhs.takeover"
-                : tab === "reports"
-                  ? "xhs.analytics"
-                  : null;
   const runAvailable = [
     "xhs.publish",
     "xhs.ops",
@@ -6051,83 +10054,78 @@ function XhsOpsPage({ host, license }) {
     "xhs.analytics",
     "xhs.comment",
   ].some((item) => hasFeature(effectiveLicense, item));
+  const allowed = (item) =>
+    !item.feature ||
+    (item.feature === "runs"
+      ? runAvailable
+      : hasFeature(effectiveLicense, item.feature));
+  const group =
+    groups.find((g) => g.tabs.some((item) => item.id === tab)) || groups[0];
+  const current = group.tabs.find((item) => item.id === tab) || group.tabs[0];
+  const go = (_group, id) => setTab(id);
+  const common = { snapshot, host, readOnly, refresh, modelRef, go };
+  const panels = {
+    overview: () => h(OverviewPanel, common),
+    queue: () => h(QueuePanel, common),
+    alerts: () => h(AlertsPanel, common),
+    projects: () =>
+      h(ProjectPanel, { ...common, license: effectiveLicense }),
+    personas: () => h(PersonaPanel, common),
+    accounts: () => h(AccountPanel, common),
+    profiles: () => h(ProfilePanel, common),
+    audits: () => h(AuditPanel, common),
+    operations: () => h(OperationsPanel, common),
+    coldstart: () => h(ColdStartPanel, common),
+    comments: () => h(CommentsPanel, common),
+    plan: () => h(PlanPanel, common),
+    editor: () => h(DraftPanel, common),
+    materials: () => h(MaterialsPanel, common),
+    templates: () => h(TemplatesPanel, common),
+    bizdocs: () => h(BizDocsPanel, common),
+    calendar: () => h(CalendarPanel, common),
+    batches: () => h(BatchPanel, { ...common, license: effectiveLicense }),
+    runs: () => h(RunPanel, { ...common, license: effectiveLicense }),
+    upkeep: () => h(UpkeepPanel, common),
+    reports: () => h(ReportPanel, common),
+    settings: () => h(SettingsPanel, common),
+    consent: () => h(ConsentPanel, common),
+    entitlement: () => h(EntitlementPanel, common),
+  };
   const panel =
-    !readOnly &&
-    ((feature && !hasFeature(effectiveLicense, feature)) ||
-      (tab === "runs" && !runAvailable))
+    !readOnly && !allowed(current)
       ? h(FeatureLocked, { locale })
-      : tab === "projects"
-        ? h(ProjectPanel, {
-            snapshot,
-            host,
-            readOnly,
-            refresh,
-            license: effectiveLicense,
-            modelRef,
-          })
-        : tab === "personas"
-          ? h(PersonaPanel, { snapshot, host, readOnly, refresh, modelRef })
-          : tab === "accounts"
-            ? h(AccountPanel, { snapshot, host, readOnly, refresh })
-            : tab === "profiles"
-              ? h(ProfilePanel, { snapshot, host, readOnly, refresh, modelRef })
-              : tab === "operations"
-                ? h(OperationsPanel, { snapshot, host, readOnly, refresh })
-                : tab === "reports"
-                  ? h(ReportPanel, { snapshot, host, readOnly, refresh })
-                  : tab === "drafts"
-                    ? h(DraftPanel, {
-                        snapshot,
-                        host,
-                        readOnly,
-                        refresh,
-                        modelRef,
-                      })
-                    : tab === "batches"
-                      ? h(BatchPanel, {
-                          snapshot,
-                          host,
-                          readOnly,
-                          refresh,
-                          license: effectiveLicense,
-                        })
-                      : tab === "runs"
-                        ? h(RunPanel, {
-                            snapshot,
-                            host,
-                            readOnly,
-                            refresh,
-                            license: effectiveLicense,
-                          })
-                        : tab === "comments"
-                          ? h(CommentsPanel, {
-                              snapshot,
-                              host,
-                              readOnly,
-                              refresh,
-                              modelRef,
-                            })
-                          : h(AuditPanel, {
-                              snapshot,
-                              host,
-                              readOnly,
-                              refresh,
-                              modelRef,
-                            });
+      : panels[current.id]();
   return h(
     "div",
     { className: "xhs-app" },
-    textModels.length > 0 &&
-      h(
-        "label",
-        { className: "xhs-field" },
-        "生成模型",
+    h(
+      "div",
+      {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: 12,
+        },
+      },
+      h("img", {
+        src: XHS_LOGO,
+        alt: "小红薯",
+        style: { width: 56, height: 28 },
+      }),
+      h("b", { style: { fontSize: 16 } }, "运营"),
+      h("span", { style: { flex: 1 } }),
+      textModels.length > 0 &&
         h(
           "select",
           {
             className: "xhs-select",
+            style: { width: 200, marginTop: 0 },
             value: modelRef,
             disabled: readOnly,
+            "aria-label": "生成模型",
+            title: "生成模型",
             onChange: (event) => setModelRef(event.target.value),
           },
           h("option", { value: "" }, "默认授权模型"),
@@ -6140,19 +10138,39 @@ function XhsOpsPage({ host, license }) {
             ),
           ),
         ),
+      h(PauseButton, { snapshot, host, readOnly, refresh }),
+    ),
+    h(
+      "div",
+      { className: "xhs-groups" },
+      groups.map((g) =>
+        h(
+          "button",
+          {
+            key: g.id,
+            className: `xhs-btn xhs-group${g.id === group.id ? " active" : ""}`,
+            onClick: () => setTab(g.tabs.find(allowed)?.id || g.tabs[0].id),
+          },
+          g.label,
+        ),
       ),
+    ),
     h(
       "div",
       { className: "xhs-tabs" },
-      tabs.map((item) =>
+      group.tabs.map((item) =>
         h(
           "button",
           {
             key: item.id,
-            className: `xhs-tab${tab === item.id ? " active" : ""}`,
+            className: `xhs-tab${current.id === item.id ? " active" : ""}`,
             onClick: () => setTab(item.id),
+            title: readOnly || allowed(item) ? undefined : "未分配给你",
           },
           item.label,
+          !readOnly &&
+            !allowed(item) &&
+            h("span", { "aria-hidden": true }, " 🔒"),
         ),
       ),
     ),
@@ -6161,6 +10179,15 @@ function XhsOpsPage({ host, license }) {
         "div",
         { className: "xhs-card xhs-danger", style: { marginBottom: 12 } },
         error,
+        h(
+          "button",
+          {
+            className: "xhs-btn",
+            style: { marginLeft: 10 },
+            onClick: () => setError(""),
+          },
+          "关闭",
+        ),
       ),
     readOnly &&
       h(
@@ -6185,16 +10212,16 @@ function WorkbenchLink({ host }) {
       },
     },
     host.getToolContext().locale.startsWith("zh")
-      ? "打开小红书运营工作台"
+      ? "打开小红薯运营工作台"
       : "Open XHS operations workbench",
   );
 }
 
 export function setup(host) {
-  host.registerPage({ id: "main", title: "小红书运营", component: XhsOpsPage });
+  host.registerPage({ id: "main", title: "小红薯运营", component: XhsOpsPage });
   host.registerRenderer({
     id: "xhs_workbench",
     tools: ["xhs_workbench"],
-    component: WorkbenchLink,
+    component: WorkbenchCards,
   });
 }

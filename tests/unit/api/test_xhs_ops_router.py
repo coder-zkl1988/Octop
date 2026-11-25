@@ -183,7 +183,7 @@ def test_xhs_identity_facade_exposes_pending_and_completed_contract() -> None:
         "screenshotUrl": "/api/evidence/r1",
         "accountId": "xhs-1",
         "taskId": "r1",
-        "reason": "已读到手机上的小红书号，请对照截图确认",
+        "reason": "已读到手机上的小红薯号，请对照截图确认",
     }
 
 
