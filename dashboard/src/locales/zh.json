@@ -4460,14 +4460,21 @@
     }
   },
   "agentConfig": {
+    "currentAgent": "当前专家：{{name}}",
+    "sectionModel": "模型参数",
+    "sectionBehavior": "运行行为",
+    "sectionAdvanced": "高级设置（工具调用、重试与压缩参数）",
+    "enableTrajectoryDesc": "对话会写入运行轨迹，可在聊天页查看。",
+    "heartbeat": "心跳",
+    "heartbeatDesc": "空闲时按计划主动检查待办",
     "title": "运行配置",
     "description": "配置智能体运行参数",
-    "maxIters": "最大迭代次数",
+    "maxIters": "最大迭代轮数",
     "maxItersTooltip": "ReAct 智能体的最大推理-行动迭代次数",
     "maxItersPlaceholder": "请输入最大迭代次数",
     "maxItersRequired": "最大迭代次数为必填项",
     "maxItersMin": "最大迭代次数必须大于等于 1",
-    "maxInputLength": "最大输入长度",
+    "maxInputLength": "上下文窗口（tokens）",
     "maxInputLengthTooltip": "模型上下文窗口的最大输入长度（token 数）",
     "maxInputLengthPlaceholder": "请输入最大输入长度",
     "maxInputLengthRequired": "最大输入长度为必填项",
@@ -4513,6 +4520,7 @@
       "maxDelayPlaceholder": "60"
     },
     "compaction": {
+      "enabledDesc": "接近上限时自动总结历史消息",
       "enabled": "自动压缩上下文",
       "enabledTooltip": "对话接近上下文窗口时，把较早的消息摘要后移出窗口。关闭后不再自动压缩。保存后重新加载该专家。",
       "trigger": "触发比例",
@@ -6152,11 +6160,11 @@
   "wizard": {
     "title": "初始化设置",
     "back": "上一步",
-    "sessionExpired": "向导会话已过期，请重新验证启动密码。",
+    "sessionExpired": "向导会话已过期，请重新验证安装密码。",
     "stepDatabase": "选择数据库",
-    "stepPassword": "验证启动密码",
+    "stepPassword": "验证安装密码",
     "stepAdmin": "创建管理员",
-    "stepModel": "配置模型（可选）",
+    "stepModel": "配置模型",
     "stepFinish": "完成",
     "steps": {
       "database": "数据库",
@@ -6205,8 +6213,8 @@
       "continue": "保存并继续"
     },
     "password": {
-      "label": "启动密码",
-      "hint": "首次启动时，服务端会在控制台打印一次性引导密码，并写入下方路径所示文件。",
+      "label": "安装密码",
+      "hint": "首次启动时终端会打印一次性安装密码，用它确认你是这台机器的管理员。",
       "whereTitle": "在哪里找到密码？",
       "wherePath": "在服务器上打开 {{path}}，或查看启动 Tabby 时终端里黄色边框的输出。",
       "whereDefault": "在服务器上打开 ~/.octop/octop-login.txt，或查看启动 Tabby 时终端里黄色边框的输出。",
@@ -6229,11 +6237,11 @@
       "submitFailed": "无法创建管理员。",
       "continue": "继续",
       "alreadyCreated": "管理员「{{username}}」已创建。",
-      "intro": "创建第一个管理员账户。",
+      "intro": "第一个账号拥有全部权限，之后可在「用户管理」中添加其他用户。",
       "introNoPassword": "为这台设备上的账户命名，无需设置密码。"
     },
     "model": {
-      "intro": "配置一个模型提供商，助手就可以回应你了。你也可以跳过本步，稍后在「模型」页配置。",
+      "intro": "至少配置一个对话模型提供商；也可以跳过，稍后在「模型配置」中设置。",
       "skip": "跳过",
       "presetTab": "预置提供商",
       "customTab": "自定义提供商",

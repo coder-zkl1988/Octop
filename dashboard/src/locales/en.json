@@ -4460,6 +4460,13 @@
     }
   },
   "agentConfig": {
+    "currentAgent": "Current expert: {{name}}",
+    "sectionModel": "Model parameters",
+    "sectionBehavior": "Run behavior",
+    "sectionAdvanced": "Advanced (tool calls, retries, compaction)",
+    "enableTrajectoryDesc": "Conversations are recorded as run trajectories you can view in chat.",
+    "heartbeat": "Heartbeat",
+    "heartbeatDesc": "Check pending work on schedule while idle",
     "title": "Configuration",
     "description": "Configure agent runtime parameters",
     "maxIters": "Max Iterations",
@@ -4467,7 +4474,7 @@
     "maxItersPlaceholder": "Enter max iterations",
     "maxItersRequired": "Max iterations is required",
     "maxItersMin": "Max iterations must be at least 1",
-    "maxInputLength": "Max Input Length",
+    "maxInputLength": "Context window (tokens)",
     "maxInputLengthTooltip": "Maximum input length (tokens) for the model context window",
     "maxInputLengthPlaceholder": "Enter max input length",
     "maxInputLengthRequired": "Max input length is required",
@@ -4513,6 +4520,7 @@
       "maxDelayPlaceholder": "60"
     },
     "compaction": {
+      "enabledDesc": "Summarize older messages near the context limit",
       "enabled": "Automatic context compaction",
       "enabledTooltip": "When a chat nears the context window, older messages are summarized and moved out of the window. Turn this off to stop automatic compaction. Saving reloads this expert.",
       "trigger": "Trigger fraction",
@@ -6154,9 +6162,9 @@
     "back": "Back",
     "sessionExpired": "Wizard session expired. Please verify the bootstrap password again.",
     "stepDatabase": "Choose database",
-    "stepPassword": "Verify wizard password",
+    "stepPassword": "Verify setup password",
     "stepAdmin": "Create administrator",
-    "stepModel": "Configure a model (optional)",
+    "stepModel": "Configure models",
     "stepFinish": "Finish",
     "steps": {
       "database": "Database",
@@ -6205,8 +6213,8 @@
       "continue": "Save and continue"
     },
     "password": {
-      "label": "Bootstrap password",
-      "hint": "On first start, Tabby prints a one-time bootstrap password in the server terminal and writes it to the file below.",
+      "label": "Setup password",
+      "hint": "On first start the terminal prints a one-time setup password. Use it to confirm you administer this machine.",
       "whereTitle": "Where is the password?",
       "wherePath": "On the server, open {{path}} or check the yellow banner printed when Tabby starts.",
       "whereDefault": "On the server, open ~/.octop/octop-login.txt or check the yellow banner printed when Tabby starts.",
@@ -6229,11 +6237,11 @@
       "submitFailed": "Could not create administrator.",
       "continue": "Continue",
       "alreadyCreated": "Administrator \"{{username}}\" has been created.",
-      "intro": "Create the first administrator account.",
+      "intro": "The first account has full permissions. You can add other users later under User management.",
       "introNoPassword": "Name the account on this device. No password is needed."
     },
     "model": {
-      "intro": "Configure one model provider so the assistant can reply. You can skip this step and configure it later.",
+      "intro": "Configure at least one chat model provider, or skip and set it up later under Model settings.",
       "skip": "Skip",
       "presetTab": "Preset provider",
       "customTab": "Custom provider",
