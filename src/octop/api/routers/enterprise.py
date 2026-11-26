@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from octop.api.deps import current_user, get_server
-from octop.infra import enterprise_plugins, enterprise_security
+from octop.infra import enterprise_env, enterprise_plugins, enterprise_security
 from octop.infra.agents.plugins.bundled import default_bundled_plugins_root
 from octop.infra.enterprise_client import clear_persisted_session
 from octop.infra.enterprise_client import session_entry as load_session_entry
@@ -23,6 +23,7 @@ from octop.infra.enterprise_device import headers as device_headers
 from octop.infra.enterprise_device import is_registered, mark_registered, registration_body
 from octop.infra.enterprise_policy import enterprise_policy_permissions
 from octop.infra.errors import ErrorCode, OctopError
+from octop.infra.utils.env_file import env_file_path, load_env_file
 
 router = APIRouter()
 
@@ -244,6 +245,26 @@ async def _sync_enterprise_plugins(
         await server.refresh_plugin_channels()
         await server.app_runtime.agent_registry.reload_all()
     return changed
+
+
+async def _sync_enterprise_env(server: Any, user_id: int) -> None:
+    """Apply the environment variables the enterprise delivers to this member."""
+    settings = getattr(getattr(server, "services", None), "settings_repo", None)
+    paths = getattr(server, "paths", None)
+    if settings is None or paths is None:
+        return
+    try:
+        view = await _upstream(server, user_id, "GET", "/desktop/v1/env")
+    except OctopError as exc:
+        if exc.status == 401:
+            raise
+        return
+    items = view.get("items")
+    server.__dict__["_enterprise_env"] = enterprise_env.apply(
+        settings,
+        items if isinstance(items, list) else [],
+        load_env_file(env_file_path(paths.root)),
+    )
 
 
 async def _sync_enterprise_security(server: Any, user_id: int, policy_raw: dict[str, Any]) -> None:
@@ -494,6 +515,7 @@ async def _load_snapshot_inputs(
     usage = await _upstream(server, user_id, "GET", "/desktop/v1/usage")
     await _sync_enterprise_plugins(server, user_id, str(device_key.get("device_id") or ""))
     await _sync_enterprise_security(server, user_id, policy)
+    await _sync_enterprise_env(server, user_id)
     return me, policy, resources, device_key, usage
 
 
