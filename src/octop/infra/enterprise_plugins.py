@@ -41,7 +41,16 @@ def load_policy(settings: Any) -> dict[str, Any]:
 
 
 def _allowed(policy: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {str(i["id"]): i for i in policy["items"]}
+    """Plugins this member may run. An admin-only plugin counts once the admin pushed it."""
+    return {str(i["id"]): i for i in policy["items"] if i.get("installable", True)}
+
+
+def denied_tools(settings: Any) -> set[str]:
+    """Plugin tools the enterprise switched off. They are hidden from every expert."""
+    policy = load_policy(settings)
+    if not policy["enforced"]:
+        return set()
+    return {str(t) for i in policy["items"] for t in i.get("tools_denied") or []}
 
 
 def install_blocked_reason(policy: dict[str, Any], plugin_id: str | None) -> str | None:
@@ -91,11 +100,17 @@ async def sync(
         for row in mgr.list_installed()
         if row.get("id") and not row.get("error")
     }
-    changed: dict[str, list[str]] = {"installed": [], "enabled": [], "stopped": [], "failed": []}
+    changed: dict[str, list[str]] = {
+        "installed": [],
+        "enabled": [],
+        "stopped": [],
+        "failed": [],
+        "tools": [],
+    }
 
     if policy["enforced"]:
         for plugin_id, item in allowed.items():
-            if item.get("builtin") or not item.get("required"):
+            if item.get("builtin") or not item.get("required") or not item.get("installable", True):
                 continue
             have = installed.get(plugin_id)
             stale = (
@@ -132,10 +147,22 @@ async def sync(
         if plugin_id not in installed:
             policy["stopped"].remove(plugin_id)
         elif not policy["enforced"] or plugin_id in allowed:
-            mgr.set_enabled(plugin_id, True)
-            changed["enabled"].append(plugin_id)
+            if plugin_id not in changed["enabled"]:
+                mgr.set_enabled(plugin_id, True)
+                changed["enabled"].append(plugin_id)
             policy["stopped"].remove(plugin_id)
 
+    before = (
+        {str(t) for i in previous["items"] for t in i.get("tools_denied") or []}
+        if previous["enforced"]
+        else set()
+    )
+    after = (
+        {str(t) for i in policy["items"] for t in i.get("tools_denied") or []}
+        if policy["enforced"]
+        else set()
+    )
+    changed["tools"] = sorted(before ^ after)
     settings.set(SETTINGS_KEY, json.dumps(policy, ensure_ascii=False))
     report = [
         {

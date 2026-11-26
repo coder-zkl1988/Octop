@@ -5,6 +5,7 @@ import {
   Card,
   Descriptions,
   Empty,
+  Input,
   Modal,
   Segmented,
   Spin,
@@ -37,6 +38,8 @@ interface Row {
   required: boolean;
   tools: string[];
   enabled: boolean;
+  /** Market only: what the enterprise allows for this plugin. */
+  item?: EnterprisePlugin;
 }
 
 const kindLabel = (kind: string) =>
@@ -56,6 +59,13 @@ export default function AppsLanding() {
   const [busy, setBusy] = useState("");
   const [detail, setDetail] = useState<Row | null>(null);
   const [removing, setRemoving] = useState<Row | null>(null);
+  const [installing, setInstalling] = useState<{
+    row: Row;
+    enable: boolean;
+  } | null>(null);
+  const [asking, setAsking] = useState<{ row: Row; reason: string } | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     const [appList, pluginList, enterprise] = await Promise.all([
@@ -132,23 +142,44 @@ export default function AppsLanding() {
             (t) => t.name,
           ),
           enabled: i.enabled,
+          item: i,
         }))
         .filter(
           (r) =>
             filter === "all" ||
-            (filter === "installed" ? r.installed : !r.installed),
+            (filter === "installed"
+              ? r.installed
+              : !r.installed && r.item?.installable !== false),
         ),
     [allowed, installed, filter],
   );
 
-  const install = async (row: Row) => {
+  const install = async (row: Row, enable: boolean) => {
     setBusy(row.id);
     try {
-      await enterprisePluginsApi.install(row.id);
-      message.success(`${row.name} 已安装`);
+      await enterprisePluginsApi.install(row.id, enable);
+      message.success(
+        enable ? `${row.name} 已安装并启用` : `${row.name} 已安装，还没有启用`,
+      );
+      setInstalling(null);
       await load();
     } catch (err) {
       message.error(err instanceof Error ? err.message : "安装失败");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const ask = async () => {
+    if (!asking) return;
+    setBusy(asking.row.id);
+    try {
+      await enterprisePluginsApi.request(asking.row.id, asking.reason.trim());
+      message.success("申请已提交，管理员同意后会远程启用到这台电脑");
+      setAsking(null);
+      await load();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : "提交失败");
     } finally {
       setBusy("");
     }
@@ -189,6 +220,8 @@ export default function AppsLanding() {
           <Tag color="blue">管理员已启用</Tag>
         ) : row.installed ? (
           <Tag>已安装</Tag>
+        ) : row.item?.installable === false ? (
+          <Tag color="orange">需管理员启用</Tag>
         ) : null}
       </div>
       <Paragraph
@@ -198,19 +231,46 @@ export default function AppsLanding() {
       >
         {row.summary || "这个插件没有填写说明。"}
       </Paragraph>
+      {row.item?.request?.status === "rejected" && (
+        <Paragraph type="danger" style={{ fontSize: 12, marginTop: -6 }}>
+          管理员没有同意
+          {row.item.request.note ? `：${row.item.request.note}` : "。"}
+        </Paragraph>
+      )}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         {row.installed ? (
           <Button size="small" type="primary" onClick={() => open(row)}>
             打开
           </Button>
+        ) : row.item?.installable === false ? (
+          row.item.request?.status === "pending" ? (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              已申请，等管理员处理
+            </Text>
+          ) : (
+            <Button
+              size="small"
+              type="primary"
+              onClick={() => setAsking({ row, reason: "" })}
+            >
+              {row.item.request?.status === "rejected"
+                ? "重新申请"
+                : "申请启用"}
+            </Button>
+          )
         ) : (
           <Button
             size="small"
             type="primary"
             loading={busy === row.id}
-            onClick={() => void install(row)}
+            onClick={() => setInstalling({ row, enable: true })}
           >
             安装
+          </Button>
+        )}
+        {!row.installed && row.item && (
+          <Button size="small" onClick={() => setDetail(row)}>
+            查看详情
           </Button>
         )}
         {row.installed &&
@@ -309,38 +369,140 @@ export default function AppsLanding() {
         title={detail?.name}
         onCancel={() => setDetail(null)}
         footer={
-          <>
-            {detail && !detail.required && detail.id !== "xhs-ops" && (
-              <Button onClick={() => setRemoving(detail)}>卸载</Button>
-            )}
-            <Button onClick={() => setDetail(null)}>关闭</Button>
-            <Button type="primary" onClick={() => navigate("/")}>
-              去对话里使用
-            </Button>
-          </>
+          detail && !detail.installed ? (
+            <>
+              <Button onClick={() => setDetail(null)}>关闭</Button>
+              {detail.item?.installable === false ? (
+                detail.item.request?.status !== "pending" && (
+                  <Button
+                    type="primary"
+                    onClick={() => {
+                      setAsking({ row: detail, reason: "" });
+                      setDetail(null);
+                    }}
+                  >
+                    申请启用
+                  </Button>
+                )
+              ) : (
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setInstalling({ row: detail, enable: true });
+                    setDetail(null);
+                  }}
+                >
+                  安装
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              {detail && !detail.required && detail.id !== "xhs-ops" && (
+                <Button onClick={() => setRemoving(detail)}>卸载</Button>
+              )}
+              <Button onClick={() => setDetail(null)}>关闭</Button>
+              <Button type="primary" onClick={() => navigate("/")}>
+                去对话里使用
+              </Button>
+            </>
+          )
         }
       >
-        {detail && (
+        {detail &&
+          (detail.installed ? (
+            <>
+              <Descriptions
+                column={1}
+                size="small"
+                items={[
+                  {
+                    key: "state",
+                    label: "状态",
+                    children: detail.enabled ? "已启用" : "已停用",
+                  },
+                  {
+                    key: "tools",
+                    label: "工具",
+                    children: detail.tools.join("、") || "没有声明工具",
+                  },
+                ]}
+              />
+              <Paragraph type="secondary" style={{ marginTop: 12 }}>
+                这个插件没有自己的界面。启用后，专家会在对话里按需调用它的工具。
+              </Paragraph>
+            </>
+          ) : (
+            detail.item && <PluginFacts item={detail.item} />
+          ))}
+      </Modal>
+
+      <Modal
+        open={!!installing}
+        title={`安装 ${installing?.row.name ?? ""}`}
+        okText="安装"
+        cancelText="取消"
+        okButtonProps={{ loading: busy === installing?.row.id }}
+        onCancel={() => setInstalling(null)}
+        onOk={() =>
+          installing && void install(installing.row, installing.enable)
+        }
+      >
+        {installing?.row.item && (
           <>
+            <PluginFacts item={installing.row.item} />
+            <div style={{ marginTop: 12 }}>
+              <Text>安装后</Text>
+              <div style={{ marginTop: 6 }}>
+                <Segmented<"on" | "off">
+                  value={installing.enable ? "on" : "off"}
+                  onChange={(v) =>
+                    setInstalling({ ...installing, enable: v === "on" })
+                  }
+                  options={[
+                    { value: "on", label: "启用到所有专家" },
+                    { value: "off", label: "先不启用" },
+                  ]}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!asking}
+        title="申请启用"
+        okText="提交申请"
+        cancelText="取消"
+        okButtonProps={{
+          loading: busy === asking?.row.id,
+          disabled: !asking?.reason.trim(),
+        }}
+        onCancel={() => setAsking(null)}
+        onOk={() => void ask()}
+      >
+        {asking && (
+          <>
+            <Paragraph type="secondary">
+              管理员同意后会远程启用到这台电脑。
+            </Paragraph>
             <Descriptions
               column={1}
               size="small"
               items={[
-                {
-                  key: "state",
-                  label: "状态",
-                  children: detail.enabled ? "已启用" : "已停用",
-                },
-                {
-                  key: "tools",
-                  label: "工具",
-                  children: detail.tools.join("、") || "没有声明工具",
-                },
+                { key: "plugin", label: "插件", children: asking.row.name },
               ]}
             />
-            <Paragraph type="secondary" style={{ marginTop: 12 }}>
-              这个插件没有自己的界面。启用后，专家会在对话里按需调用它的工具。
-            </Paragraph>
+            <Input.TextArea
+              style={{ marginTop: 12 }}
+              rows={3}
+              maxLength={300}
+              aria-label="用途"
+              placeholder="告诉管理员你想用它做什么"
+              value={asking.reason}
+              onChange={(e) => setAsking({ ...asking, reason: e.target.value })}
+            />
           </>
         )}
       </Modal>
@@ -357,5 +519,48 @@ export default function AppsLanding() {
         卸载后专家不能再使用这个插件的工具，插件产生的文件保留。可以随时重新安装。
       </Modal>
     </PageShell>
+  );
+}
+
+const SCAN_LABEL: Record<string, string> = {
+  pass: "扫描通过",
+  hint: "有提示项",
+  high: "高风险",
+};
+
+/** What a member should know before installing or asking for a plugin. */
+function PluginFacts({ item }: { item: EnterprisePlugin }) {
+  const allowedTools = item.tools.filter((t) => !item.toolsDenied.includes(t));
+  return (
+    <Descriptions
+      column={1}
+      size="small"
+      items={[
+        {
+          key: "version",
+          label: "版本",
+          children: [item.version && `v${item.version}`, kindLabel(item.kind)]
+            .filter(Boolean)
+            .join(" · "),
+        },
+        {
+          key: "scan",
+          label: "安全扫描",
+          children: SCAN_LABEL[item.scan] ?? "—",
+        },
+        {
+          key: "tools",
+          label: "会用到的工具",
+          children: allowedTools.join("、") || "插件包里没有找到工具名",
+        },
+        {
+          key: "limits",
+          label: "企业限制",
+          children: item.toolsDenied.length
+            ? `企业关闭了 ${item.toolsDenied.join("、")}，专家看不到这些工具`
+            : "没有额外限制",
+        },
+      ]}
+    />
   );
 }

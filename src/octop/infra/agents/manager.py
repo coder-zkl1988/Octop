@@ -3092,6 +3092,19 @@ class AgentManager:
         await self.reload_all()
         return view
 
+    def _enterprise_denied_tools(self) -> set[str]:
+        from octop.infra.enterprise_plugins import denied_tools
+
+        return denied_tools(self._repos.settings_repo)
+
+    def refresh_plugin_tools(self) -> None:
+        """Re-apply tool denylists to every agent after the enterprise changed which plugin tools are allowed."""
+        for row in self.list_rows():
+            try:
+                self.sync_effective_tools_disabled(row.agent_id)
+            except Exception:
+                logger.exception("failed to sync tools for agent %s", row.agent_id)
+
     def refresh_security(self) -> None:
         """Push the effective security policy into running agents after the enterprise floor changed."""
         if self._harness_manager is not None:
@@ -3811,10 +3824,13 @@ class AgentManager:
             self._plugin_manager.global_enabled_map() if self._plugin_manager is not None else {}
         )
         registered = [(reg.plugin_id, reg.name) for reg in PluginRegistry().all_tools()]
-        disabled = effective_tools_disabled(
-            cfg,
-            registered_plugin_tools=registered,
-            global_plugins=global_plugins,
+        disabled = (
+            effective_tools_disabled(
+                cfg,
+                registered_plugin_tools=registered,
+                global_plugins=global_plugins,
+            )
+            | self._enterprise_denied_tools()
         )
         if is_team_agent(self.get_row(agent_id)):
             disabled = set(host_tools_disabled(disabled))
@@ -4893,10 +4909,13 @@ class AgentManager:
             from octop.infra.agents.settings.tool_catalog import effective_tools_disabled
             from octop.infra.agents.teams import host_tools_disabled
 
-            disabled = effective_tools_disabled(
-                cfg,
-                registered_plugin_tools=registered,
-                global_plugins=global_plugins,
+            disabled = (
+                effective_tools_disabled(
+                    cfg,
+                    registered_plugin_tools=registered,
+                    global_plugins=global_plugins,
+                )
+                | self._enterprise_denied_tools()
             )
             if team_host:
                 disabled = set(host_tools_disabled(disabled))

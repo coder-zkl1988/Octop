@@ -99,6 +99,12 @@ export interface EnterprisePlugin {
   builtin: boolean;
   required: boolean;
   installMode: "self" | "admin";
+  /** False for an admin-only plugin the admin has not pushed to this member yet. */
+  installable: boolean;
+  tools: string[];
+  toolsDenied: string[];
+  scan: "" | "pass" | "hint" | "high";
+  request: { status: "pending" | "rejected"; at: string; note: string } | null;
   installed: boolean;
   installedVersion: string;
   enabled: boolean;
@@ -108,12 +114,21 @@ export const enterprisePluginsApi = {
   list(): Promise<{ enforced: boolean; items: EnterprisePlugin[] }> {
     return request("/enterprise/plugins");
   },
-  install(pluginId: string): Promise<{ status: string; id: string }> {
+  install(
+    pluginId: string,
+    enable = true,
+  ): Promise<{ status: string; id: string }> {
     return request(
-      `/enterprise/plugins/${encodeURIComponent(pluginId)}/install`,
-      {
-        method: "POST",
-      },
+      `/enterprise/plugins/${encodeURIComponent(
+        pluginId,
+      )}/install?enable=${enable}`,
+      { method: "POST" },
+    );
+  },
+  request(pluginId: string, reason: string): Promise<{ status: string }> {
+    return request(
+      `/enterprise/plugins/${encodeURIComponent(pluginId)}/request`,
+      { method: "POST", body: JSON.stringify({ reason }) },
     );
   },
 };

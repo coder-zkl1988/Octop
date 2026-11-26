@@ -249,6 +249,8 @@ async def _sync_enterprise_plugins(
     ) is not None:
         await server.refresh_plugin_channels()
         await server.app_runtime.agent_registry.reload_all()
+    elif changed.get("tools") and getattr(server, "app_runtime", None) is not None:
+        server.app_runtime.agent_registry.refresh_plugin_tools()
     return changed
 
 
@@ -927,6 +929,11 @@ async def enterprise_plugin_list(
                 "builtin": bool(item.get("builtin")),
                 "required": bool(item.get("required")),
                 "installMode": item.get("install_mode", "self"),
+                "installable": bool(item.get("installable", True)),
+                "tools": [str(t) for t in item.get("tools") or []],
+                "toolsDenied": [str(t) for t in item.get("tools_denied") or []],
+                "scan": str(item.get("scan") or ""),
+                "request": item.get("request") if isinstance(item.get("request"), dict) else None,
                 "installed": have is not None,
                 "installedVersion": str((have or {}).get("version") or ""),
                 "enabled": bool((have or {}).get("enabled", False)),
@@ -937,12 +944,18 @@ async def enterprise_plugin_list(
 
 @router.post("/plugins/{plugin_id}/install", summary="Install an enterprise catalog plugin")
 async def enterprise_plugin_install(
-    plugin_id: str, user: Any = Depends(current_user), server: Any = Depends(get_server)
+    plugin_id: str,
+    enable: bool = True,
+    user: Any = Depends(current_user),
+    server: Any = Depends(get_server),
 ) -> dict[str, Any]:
+    """Install a plugin from the enterprise list. ``enable=false`` installs it switched off."""
     policy = enterprise_plugins.load_policy(server.services.settings_repo)
     item = next((i for i in policy["items"] if i["id"] == plugin_id), None)
     if item is None or item.get("builtin"):
         raise OctopError(ErrorCode.FORBIDDEN, "这个插件不在企业允许安装的清单里", status=403)
+    if not item.get("installable", True):
+        raise OctopError(ErrorCode.FORBIDDEN, "这个插件需要管理员启用，请先申请", status=403)
     mgr = server.plugin_manager
     if mgr is None:
         raise OctopError(ErrorCode.INTERNAL_ERROR, "plugin manager not initialized")
@@ -960,7 +973,7 @@ async def enterprise_plugin_install(
             f"plugin install failed: {exc}",
             details={"reason": str(exc)},
         ) from exc
-    mgr.set_enabled(plugin_id, True)
+    mgr.set_enabled(plugin_id, enable)
     if server.app_runtime is not None:
         await server.refresh_plugin_channels()
         await server.app_runtime.agent_registry.reload_all()
@@ -969,6 +982,37 @@ async def enterprise_plugin_install(
         server, int(user.id), str(device.get("device_id") or ""), force=True
     )
     return {"status": "ok", "id": plugin_id}
+
+
+class PluginRequestBody(BaseModel):
+    reason: str = Field(
+        min_length=1, max_length=300, description="What the member wants to use the plugin for"
+    )
+
+
+@router.post(
+    "/plugins/{plugin_id}/request",
+    summary="Ask the enterprise admin to enable a plugin",
+    description="For plugins the enterprise marked as admin-only. The admin approves or rejects in the admin console; approval pushes the plugin to this member.",
+)
+async def enterprise_plugin_request(
+    plugin_id: str,
+    body: PluginRequestBody,
+    user: Any = Depends(current_user),
+    server: Any = Depends(get_server),
+) -> dict[str, Any]:
+    result = await _upstream(
+        server,
+        int(user.id),
+        "POST",
+        f"/desktop/v1/plugins/{plugin_id}/request",
+        body={"reason": body.reason},
+    )
+    device = await _upstream(server, int(user.id), "GET", "/desktop/v1/device/key")
+    await _sync_enterprise_plugins(
+        server, int(user.id), str(device.get("device_id") or ""), force=True
+    )
+    return result
 
 
 @router.get("/model-preferences", summary="Read enterprise model preferences")

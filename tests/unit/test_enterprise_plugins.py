@@ -89,6 +89,7 @@ def test_an_empty_list_changes_nothing() -> None:
         "enabled": [],
         "stopped": [],
         "failed": [],
+        "tools": [],
         "enforced": False,
     }
     assert mgr.rows["local-tool"]["enabled"] is True
@@ -166,3 +167,32 @@ def test_install_package_needs_a_digest() -> None:
 
     with pytest.raises(ValueError, match="digest"):
         asyncio.run(ep.install_package(Manager([]), fetch_bytes, {"id": "x", "sha256": ""}))
+
+
+def test_admin_only_plugins_need_a_push_and_denied_tools_are_collected() -> None:
+    mgr = Manager([{"id": "db-query", "version": "2.0.0", "enabled": True}])
+    settings = Settings()
+    view = {
+        "enforced": True,
+        "items": [
+            item("db-query", install_mode="admin", installable=False, required=False),
+            item("pdf-tools", tools=["pdf_merge", "pdf_split"], tools_denied=["pdf_split"]),
+        ],
+    }
+    changed, _ = run_sync(mgr, settings, view)
+    # Installed by hand before the admin made it admin-only: it is stopped until pushed.
+    assert changed["stopped"] == ["db-query"] and changed["tools"] == ["pdf_split"]
+    policy = ep.load_policy(settings)
+    assert ep.install_blocked_reason(policy, "db-query") is not None
+    assert ep.denied_tools(settings) == {"pdf_split"}
+    changed, _ = run_sync(mgr, settings, view)
+    assert changed["tools"] == []
+    pushed = {
+        "enforced": True,
+        "items": [
+            item("db-query", install_mode="admin", installable=True, required=True, start="enable")
+        ],
+    }
+    changed, _ = run_sync(mgr, settings, pushed)
+    assert changed["enabled"] == ["db-query"] and changed["tools"] == ["pdf_split"]
+    assert ep.denied_tools(settings) == set()
