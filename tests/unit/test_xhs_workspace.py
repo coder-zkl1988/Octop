@@ -490,3 +490,35 @@ def test_automatic_work_rests_the_phone_by_gap_daily_hours_and_publish_slot() ->
     assert workspace.device_rest_reason(ctx, doc, "phone-1", "nurture") == "publish_slot"
     # A reply is short; only nurture steps aside for a publish that is about to be confirmed.
     assert workspace.device_rest_reason(ctx, doc, "phone-1", "reply") == ""
+
+
+@pytest.mark.asyncio
+async def test_a_photographed_authorization_letter_is_kept_as_a_private_asset() -> None:
+    import base64
+
+    ctx = ctx_with(FULL)
+    today = datetime.now(UTC).date()
+    image = {
+        "filename": "letter.png",
+        "mime_type": "image/png",
+        "data_base64": base64.b64encode(b"\x89PNG\r\n\x1a\nletter").decode(),
+    }
+    await domain.command(
+        ctx,
+        "consent.save",
+        {
+            "person": "小王",
+            "covers": ["portrait"],
+            "account_ids": ["a1"],
+            "valid_from": today.isoformat(),
+            "valid_to": (today + timedelta(days=30)).isoformat(),
+            "proof_asset": "letter.png",
+            "proof_image": image,
+        },
+    )
+    saved = ctx.doc["authorizations"][0]
+    assert saved["status"] == "active" and saved["proof_image"]["asset_id"].endswith(".png")
+    assert "data_base64" not in saved["proof_image"]
+    # The enterprise summary says a proof exists, without the file or its name.
+    report = json.dumps(domain.studio.enterprise_report(ctx, ctx.doc), ensure_ascii=False)
+    assert "letter.png" not in report and saved["proof_image"]["asset_id"] not in report

@@ -174,6 +174,8 @@ class Authorization(Input):
     valid_from: date
     valid_to: date
     proof_asset: str = Field(default="", max_length=200)
+    # A photo or scan of the signed letter, kept with the plugin's private assets.
+    proof_image: dict[str, Any] | None = None
 
     @field_validator("valid_to")
     @classmethod
@@ -799,6 +801,8 @@ async def _bizdoc_delete(ctx: Any, domain: Any, payload: dict[str, Any]) -> None
 
 async def _consent_save(ctx: Any, domain: Any, payload: dict[str, Any]) -> None:
     body = Authorization.model_validate(payload).model_dump(mode="json")
+    if body["proof_image"]:
+        body["proof_image"] = await domain.store_image(ctx, body["proof_image"])
 
     def save(state: dict[str, Any]) -> None:
         for account_id in body["account_ids"]:

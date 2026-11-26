@@ -13884,7 +13884,8 @@ function ConsentPanel({ snapshot, host, readOnly, refresh, go }) {
         "valid_from",
         "valid_to",
         "proof_asset",
-      ].map((k) => [k, f[k]]),
+        "proof_image",
+      ].map((k) => [k, f[k] ?? (k === "proof_image" ? null : f[k])]),
     );
     await send(host, "consent.save", {
       ...body,
@@ -13895,16 +13896,21 @@ function ConsentPanel({ snapshot, host, readOnly, refresh, go }) {
     toast("已保存");
     await refresh();
   };
-  const proofInput = (onName) =>
+  const proofInput = (onPick) =>
     h("input", {
       type: "file",
-      accept: ".pdf,.png,.jpg,.jpeg",
+      accept: ".pdf,.png,.jpg,.jpeg,.webp",
       style: { display: "none" },
       disabled: readOnly,
-      onChange: (e) => {
+      onChange: async (e) => {
         const f = e.target.files[0];
         e.target.value = "";
-        if (f) onName(f.name.slice(0, 200));
+        if (!f) return;
+        // A photo or scan is stored with the plugin's private files; other formats keep the name only.
+        const image = /^image\/(png|jpeg|webp)$/.test(f.type)
+          ? (await readImageFiles([f]))[0]
+          : null;
+        onPick(f.name.slice(0, 200), image);
       },
     });
   const publishedOf = (c) =>
@@ -14019,12 +14025,13 @@ function ConsentPanel({ snapshot, host, readOnly, refresh, go }) {
                   { className: "xhs-btn" },
                   ic("上传授权书"),
                   "上传授权书",
-                  proofInput((name) =>
+                  proofInput((name, image) =>
                     save({
                       ...blank,
                       ...c,
                       scope: rows(c.account_ids).length ? "pick" : "all",
                       proof_asset: name,
+                      proof_image: image,
                     }),
                   ),
                 )
@@ -14223,11 +14230,22 @@ function ConsentPanel({ snapshot, host, readOnly, refresh, go }) {
               "div",
               { className: "xhs-meta", style: { marginTop: 6 } },
               `授权书：${form.proof_asset}`,
+              form.proof_image &&
+                h(
+                  "div",
+                  null,
+                  h(PrivateImage, {
+                    host,
+                    image: form.proof_image,
+                    alt: "授权书",
+                    className: "xhs-preview",
+                  }),
+                ),
             )
           : h(
               "div",
               { className: "xhs-meta", style: { marginTop: 6 } },
-              "没有授权书时状态为“待补授权书”，关联素材暂不可用。这里登记文件名，原件由你存档。",
+              "没有授权书时状态为“待补授权书”，关联素材暂不可用。照片或扫描件会保存在本机；PDF 只登记文件名，原件由你存档。",
             ),
         h(
           "div",
@@ -14237,7 +14255,9 @@ function ConsentPanel({ snapshot, host, readOnly, refresh, go }) {
             { className: "xhs-btn" },
             ic("上传授权书"),
             "上传授权书",
-            proofInput((name) => setForm({ ...form, proof_asset: name })),
+            proofInput((name, image) =>
+              setForm({ ...form, proof_asset: name, proof_image: image }),
+            ),
           ),
           h(
             Button,
