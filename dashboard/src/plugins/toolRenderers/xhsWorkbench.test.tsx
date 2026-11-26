@@ -304,6 +304,24 @@ function snapshotFor(features: string[], rules: Row = {}): Row {
         templates: ["tpl_life"],
       },
       runs: [],
+      transfers: {
+        items: [
+          {
+            id: "tr_in",
+            direction: "incoming",
+            account_id: "x9",
+            account_name: "北北的衣橱",
+            platform_account_id: "889",
+            from_member_name: "林清",
+            note: "排期已做完",
+            summary: { drafts: 3, materials: 2 },
+            status: "approved",
+            created_at: today,
+          },
+        ],
+        members: [{ id: "mb_b", name: "阿北" }],
+        fetched_at: today,
+      },
       operation_clock: { date: "2026-11-25", timezone: "Asia/Shanghai" },
     },
   };
@@ -374,6 +392,7 @@ describe("小红薯运营 workbench", () => {
     expect(await screen.findByText("系统已为你准备好")).toBeInTheDocument();
     for (const tab of [
       "执行队列",
+      "账号档案",
       "异常与告警",
       "冷启动方案",
       "内容计划",
@@ -518,5 +537,66 @@ describe("小红薯运营 workbench", () => {
       await screen.findByRole("button", { name: "打开小红薯运营工作台" }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/已自动回复/)).not.toBeInTheDocument();
+  });
+
+  it("opens an account's profile from the overview and hands it to a colleague", async () => {
+    const { posts } = renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "小鹿" }));
+    expect(await screen.findByText("手机与登录")).toBeInTheDocument();
+    expect(screen.getByText(/冷启动 · 起步 · 第 2 天/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "转交给同事" }));
+    const send = screen.getByRole("button", { name: "发起转交" });
+    expect(send).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("我已确认上面的说明"));
+    fireEvent.click(send);
+    await waitFor(() =>
+      expect(posts).toContainEqual({
+        command: "transfer.create",
+        payload: {
+          account_id: "a1",
+          to_member_id: "mb_b",
+          note: "",
+          confirmed: true,
+        },
+      }),
+    );
+    expect(posts).toContainEqual({ command: "transfer.sync", payload: {} });
+  });
+
+  it("accepts an incoming account into a new project", async () => {
+    const { posts } = renderPage();
+    await openXhsTab("账号档案");
+    expect(screen.getByText("北北的衣橱")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "接收" }));
+    await waitFor(() =>
+      expect(posts).toContainEqual({
+        command: "transfer.accept",
+        payload: { transfer_id: "tr_in", project_id: "", confirmed: true },
+      }),
+    );
+  });
+
+  it("shows a frozen account and lets the sender withdraw the transfer", async () => {
+    const value = fixture();
+    value.snapshot.data.accounts[0].transfer = {
+      id: "tr_out",
+      status: "pending_approval",
+      to_member_name: "阿北",
+    };
+    render(<value.Page host={value.host} license={value.snapshot.license} />);
+    await openXhsTab("账号档案");
+    expect(
+      screen.getByText(/正在转交给 阿北 · 待管理员审批/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "转交给同事" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "撤回转交" }));
+    await waitFor(() =>
+      expect(value.posts).toContainEqual({
+        command: "transfer.cancel",
+        payload: { transfer_id: "tr_out" },
+      }),
+    );
   });
 });

@@ -32,6 +32,7 @@ from . import (
     profiles,
     reporting,
     takeover_rules,
+    transfers,
     workspace,
 )
 
@@ -1139,6 +1140,7 @@ async def snapshot(ctx: Any) -> dict[str, Any]:
             doc, doc["operation_clock"]["date"], doc["operation_clock"]["timezone"]
         )
     workspace.snapshot_extras(ctx, sys.modules[__name__], doc)
+    doc["transfers"] = transfers.snapshot(doc)
     return cast(dict[str, Any], doc)
 
 
@@ -1153,6 +1155,8 @@ def ready(
         fail("enterprise_paused", 409)
     if getattr(ctx, "member_paused", False):
         fail("member_paused", 409)
+    if transfers.frozen(account):
+        fail("account_transferring", 409)
     if (
         kind in {"publish", "comment", "profile"}
         and not str(account.get("platform_account_id") or "").strip()
@@ -1680,7 +1684,12 @@ async def command(ctx: Any, name: str, payload: dict[str, Any]) -> None:
 
 async def _command(ctx: Any, name: str, payload: dict[str, Any]) -> None:
     await assert_expected_updated_at(ctx, name, payload)
-    ctx.member_paused = workspace.paused_reason(ctx, await ctx.read()) == "member_paused"
+    current = await ctx.read()
+    ctx.member_paused = workspace.paused_reason(ctx, current) == "member_paused"
+    transfers.guard(current, name, payload)
+    if name in transfers.COMMANDS:
+        await transfers.command(ctx, sys.modules[__name__], name, payload)
+        return
     if name in workspace.HANDLERS:
         await workspace.command(ctx, sys.modules[__name__], name, payload)
         return
@@ -2956,6 +2965,7 @@ async def tick(ctx: Any) -> None:
     features = getattr(ctx.license, "features", None)
     if features is None or "xhs.ops" in features:
         await daily.tick(ctx, sys.modules[__name__])
+        await transfers.tick(ctx, sys.modules[__name__])
 
 
 async def order_command(ctx: Any, name: str, payload: dict[str, Any]) -> None:

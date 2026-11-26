@@ -134,6 +134,14 @@ async def request(
                 "tenant_quota_exceeded",
                 "member_quota_exceeded",
                 "license_required",
+                "transfer_to_self",
+                "transfer_target_not_eligible",
+                "transfer_package_too_large",
+                "too_many_open_transfers",
+                "transfer_already_open",
+                "transfer_already_decided",
+                "transfer_not_open",
+                "transfer_package_missing",
             }:
                 reason = candidate
         except ValueError:

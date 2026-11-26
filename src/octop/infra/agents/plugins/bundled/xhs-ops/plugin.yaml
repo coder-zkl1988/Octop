@@ -132,6 +132,11 @@ app:
     reply.lead: [xhs.comment]
     lead.update: [xhs.comment]
     notice.record: [xhs.ops, xhs.takeover]
+    transfer.sync: [xhs.ops]
+    transfer.create: [xhs.ops]
+    transfer.cancel: [xhs.ops]
+    transfer.accept: [xhs.ops]
+    transfer.decline: [xhs.ops]
   read_scopes:
     projects: [xhs.content, xhs.ops, xhs.publish, xhs.takeover]
     accounts: [xhs.ops, xhs.publish, xhs.takeover, xhs.comment]
@@ -173,6 +178,7 @@ app:
     template_submissions: [xhs.content]
     member_requests: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
     last_plan: [xhs.content]
+    transfers: [xhs.ops]
   record_scopes:
     runs:
       kinds:

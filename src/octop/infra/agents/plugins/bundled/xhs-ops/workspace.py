@@ -1765,7 +1765,12 @@ async def tick(ctx: Any, domain: Any) -> None:
         key=lambda i: i["created_at"],
     ):
         account = next((a for a in doc.get("accounts", []) if a["id"] == item["account_id"]), None)
-        if account is None or account.get("paused") or account.get("device_id") in busy:
+        if (
+            account is None
+            or account.get("paused")
+            or (account.get("transfer") or {}).get("id")
+            or account.get("device_id") in busy
+        ):
             continue
         if (
             _count_today(ctx, doc, account["id"], auto=True) >= eff["auto_reply_daily"]
@@ -1991,6 +1996,36 @@ def alerts(ctx: Any, doc: dict[str, Any]) -> list[dict[str, Any]]:
                     "at": consent.get("withdrawn_at") or "",
                 }
             )
+    for item in (doc.get("transfer_cache") or {}).get("items", []):
+        if item.get("direction") == "incoming" and item.get("status") in {"approved", "accepted"}:
+            out.append(
+                {
+                    "id": f"transfer:{item['id']}",
+                    "level": "action",
+                    "account_id": "",
+                    "kind": "transfer",
+                    "code": "transfer_incoming",
+                    "label": f"{item.get('from_member_name', '同事')} 把账号「{item.get('account_name', '')}」转交给你，等你接收",
+                    "at": item.get("updated_at") or item.get("created_at") or "",
+                }
+            )
+    for account in doc.get("accounts", []):
+        returned = account.get("transfer_returned") or {}
+        if returned.get("status"):
+            label = {"rejected": "管理员未通过", "declined": "对方拒收", "cancelled": "已撤回"}.get(
+                returned["status"], "已结束"
+            )
+            out.append(
+                {
+                    "id": f"transfer-returned:{account['id']}",
+                    "level": "suggest",
+                    "account_id": account["id"],
+                    "kind": "transfer",
+                    "code": f"transfer_{returned['status']}",
+                    "label": f"账号转交{label}{'：' + returned['note'] if returned.get('note') else ''}，账号已恢复",
+                    "at": returned.get("at") or "",
+                }
+            )
     eff = effective(ctx, doc)
     usage, caps = (eff["usage"] or {}).get("tenant") or {}, eff["caps"] or {}
     if caps.get("monthly_posts") and usage.get("posts", 0) >= 0.9 * caps["monthly_posts"]:
@@ -2042,7 +2077,9 @@ def health(ctx: Any, doc: dict[str, Any]) -> list[dict[str, Any]]:
                     1 for r in publish if r["status"] in {"unknown", "interrupted"}
                 ),
                 "notices": account.get("platform_notices", []),
-                "state": "paused"
+                "state": "transferring"
+                if (account.get("transfer") or {}).get("id")
+                else "paused"
                 if account.get("paused") or restricted or login_lost
                 else "unconfigured"
                 if not account.get("device_id")

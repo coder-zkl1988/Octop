@@ -6000,6 +6000,8 @@ const css2 = `
   .xhs-tbl th, .xhs-tbl td { text-align:left; padding:7px 8px; border-bottom:1px solid ${C.line}; font-size:12px; vertical-align:top; }
   .xhs-tbl th { color:${C.muted}; font-weight:500; }
   .xhs-tbl .xhs-btn { white-space:nowrap; }
+  .xhs-link { border:0; background:none; padding:0; color:#2f5bd7; cursor:pointer; font:inherit; text-align:left; }
+  .xhs-link:hover { text-decoration:underline; }
   .xhs-app textarea { font:inherit; }
   .xhs-steps { display:grid; gap:10px 8px; margin:4px 0 10px; }
   .xhs-step { display:flex; gap:7px; align-items:flex-start; }
@@ -6591,7 +6593,14 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
             (d) => d.device_id === a.device_id,
           );
           return [
-            a.name || a.id,
+            h(
+              "button",
+              {
+                className: "xhs-link",
+                onClick: () => go("build", "profile", a.id),
+              },
+              a.name || a.id,
+            ),
             a.entry_mode === "existing" ? "已有账号" : "新账号",
             device
               ? device.name || device.device_id
@@ -6903,7 +6912,9 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
               h(
                 "b",
                 null,
-                `${accountName(snapshot, a.account_id)} · ${a.label}`,
+                a.account_id
+                  ? `${accountName(snapshot, a.account_id)} · ${a.label}`
+                  : a.label,
               ),
             ),
             h(
@@ -6934,6 +6945,12 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
                   { onClick: () => go("settings", "consent") },
                   "去处理",
                 ),
+              a.code === "transfer_incoming" &&
+                h(
+                  Button,
+                  { primary: true, onClick: () => go("build", "profile") },
+                  "去接收",
+                ),
             ),
           ),
         ),
@@ -6949,7 +6966,7 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
             .slice(0, 12)
             .map((a) => [
               fmt(a.at, zone),
-              accountName(snapshot, a.account_id),
+              a.account_id ? accountName(snapshot, a.account_id) : "—",
               a.label,
             ]),
           empty: "近期没有提醒",
@@ -9874,11 +9891,841 @@ function WorkbenchCards({ host }) {
           h(
             "div",
             { key: a.id, className: "xhs-row" },
-            `${accountName(snapshot, a.account_id)} · ${a.label}`,
+            a.account_id
+              ? `${accountName(snapshot, a.account_id)} · ${a.label}`
+              : a.label,
           ),
         ),
       ),
     h("div", { className: "xhs-actions" }, h(WorkbenchLink, { host })),
+  );
+}
+
+// ---- 账号档案：一个账号的全部信息，以及转交给同事 ----
+const TRANSFER_STATUS = {
+  pending_approval: ["待管理员审批", "warn"],
+  approved: ["待对方接收", "warn"],
+  accepted: ["对方导入中", "warn"],
+  completed: ["已转交", "ok"],
+  rejected: ["管理员未通过", ""],
+  declined: ["对方已拒收", ""],
+  cancelled: ["已撤回", ""],
+};
+const HEALTH_LABELS = {
+  healthy: ["正常", "ok"],
+  paused: ["已暂停", "bad"],
+  unconfigured: ["待绑定手机", "warn"],
+  transferring: ["转交中", "warn"],
+};
+const PROFILE_LABELS = [
+  ["nickname", "名字"],
+  ["bio", "简介"],
+  ["occupation", "职业"],
+  ["gender", "性别"],
+  ["birthday", "生日"],
+  ["region", "地区"],
+];
+const PERSONA_LABELS = [
+  ["age", "年龄"],
+  ["gender", "性别"],
+  ["region", "地区"],
+  ["occupation", "职业"],
+  ["life_status", "生活状态"],
+];
+const SUMMARY_LABELS = {
+  drafts: "未发布草稿",
+  materials: "素材",
+  authorizations: "授权",
+  leads: "线索",
+  images: "图片",
+};
+
+function KV({ label, children }) {
+  return h(
+    "div",
+    { className: "xhs-row", style: { padding: "7px 0" } },
+    h("span", { className: "xhs-meta" }, label),
+    h("span", { style: { textAlign: "right", minWidth: 0 } }, children),
+  );
+}
+
+function TransferDialog({ snapshot, host, account, onClose, refresh }) {
+  const transfer = snapshot.data.transfers || {};
+  const members = rows(transfer.members);
+  const [to, setTo] = useState(members[0]?.id || "");
+  const [note, setNote] = useState("");
+  const [sure, setSure] = useState(false);
+  const id = account.id;
+  const counts = {
+    drafts: rows(snapshot.data.drafts).filter(
+      (d) => d.account_id === id && d.review_status !== "published",
+    ).length,
+    materials: rows(snapshot.data.materials).filter(
+      (m) => m.owner !== "public" && rows(m.account_ids).includes(id),
+    ).length,
+    authorizations: rows(snapshot.data.authorizations).filter((c) =>
+      rows(c.account_ids).includes(id),
+    ).length,
+    leads: rows(snapshot.data.leads).filter((l) => l.account_id === id).length,
+  };
+  return h(
+    "section",
+    {
+      className: "xhs-card",
+      style: { borderColor: C.red },
+      role: "dialog",
+      "aria-label": "转交给同事",
+    },
+    h("h3", null, `把「${account.name}」转交给同事`),
+    members.length === 0
+      ? h(
+          "div",
+          { className: "xhs-empty" },
+          "企业里还没有其他分配了“运营管理”能力的同事。请先让管理员在后台分配。",
+        )
+      : h(
+          "div",
+          null,
+          h(Select, {
+            label: "转交给",
+            value: to,
+            onChange: setTo,
+            options: members.map((m) => [m.id, m.name]),
+          }),
+          h(Field, {
+            label: "交接说明（对方和管理员可以看到）",
+            value: note,
+            onChange: setNote,
+            placeholder: "例如：本月排期已做完，素材都在素材库里",
+          }),
+          h(
+            "div",
+            { className: "xhs-meta", style: { margin: "8px 0" } },
+            "一起转交：",
+            Object.entries(counts)
+              .map(([k, n]) => `${SUMMARY_LABELS[k]} ${n}`)
+              .join(" · "),
+            " · 已发布笔记的记录",
+          ),
+          h(
+            "div",
+            {
+              className: "xhs-card",
+              style: { background: C.soft, borderColor: C.line },
+            },
+            h(
+              "div",
+              null,
+              "· 发起后这个账号暂停全部自动任务，不能再修改，直到转交结束。",
+            ),
+            h(
+              "div",
+              null,
+              "· 企业管理员通过、对方接收后，账号和上面这些内容会从你这里移走。",
+            ),
+            h(
+              "div",
+              null,
+              "· 手机绑定和身份核对不会带过去，对方要重新绑定手机并核对小红薯号后才能继续运营。",
+            ),
+            h("div", null, "· 管理员拒绝、对方拒收或你撤回后，账号恢复原样。"),
+          ),
+          h(Check, {
+            label: "我已确认上面的说明",
+            checked: sure,
+            onChange: setSure,
+          }),
+        ),
+    h(
+      "div",
+      { className: "xhs-actions" },
+      members.length > 0 &&
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: !to || !sure,
+            onClick: async () => {
+              await send(host, "transfer.create", {
+                account_id: id,
+                to_member_id: to,
+                note,
+                confirmed: true,
+              });
+              onClose();
+              await refresh();
+            },
+          },
+          "发起转交",
+        ),
+      h(Button, { onClick: onClose }, "取消"),
+    ),
+  );
+}
+
+function IncomingTransfers({ snapshot, host, readOnly, refresh, onImported }) {
+  const items = rows(snapshot.data.transfers?.items).filter(
+    (t) =>
+      t.direction === "incoming" && ["approved", "accepted"].includes(t.status),
+  );
+  const projects = rows(snapshot.data.projects);
+  const [target, setTarget] = useState({});
+  if (!items.length) return null;
+  return h(
+    Card,
+    {
+      title: `转交给你的账号 · ${items.length}`,
+      hint: "接收后账号会放进你选的项目。需要先绑定你的手机并核对小红薯号，之后才能养号、发布和回复。",
+    },
+    items.map((t) =>
+      h(
+        "div",
+        {
+          key: t.id,
+          className: "xhs-row",
+          style: { alignItems: "flex-end", flexWrap: "wrap" },
+        },
+        h(
+          "div",
+          { style: { minWidth: 220, flex: 1 } },
+          h("b", null, `${t.account_name}`),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            `${t.from_member_name} 转交 · ${
+              t.platform_account_id
+                ? "小红薯号 " + t.platform_account_id
+                : "未核对小红薯号"
+            }`,
+          ),
+          t.note && h("div", { className: "xhs-meta" }, `交接说明：${t.note}`),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            Object.entries(t.summary || {})
+              .filter(([, n]) => n > 0)
+              .map(([k, n]) => `${SUMMARY_LABELS[k] || k} ${n}`)
+              .join(" · ") || "只有账号资料",
+          ),
+        ),
+        h(Select, {
+          label: "放进项目",
+          value: target[t.id] ?? "",
+          onChange: (v) => setTarget({ ...target, [t.id]: v }),
+          options: [
+            ["", "新建项目（沿用原项目设置）"],
+            ...projects.map((p) => [p.id, p.name]),
+          ],
+        }),
+        h(
+          "span",
+          { style: { display: "flex", gap: 6 } },
+          h(
+            Button,
+            {
+              primary: true,
+              disabled: readOnly,
+              onClick: async () => {
+                await send(host, "transfer.accept", {
+                  transfer_id: t.id,
+                  project_id: target[t.id] || "",
+                  confirmed: true,
+                });
+                await refresh();
+                onImported(t.account_id);
+              },
+            },
+            "接收",
+          ),
+          t.status === "approved" &&
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  const note =
+                    window.prompt("拒收原因（对方可以看到）", "") ?? null;
+                  if (note === null) return;
+                  await send(host, "transfer.decline", {
+                    transfer_id: t.id,
+                    note,
+                  });
+                  await refresh();
+                },
+              },
+              "拒收",
+            ),
+        ),
+      ),
+    ),
+  );
+}
+
+function AccountProfilePanel({ snapshot, host, readOnly, refresh, go, focus }) {
+  const data = snapshot.data;
+  const zone = tz(snapshot);
+  const accounts = rows(data.accounts);
+  const [selected, setSelected] = useState(focus || accounts[0]?.id || "");
+  const [transferring, setTransferring] = useState(false);
+  useEffect(() => {
+    if (focus) setSelected(focus);
+  }, [focus]);
+  useEffect(() => {
+    // Pick up transfers decided while the page was closed; a desktop without an enterprise has none.
+    send(host, "transfer.sync", {})
+      .then(() => refresh())
+      .catch(() => undefined);
+  }, []);
+  const account = accounts.find((a) => a.id === selected) || accounts[0];
+  const incoming = h(IncomingTransfers, {
+    snapshot,
+    host,
+    readOnly,
+    refresh,
+    onImported: (id) => setSelected(id),
+  });
+  if (!account)
+    return h(
+      "div",
+      { className: "xhs-stack" },
+      incoming,
+      h(
+        Card,
+        { title: "账号档案" },
+        h(
+          "div",
+          { className: "xhs-empty" },
+          "还没有账号。在 建号 › 账号与设备 里添加。",
+        ),
+      ),
+    );
+  const id = account.id;
+  const health =
+    rows(data.account_health).find((x) => x.account_id === id) || {};
+  const stage = (data.cold_start_status || {})[id];
+  const device = rows(snapshot.devices).find(
+    (d) => d.device_id === account.device_id,
+  );
+  const project = rows(data.projects).find((p) => p.id === account.project_id);
+  const drafts = rows(data.drafts).filter((d) => d.account_id === id);
+  const upcoming = drafts
+    .filter((d) => d.scheduled_at && d.review_status !== "published")
+    .sort((a, b) => (a.scheduled_at < b.scheduled_at ? -1 : 1));
+  const published = drafts.filter((d) => d.review_status === "published");
+  const runs = rows(data.runs).filter((r) => r.account_id === id);
+  const replies = rows(data.reply_items).filter((r) => r.account_id === id);
+  const leads = rows(data.leads).filter((l) => l.account_id === id);
+  const materials = rows(data.materials).filter((m) =>
+    rows(m.account_ids).includes(id),
+  );
+  const consents = rows(data.authorizations).filter((c) =>
+    rows(c.account_ids).includes(id),
+  );
+  const audits = rows(data.audits).filter((a) => a.account_id === id);
+  const orders = rows(data.change_orders).filter((o) => o.account_id === id);
+  const transfer = account.transfer;
+  const before = rows(account.history_before_transfer);
+  const [stateLabel, stateTone] = HEALTH_LABELS[health.state] || [
+    "待配置",
+    "warn",
+  ];
+  const persona = account.persona || {};
+  const tags = account.persona_tags || {};
+  const profile = account.profile_draft || {};
+  const history = [
+    ...published.map((d) => ({
+      at: d.published_at || d.updated_at || d.scheduled_at,
+      text: `发布「${d.title}」`,
+      tone: "ok",
+    })),
+    ...runs
+      .filter((r) => r.kind !== "publish")
+      .map((r) => ({
+        at: r.updated_at || r.created_at,
+        text: `${RUN_LABELS[r.kind] || r.kind} · ${statusLabel(r.status)}`,
+        tone: ["unknown", "interrupted", "error", "failed"].includes(r.status)
+          ? "bad"
+          : "",
+      })),
+    ...before.map((x) => ({
+      at: x.at,
+      text: `${
+        x.kind === "publish"
+          ? `发布「${x.title}」`
+          : `${RUN_LABELS[x.kind] || x.kind} · ${statusLabel(x.status)}`
+      }（转交前）`,
+      tone: "",
+    })),
+  ]
+    .filter((x) => x.at)
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, 12);
+  const outgoing = rows(data.transfers?.items).filter(
+    (t) => t.account_id === id,
+  );
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    incoming,
+    h(
+      "section",
+      {
+        className: "xhs-card",
+        style: {
+          display: "flex",
+          gap: 14,
+          alignItems: "center",
+          flexWrap: "wrap",
+        },
+      },
+      h(
+        "div",
+        {
+          style: {
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            background: "#ffe3e7",
+            color: C.red,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 20,
+            fontWeight: 700,
+            flex: "none",
+          },
+        },
+        (account.name || "?").slice(0, 1),
+      ),
+      h(
+        "div",
+        { style: { flex: 1, minWidth: 200 } },
+        h(
+          "div",
+          {
+            style: {
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+            },
+          },
+          h("b", { style: { fontSize: 16 } }, account.name),
+          pill(stateLabel, stateTone),
+          pill(account.entry_mode === "new" ? "新账号" : "已有账号"),
+        ),
+        h(
+          "div",
+          { className: "xhs-meta", style: { marginTop: 4 } },
+          [
+            account.platform_account_id
+              ? `小红薯号 ${account.platform_account_id}`
+              : "未核对小红薯号",
+            project ? `项目 ${project.name}` : "",
+            stage
+              ? stage.graduated
+                ? "日常运营"
+                : `冷启动 · ${stage.name} · 第 ${stage.day} 天`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        ),
+        account.transferred_in &&
+          h(
+            "div",
+            { className: "xhs-meta" },
+            `${account.transferred_in.from_member_name || "同事"} 于 ${fmt(
+              account.transferred_in.at,
+              zone,
+            )} 转交给你`,
+          ),
+      ),
+      accounts.length > 1 &&
+        h(
+          "select",
+          {
+            className: "xhs-select",
+            style: { width: 200, marginTop: 0 },
+            value: id,
+            "aria-label": "选择账号",
+            onChange: (e) => setSelected(e.target.value),
+          },
+          accounts.map((a) =>
+            h("option", { key: a.id, value: a.id }, a.name || a.id),
+          ),
+        ),
+      h(
+        "span",
+        { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+        h(
+          Button,
+          { onClick: () => go("build", "accounts") },
+          account.device_id ? "账号与设备" : "绑定手机",
+        ),
+        h(Button, { onClick: () => go("nurture", "operations") }, "日常运营"),
+        !transfer &&
+          h(
+            Button,
+            { disabled: readOnly, onClick: () => setTransferring(true) },
+            "转交给同事",
+          ),
+      ),
+    ),
+    transfer &&
+      h(
+        "section",
+        { className: "xhs-card xhs-banner paused" },
+        h(Lock, { children: "转交中" }),
+        h(
+          "span",
+          { style: { flex: 1 } },
+          `正在转交给 ${transfer.to_member_name || "同事"} · ${
+            (TRANSFER_STATUS[transfer.status] || [transfer.status])[0]
+          }。这期间账号暂停全部自动任务，也不能修改。`,
+        ),
+        ["pending_approval", "approved"].includes(transfer.status) &&
+          h(
+            Button,
+            {
+              disabled: readOnly,
+              onClick: async () => {
+                await send(host, "transfer.cancel", {
+                  transfer_id: transfer.id,
+                });
+                await refresh();
+              },
+            },
+            "撤回转交",
+          ),
+        h(
+          Button,
+          {
+            onClick: async () => {
+              await send(host, "transfer.sync", {});
+              await refresh();
+            },
+          },
+          "刷新状态",
+        ),
+      ),
+    account.transfer_returned &&
+      !transfer &&
+      h(
+        "section",
+        { className: "xhs-card xhs-banner" },
+        h(
+          "span",
+          { style: { flex: 1 } },
+          `上次转交${
+            (TRANSFER_STATUS[account.transfer_returned.status] || ["已结束"])[0]
+          }${
+            account.transfer_returned.note
+              ? "：" + account.transfer_returned.note
+              : ""
+          }，账号已恢复。`,
+        ),
+      ),
+    transferring &&
+      h(TransferDialog, {
+        snapshot,
+        host,
+        account,
+        refresh,
+        onClose: () => setTransferring(false),
+      }),
+    h(
+      "div",
+      { className: "xhs-two" },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          {
+            title: "人设与定位",
+            right: h(
+              Button,
+              { onClick: () => go("build", "personas") },
+              "人设规划",
+            ),
+          },
+          h(
+            "div",
+            null,
+            account.positioning ||
+              h("span", { className: "xhs-meta" }, "还没有定位"),
+          ),
+          h(
+            "div",
+            {
+              style: {
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                margin: "8px 0",
+              },
+            },
+            [...rows(tags.vertical), ...rows(tags.general)].map((t) =>
+              h("span", { key: t, className: "xhs-pill" }, t),
+            ),
+          ),
+          PERSONA_LABELS.filter(([k]) => persona[k]).map(([k, l]) =>
+            h(KV, { key: k, label: l }, persona[k]),
+          ),
+        ),
+        h(
+          Card,
+          {
+            title: "主页资料",
+            right: h(
+              Button,
+              {
+                onClick: () =>
+                  go(
+                    "build",
+                    account.entry_mode === "new" ? "profiles" : "audits",
+                  ),
+              },
+              account.entry_mode === "new" ? "新号资料" : "老号接管",
+            ),
+          },
+          PROFILE_LABELS.some(([k]) => profile[k])
+            ? PROFILE_LABELS.map(([k, l]) =>
+                h(
+                  KV,
+                  { key: k, label: l },
+                  profile[k] || h("span", { className: "xhs-meta" }, "—"),
+                ),
+              )
+            : h("div", { className: "xhs-empty" }, "还没有资料草稿"),
+          audits.length > 0 &&
+            h(
+              KV,
+              { label: "账号审计" },
+              `${audits.length} 次 · 最近 ${statusLabel(
+                audits[audits.length - 1].status,
+              )}`,
+            ),
+          orders.length > 0 &&
+            h(
+              KV,
+              { label: "资料变更单" },
+              `${orders.length} 张 · 最近 ${statusLabel(
+                orders[orders.length - 1].status,
+              )}`,
+            ),
+        ),
+        h(
+          Card,
+          {
+            title: "内容",
+            right: h(
+              Button,
+              { onClick: () => go("content", "plan") },
+              "内容计划",
+            ),
+          },
+          h(
+            "div",
+            {
+              style: {
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                marginBottom: 8,
+              },
+            },
+            Object.entries(REVIEW_LABELS)
+              .filter(([k]) => k !== "scheduled")
+              .map(([k, l]) => [
+                l,
+                drafts.filter(
+                  (d) =>
+                    (d.review_status || "pending_review") === k ||
+                    (k === "approved" && d.review_status === "scheduled"),
+                ).length,
+              ])
+              .filter(([, n]) => n > 0)
+              .map(([l, n]) =>
+                h("span", { key: l, className: "xhs-pill" }, `${l} ${n}`),
+              ),
+          ),
+          h(Table, {
+            head: ["接下来", "排期", "检查"],
+            body: upcoming
+              .slice(0, 5)
+              .map((d) => [
+                d.title,
+                fmt(d.scheduled_at, zone),
+                checkPills(d.checks),
+              ]),
+            empty: "没有排期中的内容",
+          }),
+        ),
+        h(
+          Card,
+          { title: "运营记录" },
+          history.length
+            ? history.map((x, i) =>
+                h(
+                  "div",
+                  { key: i, className: "xhs-row", style: { padding: "6px 0" } },
+                  h(
+                    "span",
+                    { className: x.tone === "bad" ? "xhs-danger" : "" },
+                    x.text,
+                  ),
+                  h("span", { className: "xhs-meta" }, fmt(x.at, zone)),
+                ),
+              )
+            : h("div", { className: "xhs-empty" }, "还没有记录"),
+        ),
+      ),
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          { title: "手机与登录" },
+          h(
+            KV,
+            { label: "手机" },
+            device
+              ? `${device.name || device.device_id}${
+                  device.online ? "" : " · 离线"
+                }`
+              : account.device_id
+              ? account.device_id
+              : "未绑定",
+          ),
+          h(
+            KV,
+            { label: "登录" },
+            pill(
+              health.login === "ok"
+                ? "正常"
+                : health.login === "lost"
+                ? "登录失效"
+                : "未绑定",
+              health.login === "ok" ? "ok" : "bad",
+            ),
+          ),
+          h(
+            KV,
+            { label: "身份核对" },
+            account.identity_confirmed_at
+              ? fmt(account.identity_confirmed_at, zone)
+              : account.entry_mode === "new"
+              ? "新账号"
+              : "未核对",
+          ),
+          h(
+            KV,
+            { label: "近 7 天养号完成率" },
+            health.nurture_rate == null ? "—" : `${health.nurture_rate}%`,
+          ),
+          h(
+            KV,
+            { label: "近 7 天发布" },
+            `${health.publish_ok ?? 0} / ${health.publish_total ?? 0}${
+              health.publish_unknown
+                ? ` · ${health.publish_unknown} 篇结果不明`
+                : ""
+            }`,
+          ),
+          rows(health.notices).length > 0 &&
+            h(
+              KV,
+              { label: "平台通知" },
+              rows(health.notices).slice(-1)[0].text,
+            ),
+        ),
+        h(
+          Card,
+          {
+            title: "评论与线索",
+            right: h(
+              Button,
+              { onClick: () => go("publish", "upkeep") },
+              "笔记维护",
+            ),
+          },
+          h(
+            KV,
+            { label: "待你审核的回复" },
+            replies.filter((r) => ["new", "failed"].includes(r.status)).length,
+          ),
+          h(
+            KV,
+            { label: "已自动回复" },
+            replies.filter((r) => r.auto && r.status === "sent").length,
+          ),
+          h(
+            KV,
+            { label: "意向线索" },
+            `${leads.length}（新 ${
+              leads.filter((l) => l.status === "new").length
+            }）`,
+          ),
+          h(
+            KV,
+            { label: "上次读取新评论" },
+            account.inbox_checked_at
+              ? fmt(account.inbox_checked_at, zone)
+              : "—",
+          ),
+        ),
+        h(
+          Card,
+          {
+            title: "素材与授权",
+            right: h(
+              Button,
+              { onClick: () => go("settings", "consent") },
+              "授权台账",
+            ),
+          },
+          h(KV, { label: "绑定的素材" }, `${materials.length} 条`),
+          consents.length
+            ? consents.map((c) =>
+                h(
+                  KV,
+                  { key: c.id, label: c.person },
+                  pill(
+                    c.status === "withdrawn" ? "已撤回" : `至 ${c.valid_to}`,
+                    c.status === "withdrawn" ? "bad" : "ok",
+                  ),
+                ),
+              )
+            : h("div", { className: "xhs-meta" }, "没有登记个人授权"),
+        ),
+        outgoing.length > 0 &&
+          h(
+            Card,
+            { title: "转交记录" },
+            outgoing
+              .slice(0, 5)
+              .map((t) =>
+                h(
+                  KV,
+                  {
+                    key: t.id,
+                    label: `${
+                      t.direction === "incoming"
+                        ? `${t.from_member_name} → 你`
+                        : `你 → ${t.to_member_name}`
+                    } · ${fmt(t.created_at, zone)}`,
+                  },
+                  pill(
+                    (TRANSFER_STATUS[t.status] || [t.status])[0],
+                    (TRANSFER_STATUS[t.status] || [])[1],
+                  ),
+                ),
+              ),
+          ),
+      ),
+    ),
   );
 }
 
@@ -9889,6 +10736,7 @@ function XhsOpsPage({ host, license }) {
   const [snapshot, setSnapshot] = useState(null);
   const effectiveLicense = snapshot?.license || license;
   const [tab, setTab] = useState("overview");
+  const [focus, setFocus] = useState("");
   const [error, setError] = useState("");
   const locale = String(host.getToolContext().locale || "zh");
   const readOnly =
@@ -9961,6 +10809,7 @@ function XhsOpsPage({ host, license }) {
           { id: "projects", label: "项目与画像" },
           { id: "personas", label: "人设规划", feature: "xhs.ops" },
           { id: "accounts", label: "账号与设备", feature: "xhs.ops" },
+          { id: "profile", label: "账号档案", feature: "xhs.ops" },
           { id: "profiles", label: "新号资料", feature: "xhs.ops" },
           { id: "audits", label: "老号接管", feature: "xhs.takeover" },
         ],
@@ -10062,8 +10911,11 @@ function XhsOpsPage({ host, license }) {
   const group =
     groups.find((g) => g.tabs.some((item) => item.id === tab)) || groups[0];
   const current = group.tabs.find((item) => item.id === tab) || group.tabs[0];
-  const go = (_group, id) => setTab(id);
-  const common = { snapshot, host, readOnly, refresh, modelRef, go };
+  const go = (_group, id, accountId) => {
+    if (accountId) setFocus(accountId);
+    setTab(id);
+  };
+  const common = { snapshot, host, readOnly, refresh, modelRef, go, focus };
   const panels = {
     overview: () => h(OverviewPanel, common),
     queue: () => h(QueuePanel, common),
@@ -10072,6 +10924,7 @@ function XhsOpsPage({ host, license }) {
       h(ProjectPanel, { ...common, license: effectiveLicense }),
     personas: () => h(PersonaPanel, common),
     accounts: () => h(AccountPanel, common),
+    profile: () => h(AccountProfilePanel, common),
     profiles: () => h(ProfilePanel, common),
     audits: () => h(AuditPanel, common),
     operations: () => h(OperationsPanel, common),

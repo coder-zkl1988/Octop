@@ -720,7 +720,14 @@ class AppContext:
         )
 
     # Desktop endpoints of the plugin's own enterprise policy; nothing else is reachable from plugin code.
-    ENTERPRISE_PLUGIN_PATHS = frozenset({"usage", "catalog", "requests", "template-submissions"})
+    ENTERPRISE_PLUGIN_PATHS = frozenset(
+        {"usage", "catalog", "requests", "template-submissions", "transfers", "transfer-actions"}
+    )
+
+    @property
+    def has_enterprise(self) -> bool:
+        """Whether this desktop is connected to an enterprise control plane."""
+        return bool(self.host.server.services.config.enterprise_backend_url)
 
     async def enterprise(
         self, method: str, name: str, body: dict[str, Any] | None = None
@@ -729,7 +736,7 @@ class AppContext:
         if name not in self.ENTERPRISE_PLUGIN_PATHS or method not in {"GET", "POST"}:
             raise PluginAppError("enterprise_path_not_allowed", status=403)
         await self.require_any(self.license.features)
-        if not self.host.server.services.config.enterprise_backend_url:
+        if not self.has_enterprise:
             raise PluginAppError("enterprise_backend_unavailable", status=503)
         try:
             result = await enterprise_request(
@@ -752,7 +759,7 @@ class AppContext:
         """Count generated posts or images against the enterprise volume before the work happens.
 
         Self-hosted desktops without an enterprise backend have no volume to count against."""
-        if not self.host.server.services.config.enterprise_backend_url:
+        if not self.has_enterprise:
             return
         result = await self.enterprise(
             "POST", "usage", {"kind": kind, "count": count, "idempotency_key": key}
