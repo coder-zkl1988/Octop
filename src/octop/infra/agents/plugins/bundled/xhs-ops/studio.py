@@ -722,7 +722,7 @@ async def command(ctx: Any, domain: Any, name: str, payload: dict[str, Any]) -> 
 
 def enterprise_report(ctx: Any, doc: dict[str, Any]) -> dict[str, Any]:
     """What the tenant admin sees about this member's accounts: names, stage, status, authorization
-    summaries and open alerts. No note text, drafts, materials, images or platform account ids."""
+    summaries, open alerts and how often each template was used. No note text, drafts, materials, images or platform account ids."""
     names = {a["id"]: str(a.get("name") or "")[:40] for a in doc.get("accounts", [])}
     health = {row["account_id"]: row for row in workspace.health(ctx, doc)}
     devices = {d["device_id"]: d for d in getattr(ctx, "devices", lambda: [])()}
@@ -788,7 +788,21 @@ def enterprise_report(ctx: Any, doc: dict[str, Any]) -> dict[str, Any]:
         for a in workspace.alerts(ctx, doc)
         if a.get("level") == "action"
     ][:50]
-    return {"accounts": accounts[:100], "authorizations": authorizations, "alerts": alerts}
+    usage: dict[str, dict[str, int]] = {}
+    for draft in doc.get("drafts", []):
+        template_id = str(draft.get("template_id") or "")
+        if not template_id:
+            continue
+        entry = usage.setdefault(template_id, {"uses": 0, "approved": 0})
+        entry["uses"] += 1
+        entry["approved"] += draft.get("review_status") in {"approved", "scheduled", "published"}
+    templates = [{"id": key[:64], **value} for key, value in sorted(usage.items())][:500]
+    return {
+        "accounts": accounts[:100],
+        "authorizations": authorizations,
+        "alerts": alerts,
+        "templates": templates,
+    }
 
 
 async def report_tick(ctx: Any, domain: Any) -> None:
