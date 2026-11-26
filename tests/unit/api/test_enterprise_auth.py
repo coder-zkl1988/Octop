@@ -111,3 +111,36 @@ async def test_enterprise_login_rejects_invalid_upstream_payload(
 
     assert exc.value.code == ErrorCode.AUTH_FAILED
     assert exc.value.status == 502
+
+
+@pytest.mark.asyncio
+async def test_enterprise_login_relays_the_captcha_and_its_refusal(monkeypatch: Any) -> None:
+    sent: list[dict[str, Any]] = []
+
+    class Response:
+        status_code = 400
+
+        def json(self) -> object:
+            return {"error": {"code": "captcha_required", "message": "请先完成人机验证"}}
+
+    class Client:
+        async def __aenter__(self) -> "Client":
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+        async def post(self, *_args: object, **kwargs: Any) -> Response:
+            sent.append(kwargs["json"])
+            return Response()
+
+    monkeypatch.setattr("octop.api.routers.auth.httpx.AsyncClient", lambda **_kwargs: Client())
+
+    with pytest.raises(OctopError) as exc:
+        await enterprise_login(
+            EnterpriseLoginBody(email="user@example.com", password="pw", captcha_token="tk:rs"),
+            _server(),
+        )
+
+    assert exc.value.code == ErrorCode.CAPTCHA_REQUIRED and exc.value.status == 400
+    assert sent == [{"email": "user@example.com", "password": "pw", "captcha": "tk:rs"}]

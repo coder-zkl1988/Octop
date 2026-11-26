@@ -243,6 +243,13 @@ function normalizeMfaStatus(raw: Record<string, unknown>): MfaStatus {
   };
 }
 
+export interface EnterpriseCaptchaConfig {
+  provider: string;
+  site_key: string;
+  trigger: "always" | "after_failures";
+  after_failures: number;
+}
+
 export interface EnterpriseLoginResponse {
   status: "mfa_required" | "ok" | "authenticated";
   mfa_ticket?: string;
@@ -371,11 +378,19 @@ export const authApi = {
         body: JSON.stringify({ invitation_token, name, password }),
       },
     ),
-  enterpriseOpenRegisterCode: (email: string) =>
+  enterpriseOpenRegisterCode: (email: string, captchaToken?: string) =>
     request<{ sent: boolean; expires_in: number; debug_code?: string }>(
       "/auth/enterprise/register/email/code",
-      { method: "POST", body: JSON.stringify({ email }) },
+      {
+        method: "POST",
+        body: JSON.stringify(
+          captchaToken ? { email, captcha_token: captchaToken } : { email },
+        ),
+      },
     ),
+  /** The enterprise platform's login captcha; provider "off" when it has none. */
+  getEnterpriseCaptcha: () =>
+    request<EnterpriseCaptchaConfig>("/auth/enterprise/captcha"),
   enterpriseOpenRegister: (
     email: string,
     code: string,
@@ -389,10 +404,14 @@ export const authApi = {
         body: JSON.stringify({ email, code, name, password }),
       },
     ),
-  enterpriseLogin: (email: string, password: string) =>
+  enterpriseLogin: (email: string, password: string, captchaToken?: string) =>
     request<EnterpriseLoginResponse>("/auth/enterprise/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(
+        captchaToken
+          ? { email, password, captcha_token: captchaToken }
+          : { email, password },
+      ),
     }),
   enterpriseMfa: (mfa_ticket: string, code: string) =>
     request<{

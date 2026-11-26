@@ -1,4 +1,10 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Alert, Button, Input } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -7,6 +13,8 @@ import { authApi, type EnterpriseInvitation } from "../../api/modules/auth";
 import { parseApiError } from "../../utils/apiError";
 import { message } from "../../utils/antdMessage";
 import styles from "./index.module.less";
+import CaptchaField, { type CaptchaFieldHandle } from "./CaptchaField";
+import { type PublicCaptchaConfig } from "./captchaAdapters";
 
 function invitationCode(input: string): string {
   const value = input.trim();
@@ -33,6 +41,25 @@ export default function EnterpriseRegistration({
   const [confirmation, setConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // The platform always checks a captcha before mailing a registration code.
+  const [captcha, setCaptcha] = useState<PublicCaptchaConfig | null>(null);
+  const [captchaReady, setCaptchaReady] = useState(false);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const captchaRef = useRef<CaptchaFieldHandle>(null);
+  useEffect(() => {
+    let cancelled = false;
+    authApi
+      .getEnterpriseCaptcha()
+      .then((next) => {
+        if (!cancelled && next.provider !== "off" && next.site_key) {
+          setCaptcha({ provider: next.provider, site_key: next.site_key });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const code = invitationCode(invitation);
   const validCode = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,255}$/.test(code);
   const validEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
@@ -151,22 +178,48 @@ export default function EnterpriseRegistration({
               />
               <Button
                 type="default"
-                disabled={!validEmail || loading}
+                disabled={
+                  !validEmail || loading || (!!captcha && !captchaReady)
+                }
                 onClick={() => {
                   setLoading(true);
                   setError("");
-                  void authApi
-                    .enterpriseOpenRegisterCode(email.trim())
-                    .then(() => setEmailCodeSent(true))
-                    .catch(() =>
-                      setError(t("login.enterpriseRegister.emailCodeFailed")),
-                    )
-                    .finally(() => setLoading(false));
+                  void (async () => {
+                    try {
+                      const token = captcha
+                        ? await captchaRef.current?.getToken()
+                        : undefined;
+                      await authApi.enterpriseOpenRegisterCode(
+                        email.trim(),
+                        token,
+                      );
+                      setEmailCodeSent(true);
+                    } catch {
+                      setError(t("login.enterpriseRegister.emailCodeFailed"));
+                    } finally {
+                      if (captcha) {
+                        setCaptchaReady(false);
+                        setCaptchaResetKey((k) => k + 1);
+                      }
+                      setLoading(false);
+                    }
+                  })();
                 }}
               >
                 {t("login.enterpriseRegister.sendEmailCode")}
               </Button>
             </div>
+            {captcha && !emailCodeSent && (
+              <CaptchaField
+                ref={captchaRef}
+                config={captcha}
+                resetKey={captchaResetKey}
+                slideHint={t("login.slideHint")}
+                slideVerifiedLabel={t("login.slideVerified")}
+                unsupportedLabel={t("login.unsupportedCaptcha")}
+                onReadyChange={setCaptchaReady}
+              />
+            )}
             <label className={styles.registrationField}>
               {t("login.enterpriseRegister.name")}
               <Input

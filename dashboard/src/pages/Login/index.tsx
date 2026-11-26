@@ -25,7 +25,7 @@ import {
   type MfaMethod,
   type OauthProviderStatus,
 } from "../../api/modules/auth";
-import { apiErrorMessage } from "../../utils/apiError";
+import { apiErrorMessage, parseApiError } from "../../utils/apiError";
 import { publicUrl } from "../../utils/publicUrl";
 import { refreshServerLabels } from "../../i18n";
 import { applyUserLocale, applyGuestLocale } from "../../utils/locale";
@@ -153,10 +153,21 @@ export default function LoginPage() {
     provider: "slider",
   });
   const captchaRef = useRef<CaptchaFieldHandle>(null);
+  // Enterprise logins use the platform's captcha: shown from the start when it
+  // asks on every login, otherwise once the platform says it is needed.
+  const [enterpriseCaptcha, setEnterpriseCaptcha] =
+    useState<PublicCaptchaConfig | null>(null);
+  const [enterpriseCaptchaAlways, setEnterpriseCaptchaAlways] = useState(false);
+  const [enterpriseCaptchaAsked, setEnterpriseCaptchaAsked] = useState(false);
+  const showEnterpriseCaptcha = Boolean(
+    enterpriseMode &&
+      enterpriseCaptcha &&
+      (enterpriseCaptchaAlways || enterpriseCaptchaAsked),
+  );
   const canSubmit = Boolean(
     (enterpriseMode ? username.trim() : username) &&
       password &&
-      (enterpriseMode || captchaReady),
+      (enterpriseMode ? !showEnterpriseCaptcha || captchaReady : captchaReady),
   );
 
   // MFA challenge — mfa_token stays in React state only (never localStorage).
@@ -229,6 +240,25 @@ export default function LoginPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!status || !enterpriseMode) return;
+    let cancelled = false;
+    authApi
+      .getEnterpriseCaptcha()
+      .then((next) => {
+        if (cancelled || next.provider === "off" || !next.site_key) return;
+        setEnterpriseCaptcha({
+          provider: next.provider,
+          site_key: next.site_key,
+        });
+        setEnterpriseCaptchaAlways(next.trigger === "always");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [enterpriseMode, status]);
 
   useEffect(() => {
     if (!status || enterpriseMode) return;
@@ -456,7 +486,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (enterpriseMode) {
-        const res = await authApi.enterpriseLogin(username.trim(), password);
+        const captchaToken = showEnterpriseCaptcha
+          ? await captchaRef.current?.getToken()
+          : undefined;
+        const res = await authApi.enterpriseLogin(
+          username.trim(),
+          password,
+          captchaToken,
+        );
         if (res.status === "mfa_required" && res.mfa_ticket) {
           setEnterpriseMfaTicket(res.mfa_ticket);
           setMfaCode("");
@@ -480,6 +517,13 @@ export default function LoginPage() {
       }
       await finishLogin(res.access_token, res.user.locale);
     } catch (err) {
+      const code = parseApiError(err)?.code;
+      if (
+        enterpriseMode &&
+        (code === "CAPTCHA_REQUIRED" || code === "CAPTCHA_FAILED")
+      ) {
+        setEnterpriseCaptchaAsked(true);
+      }
       message.error(apiErrorMessage(err, t("login.failed"), t));
       resetCaptcha();
     } finally {
@@ -862,10 +906,12 @@ export default function LoginPage() {
           </p>
         )}
 
-        {!enterpriseMode && (
+        {(!enterpriseMode || showEnterpriseCaptcha) && (
           <CaptchaField
             ref={captchaRef}
-            config={captcha}
+            config={
+              enterpriseMode && enterpriseCaptcha ? enterpriseCaptcha : captcha
+            }
             resetKey={captchaResetKey}
             slideHint={t("login.slideHint")}
             slideVerifiedLabel={t("login.slideVerified")}
