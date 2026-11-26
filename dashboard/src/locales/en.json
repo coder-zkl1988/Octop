@@ -379,7 +379,8 @@
     "saveFailed": "Could not save the navigation layout",
     "dragToReorder": "Drag to reorder",
     "chatHistory": "Session list",
-    "passkeys": "Passkeys"
+    "passkeys": "Passkeys",
+    "localSettings": "This device"
   },
   "skillPackages": {
     "title": "Skill Packages",
@@ -8382,6 +8383,38 @@
       "gone": "This pairing request has expired or was already handled",
       "failed": "Something went wrong, please try again",
       "more": "{{count}} more request(s) waiting"
+    }
+  },
+  "localSettings": {
+    "title": "This device",
+    "subtitle": "Settings that only concern this computer. Parts your organization manages are read-only.",
+    "tabs": {
+      "workspace": "Workspace & storage",
+      "approval": "Tool approval"
+    },
+    "workspace": {
+      "title": "Workspace folders",
+      "desc": "Experts can only read, write and run commands inside these folders.",
+      "manage": "Change in Experts",
+      "empty": "No expert uses a workspace folder yet",
+      "colDir": "Folder",
+      "colAccess": "Access",
+      "colExperts": "Used by",
+      "readWrite": "Read & write"
+    },
+    "approval": {
+      "title": "Tool approval",
+      "desc": "Before running a tool that needs confirmation, the expert pauses until you confirm in the chat.",
+      "enterprise": "Organization requires",
+      "every": "Every time",
+      "first": "First time",
+      "auto": "Auto-approve",
+      "forced": "cannot be relaxed here",
+      "perChat": "Each chat can tighten or open tool approval from the composer, but never below the organization's rule."
+    },
+    "passkeys": {
+      "desc": "Sign in to Tabby on this computer with fingerprint, face or your screen-lock password.",
+      "manage": "Manage passkeys"
     }
   }
 }

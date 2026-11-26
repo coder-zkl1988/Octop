@@ -379,7 +379,8 @@
     "saveFailed": "没能保存导航布局",
     "dragToReorder": "拖动排序",
     "chatHistory": "会话列表",
-    "passkeys": "通行密钥"
+    "passkeys": "通行密钥",
+    "localSettings": "本机设置"
   },
   "skillPackages": {
     "title": "技能包",
@@ -8382,6 +8383,38 @@
       "gone": "该配对请求已过期或已被处理",
       "failed": "操作失败，请重试",
       "more": "还有 {{count}} 个请求等待处理"
+    }
+  },
+  "localSettings": {
+    "title": "本机设置",
+    "subtitle": "只和这台电脑有关的设置。企业统一管理的部分以只读显示。",
+    "tabs": {
+      "workspace": "工作区与存储",
+      "approval": "工具审批"
+    },
+    "workspace": {
+      "title": "工作区目录",
+      "desc": "专家只能在这些目录里读写文件和执行命令。",
+      "manage": "在专家里调整",
+      "empty": "还没有专家使用工作区目录",
+      "colDir": "目录",
+      "colAccess": "权限",
+      "colExperts": "使用它的专家",
+      "readWrite": "读写"
+    },
+    "approval": {
+      "title": "工具审批",
+      "desc": "专家执行需要确认的工具前会先暂停，等你在对话里确认。",
+      "enterprise": "企业要求",
+      "every": "每次审批",
+      "first": "首次审批",
+      "auto": "自动放行",
+      "forced": "本机不能放宽",
+      "perChat": "每个对话可以在输入框的「工具审批」里收紧或放通，但不能低于企业要求。"
+    },
+    "passkeys": {
+      "desc": "用指纹、面容或系统锁屏密码登录这台电脑上的 Tabby。",
+      "manage": "管理通行密钥"
     }
   }
 }

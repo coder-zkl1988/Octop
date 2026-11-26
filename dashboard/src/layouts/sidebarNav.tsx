@@ -247,6 +247,18 @@ export function buildNavSections(
       labelKey: "nav.knowledgeBases",
     });
   }
+  // Enterprise desktops have no admin group: device-only settings live here.
+  if (
+    import.meta.env.VITE_ENTERPRISE_MODE === "1" &&
+    navAllowed(user, "admin-advanced")
+  ) {
+    settingsItems.push({
+      key: "admin-advanced",
+      path: "/local-settings",
+      icon: <HardDrive size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.localSettings",
+    });
+  }
   if (navAllowed(user, "bridge")) {
     settingsItems.push({
       key: "bridge",

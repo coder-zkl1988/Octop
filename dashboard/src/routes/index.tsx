@@ -30,6 +30,7 @@ const AdvancedSettingsPage = lazy(
 const AdminStoragePage = lazy(() => import("../pages/Admin/Storage"));
 const AdminPluginsPage = lazy(() => import("../pages/Admin/Plugins"));
 const AgentConfigPage = lazy(() => import("../pages/Agent/Config"));
+const LocalSettingsPage = lazy(() => import("../pages/Settings/LocalSettings"));
 
 // Enterprise
 const AccountPage = lazy(() => import("../pages/Enterprise/Account"));
@@ -73,6 +74,7 @@ export const pathToKey: Record<string, string> = {
   "/skills": "personalization",
   "/token-usage": "token-usage",
   "/agent-config": "agent-config",
+  "/local-settings": "admin-advanced",
   // Enterprise
   "/account": "account",
   "/sync": "sync",
@@ -316,6 +318,7 @@ export const routeConfigs: RouteConfig[] = [
   },
   { path: "/environments", element: <Navigate to="/admin/advanced" replace /> },
   { path: "/agent-config", element: <AgentConfigPage /> },
+  { path: "/local-settings", element: <LocalSettingsPage /> },
   {
     path: "/updates",
     element: <Navigate to="/admin/advanced?tab=updates" replace />,
