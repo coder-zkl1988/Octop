@@ -1,43 +1,361 @@
-import { useEffect, useState } from "react";
-import { Card, Empty, List, Spin, Typography } from "antd";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Descriptions,
+  Empty,
+  Modal,
+  Segmented,
+  Spin,
+  Tag,
+  Typography,
+  message,
+} from "antd";
 import { useNavigate } from "react-router-dom";
 import PageShell from "../../layouts/PageShell";
 import { pluginAppsApi, type PluginApp } from "../../api/modules/pluginApps";
+import {
+  enterprisePluginsApi,
+  pluginsApi,
+  type EnterprisePlugin,
+  type InstalledPlugin,
+} from "../../api/modules/plugins";
 
+const { Paragraph, Text } = Typography;
+
+type Tab = "mine" | "market";
+type Filter = "all" | "installable" | "installed";
+
+interface Row {
+  id: string;
+  name: string;
+  meta: string;
+  summary: string;
+  hasUi: boolean;
+  installed: boolean;
+  required: boolean;
+  tools: string[];
+  enabled: boolean;
+}
+
+const kindLabel = (kind: string) =>
+  kind === "official" ? "官方" : kind === "third_party" ? "第三方" : "";
+
+/** Installed apps and plugins, and the ones the enterprise allows this member to install. */
 export default function AppsLanding() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>("mine");
+  const [filter, setFilter] = useState<Filter>("all");
   const [apps, setApps] = useState<PluginApp[] | null>(null);
-  useEffect(() => {
-    void pluginAppsApi
-      .list()
-      .then(setApps)
-      .catch(() => setApps([]));
+  const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
+  const [allowed, setAllowed] = useState<{
+    enforced: boolean;
+    items: EnterprisePlugin[];
+  }>({ enforced: false, items: [] });
+  const [busy, setBusy] = useState("");
+  const [detail, setDetail] = useState<Row | null>(null);
+  const [removing, setRemoving] = useState<Row | null>(null);
+
+  const load = useCallback(async () => {
+    const [appList, pluginList, enterprise] = await Promise.all([
+      pluginAppsApi.list().catch(() => [] as PluginApp[]),
+      pluginsApi.list().catch(() => [] as InstalledPlugin[]),
+      // Not signed in to an enterprise, or it set no list: nothing is restricted.
+      enterprisePluginsApi
+        .list()
+        .catch(() => ({ enforced: false, items: [] as EnterprisePlugin[] })),
+    ]);
+    setApps(appList);
+    setInstalled(pluginList.filter((p) => !p.error));
+    setAllowed(enterprise);
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const byId = useMemo(
+    () => Object.fromEntries(allowed.items.map((i) => [i.id, i])),
+    [allowed],
+  );
+
+  const mine: Row[] = useMemo(() => {
+    const appIds = new Set((apps ?? []).map((a) => a.id));
+    const fromApps = (apps ?? []).map((a) =>
+      rowOf(a.id, a.name, a.version, true),
+    );
+    const fromPlugins = installed
+      .filter((p) => !appIds.has(p.id) && p.enabled !== false)
+      .map((p) => rowOf(p.id, p.name ?? p.id, p.version, Boolean(p.ui?.entry)));
+    return [...fromApps, ...fromPlugins];
+
+    function rowOf(
+      id: string,
+      name: string,
+      version: string | number | undefined,
+      hasUi: boolean,
+    ): Row {
+      const plugin = installed.find((p) => p.id === id);
+      const item = byId[id];
+      return {
+        id,
+        name: item?.name || name,
+        meta: [kindLabel(item?.kind ?? ""), version ? `v${version}` : ""]
+          .filter(Boolean)
+          .join(" · "),
+        summary: item?.summary || plugin?.description || "",
+        hasUi,
+        installed: true,
+        required: Boolean(item?.required),
+        tools: (plugin?.tools ?? []).map((t) => t.name),
+        enabled: plugin?.enabled !== false,
+      };
+    }
+  }, [apps, installed, byId]);
+
+  const market: Row[] = useMemo(
+    () =>
+      allowed.items
+        .filter((i) => !i.builtin)
+        .map((i) => ({
+          id: i.id,
+          name: i.name,
+          meta: [kindLabel(i.kind), i.version ? `v${i.version}` : ""]
+            .filter(Boolean)
+            .join(" · "),
+          summary: i.summary,
+          hasUi: Boolean(installed.find((p) => p.id === i.id)?.ui?.entry),
+          installed: i.installed,
+          required: i.required,
+          tools: (installed.find((p) => p.id === i.id)?.tools ?? []).map(
+            (t) => t.name,
+          ),
+          enabled: i.enabled,
+        }))
+        .filter(
+          (r) =>
+            filter === "all" ||
+            (filter === "installed" ? r.installed : !r.installed),
+        ),
+    [allowed, installed, filter],
+  );
+
+  const install = async (row: Row) => {
+    setBusy(row.id);
+    try {
+      await enterprisePluginsApi.install(row.id);
+      message.success(`${row.name} 已安装`);
+      await load();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : "安装失败");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const uninstall = async (row: Row) => {
+    setBusy(row.id);
+    try {
+      await pluginsApi.uninstall(row.id);
+      message.success(`${row.name} 已卸载`);
+      setRemoving(null);
+      setDetail(null);
+      await load();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : "卸载失败");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const open = (row: Row) =>
+    row.hasUi
+      ? navigate(`/apps/${encodeURIComponent(row.id)}`)
+      : setDetail(row);
+
+  const card = (row: Row) => (
+    <Card key={row.id} size="small" style={{ height: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <Text strong>{row.name}</Text>
+          <div>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {row.meta}
+            </Text>
+          </div>
+        </div>
+        {row.required ? (
+          <Tag color="blue">管理员已启用</Tag>
+        ) : row.installed ? (
+          <Tag>已安装</Tag>
+        ) : null}
+      </div>
+      <Paragraph
+        type="secondary"
+        ellipsis={{ rows: 2 }}
+        style={{ margin: "8px 0 12px", minHeight: 44 }}
+      >
+        {row.summary || "这个插件没有填写说明。"}
+      </Paragraph>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {row.installed ? (
+          <Button size="small" type="primary" onClick={() => open(row)}>
+            打开
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            type="primary"
+            loading={busy === row.id}
+            onClick={() => void install(row)}
+          >
+            安装
+          </Button>
+        )}
+        {row.installed &&
+          (row.required ? (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              由管理员远程启用，不能卸载
+            </Text>
+          ) : (
+            row.id !== "xhs-ops" && (
+              <Button size="small" onClick={() => setRemoving(row)}>
+                卸载
+              </Button>
+            )
+          ))}
+      </div>
+    </Card>
+  );
+
+  const grid = (rows: Row[]) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: 16,
+      }}
+    >
+      {rows.map(card)}
+    </div>
+  );
+
   return (
-    <PageShell title="应用" subtitle="已安装的插件应用">
+    <PageShell
+      title="应用"
+      subtitle="已安装的应用与插件。你可以从企业允许的清单里自行安装，管理员也可以远程为你启用。"
+      actions={
+        <Segmented<Tab>
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "mine", label: "我的应用" },
+            { value: "market", label: "插件市场" },
+          ]}
+        />
+      }
+    >
       {apps === null ? (
         <Spin />
-      ) : apps.length === 0 ? (
-        <Empty description="暂无可用应用" />
+      ) : tab === "mine" ? (
+        mine.length === 0 ? (
+          <Empty description="还没有安装应用。去「插件市场」看看企业允许安装的插件。" />
+        ) : (
+          <>
+            {grid(mine)}
+            {mine.some((r) => r.required) && (
+              <Alert
+                style={{ marginTop: 16 }}
+                type="info"
+                message="「管理员已启用」的应用由企业管理员远程下发到这台电脑，随企业策略更新，不能卸载。"
+              />
+            )}
+          </>
+        )
       ) : (
-        <List
-          grid={{ gutter: 16, column: 3 }}
-          dataSource={apps}
-          renderItem={(app) => (
-            <List.Item>
-              <Card
-                hoverable
-                onClick={() => navigate(`/apps/${encodeURIComponent(app.id)}`)}
-                title={app.name}
-              >
-                <Typography.Text type="secondary">
-                  {app.version ?? ""}
-                </Typography.Text>
-              </Card>
-            </List.Item>
+        <>
+          <Segmented<Filter>
+            style={{ marginBottom: 16 }}
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "全部" },
+              { value: "installable", label: "可安装" },
+              { value: "installed", label: "已安装" },
+            ]}
+          />
+          {market.length === 0 ? (
+            <Empty
+              description={
+                allowed.enforced
+                  ? "这个分类下没有插件"
+                  : "企业还没有设置允许安装的插件清单"
+              }
+            />
+          ) : (
+            grid(market)
           )}
-        />
+          <Alert
+            style={{ marginTop: 16 }}
+            type="info"
+            message="这里只显示企业允许安装的插件。没有看到需要的插件？请联系企业管理员把它加入允许清单。"
+          />
+        </>
       )}
+
+      <Modal
+        open={!!detail}
+        title={detail?.name}
+        onCancel={() => setDetail(null)}
+        footer={
+          <>
+            {detail && !detail.required && detail.id !== "xhs-ops" && (
+              <Button onClick={() => setRemoving(detail)}>卸载</Button>
+            )}
+            <Button onClick={() => setDetail(null)}>关闭</Button>
+            <Button type="primary" onClick={() => navigate("/")}>
+              去对话里使用
+            </Button>
+          </>
+        }
+      >
+        {detail && (
+          <>
+            <Descriptions
+              column={1}
+              size="small"
+              items={[
+                {
+                  key: "state",
+                  label: "状态",
+                  children: detail.enabled ? "已启用" : "已停用",
+                },
+                {
+                  key: "tools",
+                  label: "工具",
+                  children: detail.tools.join("、") || "没有声明工具",
+                },
+              ]}
+            />
+            <Paragraph type="secondary" style={{ marginTop: 12 }}>
+              这个插件没有自己的界面。启用后，专家会在对话里按需调用它的工具。
+            </Paragraph>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!removing}
+        title={`卸载 ${removing?.name ?? ""}`}
+        okText="卸载"
+        okButtonProps={{ danger: true, loading: busy === removing?.id }}
+        cancelText="取消"
+        onCancel={() => setRemoving(null)}
+        onOk={() => removing && void uninstall(removing)}
+      >
+        卸载后专家不能再使用这个插件的工具，插件产生的文件保留。可以随时重新安装。
+      </Modal>
     </PageShell>
   );
 }

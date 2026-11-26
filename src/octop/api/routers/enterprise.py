@@ -15,6 +15,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from octop.api.deps import current_user, get_server
+from octop.infra import enterprise_plugins
+from octop.infra.agents.plugins.bundled import default_bundled_plugins_root
 from octop.infra.enterprise_client import clear_persisted_session
 from octop.infra.enterprise_client import session_entry as load_session_entry
 from octop.infra.enterprise_device import headers as device_headers
@@ -167,6 +169,81 @@ async def _upstream(
     if not isinstance(payload, dict):
         raise OctopError(ErrorCode.AUTH_FAILED, "invalid enterprise response", status=502)
     return cast(dict[str, Any], payload)
+
+
+async def _upstream_bytes(server: Any, user_id: int, path: str) -> tuple[bytes, dict[str, str]]:
+    """Download a binary enterprise resource (a plugin package) with the member's session."""
+    entry = _session_entry(server, user_id)
+    headers = {"Cookie": entry["cookies"], **device_headers(server, user_id)}
+    try:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=False) as client:
+            response = await client.get(_enterprise_url(server) + path, headers=headers)
+    except httpx.HTTPError as exc:
+        raise OctopError(
+            ErrorCode.AUTH_FAILED, "enterprise backend unavailable", status=503
+        ) from exc
+    if response.status_code >= 400:
+        try:
+            detail = response.json().get("error", {}).get("message", "enterprise request failed")
+        except (ValueError, TypeError):
+            detail = "enterprise request failed"
+        raise OctopError(ErrorCode.AUTH_FAILED, str(detail), status=response.status_code)
+    return response.content, {k.lower(): v for k, v in response.headers.items()}
+
+
+def _bundled_plugin_ids() -> set[str]:
+    root = default_bundled_plugins_root()
+    return {p.name for p in root.iterdir() if (p / "plugin.yaml").is_file()}
+
+
+_PLUGIN_SYNC_INTERVAL_SECONDS = 60.0
+
+
+async def _sync_enterprise_plugins(
+    server: Any, user_id: int, device_id: str, *, force: bool = False
+) -> dict[str, Any] | None:
+    """Apply the enterprise plugin allowlist. Never fails the caller: the snapshot must still load."""
+    mgr = getattr(server, "plugin_manager", None)
+    settings = getattr(getattr(server, "services", None), "settings_repo", None)
+    if mgr is None or settings is None:
+        return None
+    stamps: dict[int, float] = server.__dict__.setdefault("_enterprise_plugin_sync_at", {})
+    now = asyncio.get_running_loop().time()
+    if (
+        not force
+        and now - stamps.get(int(user_id), -_PLUGIN_SYNC_INTERVAL_SECONDS)
+        < _PLUGIN_SYNC_INTERVAL_SECONDS
+    ):
+        return None
+    stamps[int(user_id)] = now
+
+    async def fetch_json(method: str, path: str, body: dict[str, Any] | None) -> dict[str, Any]:
+        return await _upstream(server, user_id, method, path, body=body)
+
+    async def fetch_bytes(path: str) -> tuple[bytes, dict[str, str]]:
+        return await _upstream_bytes(server, user_id, path)
+
+    try:
+        changed = await enterprise_plugins.sync(
+            mgr,
+            settings,
+            fetch_json=fetch_json,
+            fetch_bytes=fetch_bytes,
+            bundled=_bundled_plugin_ids(),
+            device_id=device_id,
+        )
+    except OctopError as exc:
+        if exc.status == 401:
+            raise
+        return None
+    except Exception:  # noqa: BLE001 - plugin sync is best effort
+        return None
+    if (changed["installed"] or changed["enabled"] or changed["stopped"]) and getattr(
+        server, "app_runtime", None
+    ) is not None:
+        await server.refresh_plugin_channels()
+        await server.app_runtime.agent_registry.reload_all()
+    return changed
 
 
 def _points_value(value: Any) -> float:
@@ -392,6 +469,7 @@ async def _load_snapshot_inputs(
         },
     )
     usage = await _upstream(server, user_id, "GET", "/desktop/v1/usage")
+    await _sync_enterprise_plugins(server, user_id, str(device_key.get("device_id") or ""))
     return me, policy, resources, device_key, usage
 
 
@@ -757,6 +835,71 @@ async def logout_device(
     return await _upstream(
         server, int(user.id), "POST", f"/org/v1/devices/{device_id}:logout", body={}
     )
+
+
+@router.get("/plugins", summary="List plugins the enterprise allows on this device")
+async def enterprise_plugin_list(
+    user: Any = Depends(current_user), server: Any = Depends(get_server)
+) -> dict[str, Any]:
+    """The cached allowlist joined with what is installed. Unenforced when the enterprise set no list."""
+    policy = enterprise_plugins.load_policy(server.services.settings_repo)
+    mgr = server.plugin_manager
+    installed = {str(r.get("id")): r for r in (mgr.list_installed() if mgr is not None else [])}
+    items = []
+    for item in policy["items"]:
+        have = installed.get(str(item["id"]))
+        items.append(
+            {
+                "id": item["id"],
+                "name": item.get("name", item["id"]),
+                "summary": item.get("summary", ""),
+                "version": item.get("version", ""),
+                "kind": item.get("kind", ""),
+                "builtin": bool(item.get("builtin")),
+                "required": bool(item.get("required")),
+                "installMode": item.get("install_mode", "self"),
+                "installed": have is not None,
+                "installedVersion": str((have or {}).get("version") or ""),
+                "enabled": bool((have or {}).get("enabled", False)),
+            }
+        )
+    return {"enforced": policy["enforced"], "items": items}
+
+
+@router.post("/plugins/{plugin_id}/install", summary="Install an enterprise catalog plugin")
+async def enterprise_plugin_install(
+    plugin_id: str, user: Any = Depends(current_user), server: Any = Depends(get_server)
+) -> dict[str, Any]:
+    policy = enterprise_plugins.load_policy(server.services.settings_repo)
+    item = next((i for i in policy["items"] if i["id"] == plugin_id), None)
+    if item is None or item.get("builtin"):
+        raise OctopError(ErrorCode.FORBIDDEN, "这个插件不在企业允许安装的清单里", status=403)
+    mgr = server.plugin_manager
+    if mgr is None:
+        raise OctopError(ErrorCode.INTERNAL_ERROR, "plugin manager not initialized")
+
+    async def fetch_bytes(path: str) -> tuple[bytes, dict[str, str]]:
+        return await _upstream_bytes(server, int(user.id), path)
+
+    try:
+        await enterprise_plugins.install_package(mgr, fetch_bytes, item)
+    except OctopError:
+        raise
+    except Exception as exc:
+        raise OctopError(
+            ErrorCode.PLUGIN_INSTALL_FAILED,
+            f"plugin install failed: {exc}",
+            details={"reason": str(exc)},
+        ) from exc
+    mgr.set_enabled(plugin_id, True)
+    if server.app_runtime is not None:
+        await server.refresh_plugin_channels()
+        await server.app_runtime.agent_registry.reload_all()
+    device = await _upstream(server, int(user.id), "GET", "/desktop/v1/device/key")
+    await _sync_enterprise_plugins(
+        server, int(user.id), str(device.get("device_id") or ""), force=True
+    )
+    return {"status": "ok", "id": plugin_id}
 
 
 @router.get("/model-preferences", summary="Read enterprise model preferences")

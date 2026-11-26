@@ -89,6 +89,35 @@ export interface MarketPlugin {
   error?: string;
 }
 
+/** One plugin the enterprise allows on this device, joined with what is installed. */
+export interface EnterprisePlugin {
+  id: string;
+  name: string;
+  summary: string;
+  version: string;
+  kind: string;
+  builtin: boolean;
+  required: boolean;
+  installMode: "self" | "admin";
+  installed: boolean;
+  installedVersion: string;
+  enabled: boolean;
+}
+
+export const enterprisePluginsApi = {
+  list(): Promise<{ enforced: boolean; items: EnterprisePlugin[] }> {
+    return request("/enterprise/plugins");
+  },
+  install(pluginId: string): Promise<{ status: string; id: string }> {
+    return request(
+      `/enterprise/plugins/${encodeURIComponent(pluginId)}/install`,
+      {
+        method: "POST",
+      },
+    );
+  },
+};
+
 export const pluginsApi = {
   list(): Promise<InstalledPlugin[]> {
     return request<InstalledPlugin[]>("/plugins");
