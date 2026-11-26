@@ -99,6 +99,15 @@ def _enterprise_transport(*, email: str, phone_policy: dict[str, str]) -> httpx.
         if request.method == "GET" and request.url.path == "/org/v1/devices":
             return httpx.Response(200, json={"items": []})
 
+        if request.method == "GET" and request.url.path == "/desktop/v1/plugins":
+            return httpx.Response(200, json={"enforced": False, "items": []})
+
+        if request.method == "POST" and request.url.path == "/desktop/v1/plugins/report":
+            return httpx.Response(200, json={"ok": True})
+
+        if request.method == "GET" and request.url.path == "/desktop/v1/env":
+            return httpx.Response(200, json={"items": []})
+
         raise AssertionError(f"unexpected enterprise request: {request.method} {request.url}")
 
     return httpx.MockTransport(handler)

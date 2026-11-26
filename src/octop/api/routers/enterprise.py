@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from http.cookies import SimpleCookie
@@ -25,6 +26,8 @@ from octop.infra.enterprise_policy import enterprise_policy_permissions
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.resource_policy import POLICY_MAX_AGENTS
 from octop.infra.utils.env_file import env_file_path, load_env_file
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -239,6 +242,7 @@ async def _sync_enterprise_plugins(
             raise
         return None
     except Exception:  # noqa: BLE001 - plugin sync is best effort
+        logger.exception("enterprise plugin sync failed")
         return None
     if (changed["installed"] or changed["enabled"] or changed["stopped"]) and getattr(
         server, "app_runtime", None
