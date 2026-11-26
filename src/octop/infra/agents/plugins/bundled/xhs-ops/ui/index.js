@@ -150,6 +150,8 @@ function operationError(error, locale) {
     invalid_gateway_response: "企业模型返回不完整，请重试或联系管理员。",
     user_suspended: "当前企业成员已停用，请联系企业管理员。",
     version_conflict: "资料已更新，请重新打开并核对后保存。",
+    project_default_missing:
+      "这个项目还没有默认预算。请先在一个账号上点“另存为项目默认”。",
     portrait_authorization_required:
       "上传本人照片前，请先在授权台账登记覆盖“肖像”的有效授权。",
     reference_required: "请先提供参考内容。",
@@ -3309,6 +3311,11 @@ const operationBrowseDefaults = {
   home_feed_count: 6,
   daily_target_posts: 90,
   daily_segments: 2,
+  home_open_percent: 35,
+  open_gap_sec_min: 6,
+  open_gap_sec_max: 20,
+  shortfall: "record",
+  anomaly_stop_after: 2,
 };
 const operationRuleDefaults = {
   like: { enabled: true, daily_cap: 5, ratio_percent: 10, target_types: [] },
@@ -3747,6 +3754,9 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
                 ["home_feed_count", "按词模式首页篇数", 0, 12],
                 ["dwell_sec_min", "默认最少停留秒数", 5, 60],
                 ["dwell_sec_max", "默认最多停留秒数", 5, 120],
+                ["home_open_percent", "首页点开比例（%）", 5, 100],
+                ["open_gap_sec_min", "两次点开最少间隔秒数", 2, 60],
+                ["open_gap_sec_max", "两次点开最多间隔秒数", 2, 120],
               ].map(([key, label, min, max]) =>
                 h(OperationNumber, {
                   key,
@@ -3762,6 +3772,26 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
                 }),
               ),
             ),
+            h(Select, {
+              label: "预算来源",
+              value: account.operation_settings?.source || "account",
+              disabled: readOnly,
+              onChange: async (source) => {
+                await call("ops.configure", {
+                  account_id: account.id,
+                  account_version: account.version,
+                  version: account.operation_settings?.version || 0,
+                  browse_defaults: settings.browse,
+                  interaction: settings.interaction,
+                  source,
+                });
+                setSettingsDirty(false);
+              },
+              options: [
+                ["account", "本账号单独设置"],
+                ["project", "沿用项目默认"],
+              ],
+            }),
             h(OperationRules, {
               prefix: "账号",
               value: settings.interaction,
@@ -3779,6 +3809,27 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
               ),
               h(
                 Button,
+                {
+                  disabled:
+                    readOnly ||
+                    account.operation_settings?.source === "project",
+                  onClick: async () => {
+                    await call("ops.configure", {
+                      account_id: account.id,
+                      account_version: account.version,
+                      version: account.operation_settings?.version || 0,
+                      browse_defaults: settings.browse,
+                      interaction: settings.interaction,
+                      save_as_project_default: true,
+                    });
+                    setSettingsDirty(false);
+                    toast("已另存为项目默认，沿用项目默认的账号同时更新");
+                  },
+                },
+                "另存为项目默认",
+              ),
+              h(
+                Button,
                 { primary: true, disabled: !canSuggest, onClick: suggest },
                 todayPlan?.status === "completed"
                   ? "新建下一轮"
@@ -3792,7 +3843,7 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
             Card,
             {
               title: "目标完成量与异常处理",
-              tip: "这些是停止规则。遇到异常就停下并记录，不补刷、不换设备、不绕过平台提示。",
+              tip: "这些是停止规则。遇到异常就停下并记录，不换设备、不绕过平台提示。这里的两项和上面的预算一起保存。",
             },
             h(
               "div",
@@ -3814,17 +3865,32 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
                   }）`;
                 })(),
               }),
-              h(Field, {
+              h(Select, {
                 label: "完成不足时",
-                disabled: true,
-                onChange: () => undefined,
-                value: "记为未完成，不补刷",
+                value: settings.browse.shortfall,
+                disabled: readOnly,
+                onChange: (shortfall) =>
+                  editSettings({ browse: { ...settings.browse, shortfall } }),
+                options: [
+                  ["record", "记为未完成，不补刷"],
+                  ["topup", "下一段补到目标的 80%"],
+                ],
               }),
-              h(Field, {
-                label: "分段出现异常",
-                disabled: true,
-                onChange: () => undefined,
-                value: "停止这一段，等你对账",
+              h(Select, {
+                label: "同一分段连续异常",
+                value: String(settings.browse.anomaly_stop_after),
+                disabled: readOnly,
+                onChange: (value) =>
+                  editSettings({
+                    browse: {
+                      ...settings.browse,
+                      anomaly_stop_after: Number(value),
+                    },
+                  }),
+                options: [
+                  ["2", "2 次即停止这一段"],
+                  ["3", "3 次即停止这一段"],
+                ],
               }),
             ),
             h(Table, {
