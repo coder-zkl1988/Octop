@@ -105,6 +105,9 @@ def _enterprise_transport(*, email: str, phone_policy: dict[str, str]) -> httpx.
         if request.method == "POST" and request.url.path == "/desktop/v1/plugins/report":
             return httpx.Response(200, json={"ok": True})
 
+        if request.method == "GET" and request.url.path == "/desktop/v1/sandbox":
+            return httpx.Response(200, json={"enabled": False, "reason": "平台还没有开通云端沙箱"})
+
         if request.method == "GET" and request.url.path == "/desktop/v1/env":
             return httpx.Response(200, json={"items": []})
 

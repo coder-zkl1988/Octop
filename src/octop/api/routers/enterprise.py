@@ -16,7 +16,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from octop.api.deps import current_user, get_server
-from octop.infra import enterprise_env, enterprise_plugins, enterprise_security
+from octop.infra import (
+    enterprise_env,
+    enterprise_plugins,
+    enterprise_sandbox,
+    enterprise_security,
+)
 from octop.infra.agents.plugins.bundled import default_bundled_plugins_root
 from octop.infra.enterprise_client import clear_persisted_session
 from octop.infra.enterprise_client import session_entry as load_session_entry
@@ -269,6 +274,21 @@ def _apply_expert_limit(server: Any, user_id: int, policy_raw: dict[str, Any]) -
     )
     if repo.get(user_id, POLICY_MAX_AGENTS) != wanted:
         repo.merge(user_id, {POLICY_MAX_AGENTS: wanted})
+
+
+async def _sync_enterprise_sandbox(server: Any, user_id: int) -> None:
+    """Point the managed 企业云端沙箱 backend at the control plane, or switch it off."""
+    repo = getattr(getattr(server, "services", None), "storage_backend_repo", None)
+    if repo is None:
+        return
+    try:
+        view = await _upstream(server, user_id, "GET", "/desktop/v1/sandbox")
+    except OctopError as exc:
+        if exc.status == 401:
+            raise
+        return
+    if isinstance(view, dict):
+        enterprise_sandbox.apply(repo, view)
 
 
 async def _sync_enterprise_env(server: Any, user_id: int) -> None:
@@ -541,6 +561,7 @@ async def _load_snapshot_inputs(
     await _sync_enterprise_plugins(server, user_id, str(device_key.get("device_id") or ""))
     await _sync_enterprise_security(server, user_id, policy)
     await _sync_enterprise_env(server, user_id)
+    await _sync_enterprise_sandbox(server, user_id)
     return me, policy, resources, device_key, usage
 
 
