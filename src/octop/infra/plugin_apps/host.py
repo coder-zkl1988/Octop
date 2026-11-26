@@ -870,7 +870,7 @@ class PluginAppHost:
         path = manager.plugin_dir(plugin_id) if manager else None
         if path is None:
             raise PluginAppError("plugin_not_installed", status=404)
-        manifest = yaml.safe_load((path / "plugin.yaml").read_text())
+        manifest = yaml.safe_load((path / "plugin.yaml").read_text(encoding="utf-8"))
         app = manifest.get("app") if isinstance(manifest, dict) else None
         if not isinstance(app, dict) or app.get("sdk") != 1:
             raise PluginAppError("plugin_app_unsupported", status=404)
