@@ -109,6 +109,15 @@ class Settings(Input):
     inbox_cadence: Literal["after_publish", "daily", "manual"] = "after_publish"
     daily_minutes_cap: int = Field(default=60, ge=10, le=600)
     resume_mode: Literal["start_stage", "keep"] = "start_stage"
+    publish_slot: Literal["between_blocks", "strict"] = "between_blocks"
+    device_daily_hours: int = Field(default=4, ge=1, le=24)
+    task_gap_minutes: int = Field(default=5, ge=0, le=120)
+    notify_desktop: bool = True
+    notify_card: bool = True
+    notify_channel: bool = False
+    remind_after: Literal["2h", "none"] = "2h"
+    browse_rules: list[bool] = Field(default_factory=lambda: [True] * 4, min_length=4, max_length=4)
+    auto_reply_paused: bool = False
     version: int = Field(default=0, ge=0)
 
     @field_validator("my_words", "reply_phrases")
@@ -133,6 +142,9 @@ class Material(Input):
     origin: Literal["real", "ai", "ai_reconstruct", "upload", "spoken"] = "upload"
     consent_id: str = ""
     images: list[dict[str, Any]] = Field(default_factory=list, max_length=9)
+    file_name: str = Field(default="", max_length=255)
+    file_size: int = Field(default=0, ge=0)
+    confirmed: bool = False
 
 
 class BizDoc(Input):
@@ -240,7 +252,12 @@ def effective(ctx: Any, doc: dict[str, Any]) -> dict[str, Any]:
         min(_rank(mine["ai_proactive"], FREQUENCIES), _rank(freq_cap, FREQUENCIES))
     ]
     enterprise_auto = bool(rules.get("auto_reply_enabled")) and bool(caps.get("auto_reply_allowed"))
-    auto_reply = level == "full" and mine["small_talk"] == "auto" and enterprise_auto
+    auto_reply = (
+        level == "full"
+        and mine["small_talk"] == "auto"
+        and enterprise_auto
+        and not mine.get("auto_reply_paused")
+    )
     return {
         "automation_level": level,
         "automation_cap": level_cap,
@@ -294,10 +311,35 @@ def paused_reason(ctx: Any, doc: dict[str, Any] | None = None) -> str | None:
     return None
 
 
+PAUSE_BUCKETS = {
+    "publish": "publish",
+    "browse": "nurture",
+    "nurture": "nurture",
+    "comment": "reply",
+    "reply": "reply",
+    "reply_delete": "reply",
+    "audit": "collect",
+    "inbox": "collect",
+    "read": "collect",
+}
+
+
+def member_pause_applies(doc: dict[str, Any], account: dict[str, Any] | None, kind: str) -> bool:
+    """A member pause can be limited to some accounts and some kinds of work; anything unknown stays paused."""
+    pause = doc.get("member_settings") or {}
+    if not pause.get("paused"):
+        return False
+    accounts = pause.get("paused_accounts") or []
+    if accounts and account is not None and account.get("id") not in accounts:
+        return False
+    scope = pause.get("paused_scope") or ["nurture", "publish", "reply", "collect"]
+    return PAUSE_BUCKETS.get(kind, "") in scope or kind not in PAUSE_BUCKETS
+
+
 def require_running(ctx: Any, doc: dict[str, Any]) -> None:
-    reason = paused_reason(ctx, doc)
-    if reason:
-        _fail(reason, 409)
+    """The enterprise pause stops everything here; the member's own pause is checked per account at dispatch."""
+    if paused_reason(ctx):
+        _fail("enterprise_paused", 409)
 
 
 # ------------------------------------------------------------------ pre-publish checks
@@ -615,10 +657,25 @@ async def _pause_set(ctx: Any, domain: Any, payload: dict[str, Any]) -> None:
 
     def save(state: dict[str, Any]) -> None:
         current = dict(state.get("member_settings") or {})
+        scope = [
+            s
+            for s in payload.get("scope") or ["nurture", "publish", "reply", "collect"]
+            if s in {"nurture", "publish", "reply", "collect"}
+        ]
+        accounts = [str(a) for a in payload.get("account_ids") or []]
+        if payload.get("project_id"):
+            accounts = [
+                a["id"]
+                for a in domain.rows(state, "accounts")
+                if a["project_id"] == payload["project_id"]
+            ]
+        for account_id in accounts:
+            domain.find(state, "accounts", account_id)
         current.update(
             paused=paused,
             paused_at=now() if paused else None,
-            paused_scope=list(payload.get("scope") or ["nurture", "publish", "reply", "collect"]),
+            paused_scope=scope or ["nurture", "publish", "reply", "collect"],
+            paused_accounts=accounts if paused else [],
         )
         state["member_settings"] = current
 
@@ -634,7 +691,7 @@ async def _material_save(ctx: Any, domain: Any, payload: dict[str, Any]) -> None
         }
         for image in body["images"]
     ]
-    if not body["text"].strip() and not body["images"]:
+    if not body["text"].strip() and not body["images"] and not body["file_name"]:
         _fail("material_empty")
     if body["kind"] == "experience" and body["owner"] == "public" and body["consent_id"]:
         _fail("experience_must_stay_with_its_owner", 409)
@@ -1711,7 +1768,8 @@ def on_finish(
                 item["kind"] == "small_talk"
                 and item["draft"]
                 and eff["auto_reply"]
-                and not paused_reason(ctx, state)
+                and not paused_reason(ctx)
+                and not member_pause_applies(state, account, "reply")
             ):
                 item.update(status="auto_queued", auto=True)
         domain.rows(state, "reply_items").extend(items)
@@ -1750,7 +1808,7 @@ async def tick(ctx: Any, domain: Any) -> None:
                     ctx, domain, state, domain.find(state, "accounts", aid)
                 )
             )
-    if paused_reason(ctx, doc) or "xhs.comment" not in getattr(ctx.license, "features", []):
+    if paused_reason(ctx) or "xhs.comment" not in getattr(ctx.license, "features", []):
         return
     eff = effective(ctx, doc)
     if not eff["auto_reply"]:
@@ -1769,6 +1827,7 @@ async def tick(ctx: Any, domain: Any) -> None:
             account is None
             or account.get("paused")
             or (account.get("transfer") or {}).get("id")
+            or member_pause_applies(doc, account, "reply")
             or account.get("device_id") in busy
         ):
             continue
@@ -1896,9 +1955,13 @@ def queue(ctx: Any, doc: dict[str, Any]) -> list[dict[str, Any]]:
                     "status": "planned",
                 }
             )
-    reason = paused_reason(ctx, doc)
+    enterprise_paused = bool(paused_reason(ctx))
+    by_id = {a["id"]: a for a in doc.get("accounts", [])}
     for row in out:
-        if reason and row["status"] in {"planned", "awaiting_confirmation"}:
+        if row["status"] in {"planned", "awaiting_confirmation"} and (
+            enterprise_paused
+            or member_pause_applies(doc, by_id.get(row.get("account_id")), row["kind"])
+        ):
             row["status"] = "paused"
     return sorted(out, key=lambda r: r["at"])
 

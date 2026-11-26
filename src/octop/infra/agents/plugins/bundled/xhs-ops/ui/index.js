@@ -108,6 +108,13 @@ function operationError(error, locale) {
     invalid_gateway_response: "企业模型返回不完整，请重试或联系管理员。",
     user_suspended: "当前企业成员已停用，请联系企业管理员。",
     version_conflict: "资料已更新，请重新打开并核对后保存。",
+    portrait_authorization_required:
+      "上传本人照片前，请先在授权台账登记覆盖“肖像”的有效授权。",
+    reference_required: "请先提供参考内容。",
+    template_required: "请先选择内容母版。",
+    rewrite_invalid: "AI 返回的内容不完整，原稿没有改动，请重试。",
+    submission_already_reviewed: "平台已经审核了这条提交，不能撤回。",
+    submission_not_found: "没有找到这条提交，请刷新后重试。",
     license_required: "此功能尚未开通，请联系企业管理员。",
     permission_required:
       "当前成员没有手机控制权限，请联系企业管理员并同步权限。",
@@ -204,7 +211,8 @@ function operationError(error, locale) {
       "该资料字段仍在滚动变更预算冷却期，请先查看预算状态。",
     observation_required: "请先完成上一项资料变更的观察与复核。",
     rollback_not_available: "当前资料变更还没有可用的独立回滚单。",
-    enterprise_paused: "企业管理员已暂停全部自动任务，恢复前不会执行养号、发布和回复。",
+    enterprise_paused:
+      "企业管理员已暂停全部自动任务，恢复前不会执行养号、发布和回复。",
     member_paused: "你已暂停全部自动任务，请先在页面右上角恢复。",
     precheck_blocking: "发布前检查有未通过项，请先修改或一键补上标识与披露。",
     compliance_review_required: "高风险内容需要合规复核通过后才能发布。",
@@ -221,14 +229,16 @@ function operationError(error, locale) {
     automation_above_enterprise: "自动化程度不能高于企业设定的上限。",
     automation_manual: "当前为手动档，AI 不会主动准备内容。",
     tenant_quota_exceeded: "企业本月额度已用完，可以向管理员申请增加。",
-    member_quota_exceeded: "你本月的额度已用完，可以在能力与配额里向管理员申请。",
+    member_quota_exceeded:
+      "你本月的额度已用完，可以在能力与配额里向管理员申请。",
     enterprise_backend_unavailable: "暂时连不上企业后台，请稍后重试。",
     enterprise_request_rejected: "企业后台拒绝了这次请求，请联系管理员。",
     enterprise_response_invalid: "企业后台返回的数据不完整，请稍后重试。",
     authorization_not_active: "所选授权已撤回、过期或缺少授权书。",
     authorization_scope_exceeded: "素材绑定的账号超出了授权范围。",
     authorization_withdrawn: "素材关联的授权已撤回，不能再使用。",
-    experience_must_stay_with_its_owner: "真实个人经历不能放进公共素材库，请绑定到授权人的账号。",
+    experience_must_stay_with_its_owner:
+      "真实个人经历不能放进公共素材库，请绑定到授权人的账号。",
     material_empty: "请填写素材内容或上传图片。",
     material_analysis_invalid: "AI 整理结果不完整，素材已原样保留。",
     stages_invalid: "冷启动阶段的天数需要连续且不重叠。",
@@ -291,6 +301,7 @@ function Button({ children, onClick, disabled, primary, danger }) {
       onClick: run,
       disabled: disabled || pending,
     },
+    !pending && typeof children === "string" && ic(children),
     pending ? "处理中…" : children,
   );
 }
@@ -333,8 +344,8 @@ function Badge({ value }) {
 function hasFeature(license, feature) {
   return Boolean(
     license &&
-    Array.isArray(license.features) &&
-    license.features.includes(feature),
+      Array.isArray(license.features) &&
+      license.features.includes(feature),
   );
 }
 function FeatureLocked({ locale }) {
@@ -704,7 +715,7 @@ function ProjectPanel({
                     type: "checkbox",
                     checked: Boolean(
                       project.schedule?.enabled &&
-                      project.schedule?.kind === "daily",
+                        project.schedule?.kind === "daily",
                     ),
                     disabled: readOnly || !canOperate,
                     onChange: (event) =>
@@ -1305,7 +1316,9 @@ function AccountPanel({ snapshot, host, readOnly, refresh }) {
     const source = accounts.find((item) => item.id === sourceId.trim());
     if (!source?.device_id) {
       window.dispatchEvent(
-        new CustomEvent("octop:xhs-error", { detail: new Error("源账号没有可迁移设备") }),
+        new CustomEvent("octop:xhs-error", {
+          detail: new Error("源账号没有可迁移设备"),
+        }),
       );
       return;
     }
@@ -1363,7 +1376,8 @@ function AccountPanel({ snapshot, host, readOnly, refresh }) {
                   Button,
                   {
                     onClick: () => transferDevice(account),
-                    disabled: readOnly || !accounts.some((item) => item.device_id),
+                    disabled:
+                      readOnly || !accounts.some((item) => item.device_id),
                   },
                   "迁移已有设备",
                 ),
@@ -1617,8 +1631,8 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
               (key.endsWith("_candidates") || key === "interest_tags"
                 ? []
                 : key.endsWith("_filename")
-                  ? null
-                  : ""),
+                ? null
+                : ""),
           ]),
         ),
       ),
@@ -1765,13 +1779,13 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
   );
   const ready = Boolean(
     draft.nickname?.trim() &&
-    draft.bio?.trim() &&
-    draft.gender &&
-    draft.birthday &&
-    draft.region?.trim() &&
-    rows(draft.interest_tags).length &&
-    draft.avatar_filename &&
-    draft.cover_filename,
+      draft.bio?.trim() &&
+      draft.gender &&
+      draft.birthday &&
+      draft.region?.trim() &&
+      rows(draft.interest_tags).length &&
+      draft.avatar_filename &&
+      draft.cover_filename,
   );
   return h(
     "div",
@@ -1833,11 +1847,16 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
               Button,
               {
                 onClick: () =>
-                  act(account.authorized_at ? "takeover.identity.read" : "account.identity", {
-                    account_id: account.id,
-                    account_version: account.version,
-                    confirmed: true,
-                  }),
+                  act(
+                    account.authorized_at
+                      ? "takeover.identity.read"
+                      : "account.identity",
+                    {
+                      account_id: account.id,
+                      account_version: account.version,
+                      confirmed: true,
+                    },
+                  ),
                 disabled: phoneDisabled,
               },
               account.authorized_at ? "读取接管身份" : "只读核对小红薯号",
@@ -1885,7 +1904,9 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
               h(
                 "p",
                 null,
-                `接管待确认身份：${account.pending_identity.account_id || "未读到"}`,
+                `接管待确认身份：${
+                  account.pending_identity.account_id || "未读到"
+                }`,
               ),
               h(
                 Button,
@@ -2365,465 +2386,6 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
           account.profile_draft?.verified_version === account.version &&
           h("p", { className: "xhs-meta" }, "该版本公开资料已完成人工核验。"),
       ),
-  );
-}
-
-function DraftPanel({ snapshot, host, readOnly, refresh, modelRef }) {
-  const drafts = rows(snapshot.data && snapshot.data.drafts);
-  const projects = rows(snapshot.data && snapshot.data.projects);
-  const accounts = rows(snapshot.data && snapshot.data.accounts);
-  const [draft, setDraft] = useState(null);
-  const [projectId, setProjectId] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [hashtags, setHashtags] = useState("");
-  const [images, setImages] = useState([]);
-  const [generating, setGenerating] = useState(false);
-  const [theme, setTheme] = useState("");
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [imageModels, setImageModels] = useState([]);
-  const [imageModel, setImageModel] = useState("");
-  const [ratio, setRatio] = useState("3:4");
-  const [reading, setReading] = useState(false);
-  useEffect(() => {
-    if (!draft || readOnly) return;
-    let active = true;
-    host
-      .request("/plugin-apps/xhs-ops/image-models")
-      .then((value) => {
-        if (active) setImageModels(rows(value));
-      })
-      .catch(() => {
-        if (active) setImageModels([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [Boolean(draft), readOnly]);
-  const open = (d) => {
-    setDraft({ ...d });
-    setProjectId(d.project_id || "");
-    setAccountId(d.account_id || "");
-    setTitle(d.title || "");
-    setContent(d.content || "");
-    setHashtags((d.hashtags || []).join(" "));
-    setImages(Array.isArray(d.images) ? d.images : []);
-  };
-  const save = async (close = true) => {
-    const id = draft.id || crypto.randomUUID();
-    const result = await host.request("/plugin-apps/xhs-ops/commands", {
-      method: "POST",
-      body: JSON.stringify({
-        command: "draft.save",
-        payload: {
-          id,
-          version: draft && draft.version,
-          project_id: projectId,
-          account_id: accountId,
-          title,
-          content,
-          hashtags: hashtags.split(/[\s,，#]+/).filter(Boolean),
-          images,
-        },
-      }),
-    });
-    const saved = rows(result.data?.drafts).find((item) => item.id === id);
-    if (!saved) throw new Error("草稿保存结果不完整，请刷新后检查。");
-    if (close) setDraft(null);
-    else open(saved);
-    await refresh();
-    return saved;
-  };
-  const generate = async () => {
-    if (!projectId) return;
-    setGenerating(true);
-    try {
-      const id = draft.id || crypto.randomUUID();
-      const result = await host.request("/plugin-apps/xhs-ops/commands", {
-        method: "POST",
-        body: JSON.stringify({
-          command: "content.generate",
-          payload: {
-            id,
-            ...(draft.version ? { version: draft.version } : {}),
-            project_id: projectId,
-            account_id: accountId,
-            theme: theme.trim() || title.trim(),
-            ...(modelRef ? { model_ref: modelRef } : {}),
-          },
-        }),
-      });
-      const generated = rows(result.data?.drafts).find(
-        (item) => item.id === id,
-      );
-      if (!generated) throw new Error("文案生成结果不完整，请刷新后检查。");
-      open({ ...generated, images });
-      await refresh();
-    } finally {
-      setGenerating(false);
-    }
-  };
-  const generateImage = async () => {
-    const saved = await save(false);
-    const result = await host.request("/plugin-apps/xhs-ops/commands", {
-      method: "POST",
-      body: JSON.stringify({
-        command: "image.generate",
-        payload: {
-          draft_id: saved.id,
-          version: saved.version,
-          prompt: imagePrompt,
-          aspect_ratio: ratio,
-          ...(imageModel ? { model_ref: imageModel } : {}),
-        },
-      }),
-    });
-    const generated = rows(result.data?.drafts).find(
-      (item) => item.id === saved.id,
-    );
-    if (!generated) throw new Error("图片生成结果不完整，请刷新后检查。");
-    open(generated);
-    await refresh();
-  };
-  const readFiles = async (event) => {
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
-    setReading(true);
-    try {
-      if (images.length + files.length > 9)
-        throw new Error("每篇最多上传 9 张图片。");
-      const added = (await readImageFiles(files)).map((image) => ({
-        ...image,
-        origin: "upload",
-      }));
-      setImages((current) => [...current, ...added]);
-    } catch (error) {
-      window.dispatchEvent(
-        new CustomEvent("octop:xhs-error", { detail: error }),
-      );
-    } finally {
-      setReading(false);
-    }
-  };
-  const moveImage = (index, direction) =>
-    setImages((current) => {
-      const next = [...current];
-      [next[index], next[index + direction]] = [
-        next[index + direction],
-        next[index],
-      ];
-      return next;
-    });
-  return h(
-    "div",
-    { className: "xhs-grid" },
-    h(
-      "div",
-      { className: "xhs-card" },
-      h("h3", null, "内容草稿"),
-      drafts.length
-        ? drafts.map((d) =>
-            h(
-              "div",
-              { className: "xhs-row", key: d.id },
-              h(
-                "div",
-                null,
-                h("strong", null, text(d.title, "未命名草稿")),
-                h(
-                  "div",
-                  {
-                    style: {
-                      display: "flex",
-                      gap: 5,
-                      flexWrap: "wrap",
-                      marginTop: 4,
-                    },
-                  },
-                  srcPill(d.source),
-                  pill(REVIEW_LABELS[d.review_status || "pending_review"]),
-                  checkPills(d.checks),
-                ),
-              ),
-              h(Button, { onClick: () => open(d), disabled: readOnly }, "编辑"),
-            ),
-          )
-        : h("div", { className: "xhs-empty" }, "还没有草稿"),
-      !readOnly &&
-        h(
-          "div",
-          { className: "xhs-actions" },
-          h(Button, { primary: true, onClick: () => open({}) }, "新建草稿"),
-        ),
-    ),
-    draft &&
-      h(
-        "div",
-        { className: "xhs-card" },
-        h("h3", null, "编辑内容"),
-        h(
-          "label",
-          { className: "xhs-field" },
-          h("div", { className: "xhs-label" }, "项目"),
-          h(
-            "select",
-            {
-              className: "xhs-select",
-              value: projectId,
-              onChange: (e) => setProjectId(e.target.value),
-              disabled: readOnly,
-            },
-            h("option", { value: "" }, "选择项目"),
-            projects.map((p) =>
-              h("option", { key: p.id, value: p.id }, p.name),
-            ),
-          ),
-        ),
-        h(
-          "label",
-          { className: "xhs-field" },
-          h("div", { className: "xhs-label" }, "账号（可选）"),
-          h(
-            "select",
-            {
-              className: "xhs-select",
-              value: accountId,
-              onChange: (e) => setAccountId(e.target.value),
-              disabled: readOnly,
-            },
-            h("option", { value: "" }, "暂不指定"),
-            accounts
-              .filter((a) => !projectId || a.project_id === projectId)
-              .map((a) => h("option", { key: a.id, value: a.id }, a.name)),
-          ),
-        ),
-        h(Field, {
-          label: "内容主题与文案要求",
-          value: theme,
-          onChange: setTheme,
-          multiline: true,
-          disabled: readOnly,
-        }),
-        h(Field, {
-          label: `标题（${title.length}/20）`,
-          value: title,
-          onChange: setTitle,
-          disabled: readOnly,
-        }),
-        h(Field, {
-          label: `正文（${content.length}/1800）`,
-          value: content,
-          onChange: setContent,
-          multiline: true,
-          disabled: readOnly,
-        }),
-        h(Field, {
-          label: "话题标签",
-          value: hashtags,
-          onChange: setHashtags,
-          placeholder: "例如 生活方式 旅行",
-          disabled: readOnly,
-        }),
-        h(
-          "label",
-          { className: "xhs-field" },
-          h("div", { className: "xhs-label" }, "上传图片"),
-          h("input", {
-            className: "xhs-input",
-            type: "file",
-            accept: "image/png,image/jpeg,image/webp",
-            multiple: true,
-            onChange: readFiles,
-            disabled: readOnly || reading || images.length >= 9,
-          }),
-          h(
-            "div",
-            null,
-            h(
-              "div",
-              { className: "xhs-meta" },
-              `${images.length}/9 张，按当前顺序发布`,
-            ),
-            images.map((image, index) =>
-              h(
-                "div",
-                { className: "xhs-row", key: `${index}-${image.filename}` },
-                h(PrivateImage, {
-                  host,
-                  image,
-                  className: "xhs-preview",
-                  alt: image.display_name || image.filename,
-                }),
-                h("span", null, image.display_name || image.filename),
-                h(
-                  Button,
-                  {
-                    onClick: () => moveImage(index, -1),
-                    disabled: readOnly || index === 0,
-                  },
-                  `上移第${index + 1}张`,
-                ),
-                h(
-                  Button,
-                  {
-                    onClick: () => moveImage(index, 1),
-                    disabled: readOnly || index === images.length - 1,
-                  },
-                  `下移第${index + 1}张`,
-                ),
-                h(
-                  Button,
-                  {
-                    onClick: () =>
-                      setImages((current) =>
-                        current.filter((_, at) => at !== index),
-                      ),
-                    disabled: readOnly,
-                  },
-                  `移除第${index + 1}张`,
-                ),
-              ),
-            ),
-          ),
-        ),
-        h(Field, {
-          label: "生图描述",
-          value: imagePrompt,
-          onChange: setImagePrompt,
-          multiline: true,
-          disabled: readOnly,
-        }),
-        h(
-          "label",
-          { className: "xhs-field" },
-          "生图模型",
-          h(
-            "select",
-            {
-              className: "xhs-select",
-              value: imageModel,
-              onChange: (e) => setImageModel(e.target.value),
-              disabled: readOnly,
-            },
-            h("option", { value: "" }, "默认个人生图模型"),
-            imageModels.map((item) =>
-              h(
-                "option",
-                { key: item.id, value: item.id },
-                `${item.source === "enterprise" ? "企业模型" : "个人模型"} · ${
-                  item.name
-                }`,
-              ),
-            ),
-          ),
-        ),
-        h(
-          "label",
-          { className: "xhs-field" },
-          "图片比例",
-          h(
-            "select",
-            {
-              className: "xhs-select",
-              value: ratio,
-              onChange: (e) => setRatio(e.target.value),
-              disabled: readOnly,
-            },
-            ["3:4", "1:1", "4:3", "16:9", "9:16"].map((value) =>
-              h("option", { key: value, value }, value),
-            ),
-          ),
-        ),
-        !imageModels.length &&
-          h(
-            "p",
-            { className: "xhs-meta" },
-            "当前没有获授权的生图模型，请检查企业或个人媒体模型配置。",
-          ),
-        h(
-          Button,
-          {
-            onClick: generateImage,
-            disabled:
-              readOnly ||
-              reading ||
-              !projectId ||
-              !title.trim() ||
-              !content.trim() ||
-              !imagePrompt.trim() ||
-              !imageModels.length ||
-              images.length >= 9,
-          },
-          "生成配图并加入草稿",
-        ),
-        h(
-          "article",
-          { className: "xhs-card", "aria-label": "图文预览" },
-          h("h3", null, "图文预览"),
-          images.map((image, index) =>
-            h(PrivateImage, {
-              host,
-              image,
-              key: `${index}-${image.filename}`,
-              alt: `预览第${index + 1}张`,
-              style: { width: "100%", maxWidth: 360, borderRadius: 8 },
-            }),
-          ),
-          h("h3", null, title || "标题预览"),
-          h(
-            "p",
-            { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" } },
-            content || "正文预览",
-          ),
-          h(
-            "p",
-            { className: "xhs-meta" },
-            hashtags
-              .split(/[\s,，#]+/)
-              .filter(Boolean)
-              .map((tag) => `#${tag}`)
-              .join(" "),
-          ),
-        ),
-        h(
-          "div",
-          { className: "xhs-actions" },
-          h(
-            Button,
-            {
-              primary: true,
-              onClick: () => save(),
-              disabled:
-                readOnly ||
-                reading ||
-                !projectId ||
-                !title.trim() ||
-                title.length > 20 ||
-                !content.trim() ||
-                content.length > 1800,
-            },
-            "保存草稿",
-          ),
-          h(
-            Button,
-            {
-              onClick: generate,
-              disabled:
-                generating ||
-                reading ||
-                readOnly ||
-                !projectId ||
-                !(theme.trim() || title.trim()),
-            },
-            generating ? "生成中…" : "生成内容",
-          ),
-          h(Button, { onClick: () => setDraft(null) }, "取消"),
-        ),
-      ),
-    draft &&
-      draft.id &&
-      h(DraftMeta, { snapshot, host, readOnly, refresh, draftId: draft.id }),
   );
 }
 
@@ -4053,7 +3615,12 @@ function ReportPanel({ snapshot, host, readOnly, refresh }) {
   };
   const runMigrationImport = async () => {
     if (!migrationReport?.source_sha256 || !migrationSource) return;
-    if (!window.confirm("导入只写入本地历史记录；活动运行会转为结果不明，设备需要重新绑定，不会派发手机任务。确认继续？")) return;
+    if (
+      !window.confirm(
+        "导入只写入本地历史记录；活动运行会转为结果不明，设备需要重新绑定，不会派发手机任务。确认继续？",
+      )
+    )
+      return;
     await host.request("/plugin-apps/xhs-ops/commands", {
       method: "POST",
       body: JSON.stringify({
@@ -4113,7 +3680,9 @@ function ReportPanel({ snapshot, host, readOnly, refresh }) {
       h(
         "p",
         { className: "xhs-meta" },
-        `本地审计 outbox：${rows(snapshot.data?.audit_outbox).length} 条待同步；dry-run 不派发手机任务、不修改平台。`,
+        `本地审计 outbox：${
+          rows(snapshot.data?.audit_outbox).length
+        } 条待同步；dry-run 不派发手机任务、不修改平台。`,
       ),
       hasFeature(snapshot.license, "xhs.ops") &&
         h(
@@ -4143,7 +3712,8 @@ function ReportPanel({ snapshot, host, readOnly, refresh }) {
               Button,
               {
                 onClick: pushOutbox,
-                disabled: readOnly || !hasFeature(snapshot.license, "xhs.analytics"),
+                disabled:
+                  readOnly || !hasFeature(snapshot.license, "xhs.analytics"),
               },
               "同步审计 outbox",
             ),
@@ -4761,8 +4331,8 @@ function RunPanel({ snapshot, host, readOnly, refresh, license }) {
                             command: profile
                               ? "account_profile.reconcile"
                               : daily
-                                ? "ops.reconcile"
-                                : "run.reconcile",
+                              ? "ops.reconcile"
+                              : "run.reconcile",
                             payload: daily
                               ? {
                                   id: day.id,
@@ -5528,7 +5098,9 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                 {
                   disabled: readOnly,
                   onClick: async () => {
-                    const reference = window.prompt("请确认手机任务已停止，并记录核对依据") || "";
+                    const reference =
+                      window.prompt("请确认手机任务已停止，并记录核对依据") ||
+                      "";
                     if (reference.trim())
                       await cmd("takeover.device_hold_release", {
                         account_id: accountId,
@@ -5542,7 +5114,8 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
             h(
               Button,
               {
-                disabled: readOnly || !account?.authorized_at || !account?.device_id,
+                disabled:
+                  readOnly || !account?.authorized_at || !account?.device_id,
                 onClick: () =>
                   cmd("takeover.identity.read", {
                     account_id: accountId,
@@ -5559,7 +5132,9 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                 h(
                   "p",
                   null,
-                  `待确认小红薯号：${account.pending_identity.account_id || "未读到"}`,
+                  `待确认小红薯号：${
+                    account.pending_identity.account_id || "未读到"
+                  }`,
                 ),
                 h(
                   Button,
@@ -5668,7 +5243,10 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                   Button,
                   {
                     onClick: async () => {
-                      if (!window.confirm("撤销接管方案并作废尚未开始的变更单？")) return;
+                      if (
+                        !window.confirm("撤销接管方案并作废尚未开始的变更单？")
+                      )
+                        return;
                       await cmd("takeover.plan.revert", {
                         account_id: account.id,
                         account_version: account.version,
@@ -5692,7 +5270,8 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                   },
                   confirmed: true,
                 }),
-              disabled: readOnly || ["confirmed", "superseded"].includes(d.status),
+              disabled:
+                readOnly || ["confirmed", "superseded"].includes(d.status),
             },
             "记录采纳意见",
           ),
@@ -5804,20 +5383,19 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
             !accountId ||
             [nickname, bio, occupation, region, avatarImage, coverImage].filter(
               (value) => (typeof value === "string" ? value.trim() : value),
-            )
-              .length !== 1,
+            ).length !== 1,
           onClick: () => {
             const fields = avatarImage
               ? { avatar: avatarImage }
               : coverImage
-                ? { cover: coverImage }
-                : nickname.trim()
+              ? { cover: coverImage }
+              : nickname.trim()
               ? { nickname }
               : bio.trim()
-                ? { bio }
-                : occupation.trim()
-                  ? { occupation }
-                  : { region };
+              ? { bio }
+              : occupation.trim()
+              ? { occupation }
+              : { region };
             cmd("change_order.create", {
               account_id: accountId,
               requested: Boolean(region.trim()),
@@ -5889,7 +5467,8 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                   onClick: () =>
                     cmd("change_order.verify", {
                       id: o.id,
-                      evidence_url: o.result?.evidence_url || o.evidence_url || "",
+                      evidence_url:
+                        o.result?.evidence_url || o.evidence_url || "",
                       reference: window.prompt("请输入手机回读核验记录") || "",
                       confirmed: true,
                     }),
@@ -5897,7 +5476,11 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                 },
                 "补跑核验",
               ),
-            ["awaiting_verification", "observing", "rollback_observing"].includes(o.status) &&
+            [
+              "awaiting_verification",
+              "observing",
+              "rollback_observing",
+            ].includes(o.status) &&
               h(
                 Button,
                 {
@@ -5911,8 +5494,14 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                 },
                 "人工检查",
               ),
-            ["awaiting_verification", "observing", "rollback_observing"].includes(o.status) &&
-              Object.keys(o.fields || {}).some((field) => ["avatar", "cover"].includes(field)) &&
+            [
+              "awaiting_verification",
+              "observing",
+              "rollback_observing",
+            ].includes(o.status) &&
+              Object.keys(o.fields || {}).some((field) =>
+                ["avatar", "cover"].includes(field),
+              ) &&
               h(
                 Button,
                 {
@@ -5921,7 +5510,11 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
                       ["avatar", "cover"].includes(key),
                     );
                     if (!field) return;
-                    const matched = window.confirm(`${field === "avatar" ? "头像" : "背景图"}与手机回读一致吗？`);
+                    const matched = window.confirm(
+                      `${
+                        field === "avatar" ? "头像" : "背景图"
+                      }与手机回读一致吗？`,
+                    );
                     await cmd("change_order.visual_check", {
                       id: o.id,
                       field,
@@ -5974,58 +5567,576 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Workbench (round 4): 总览, 执行队列, 异常与告警, 冷启动方案, 内容计划, 素材库,
-// 内容母版, 业务资料, 排期日历, 笔记维护, 自动化与风控, 授权台账, 能力与配额.
-// Every action goes through the plugin command endpoint; the backend owns the rules.
-// ---------------------------------------------------------------------------
-
-// 小红薯 wordmark (112×56), inlined so the page needs no extra asset request.
 const XHS_LOGO =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAAA4CAYAAAAl63xKAAAiT0lEQVR42r2debxlRXXvv6tq73PuvT13A9KMtqKgCJjQqAgEo+ThLD5oSCBqIAlPNLxoQviYYGLQj74M6jOfp8E45hlilA5OEYMT0kEE0gwCEmQUuqHpebp9h3P2rlrvj9pD1T6nUTO8/oPue++5e6iqtdZv/dZvLYT/wB9FBV5mhXVl873jXrOs3LfvRCndixFO8KpHK3Kwql+KSE+9goCIoIAggIIqIgIqqPrwGQRVBZH2pqKgUH0g/Lz+EdWlABETvggfDv9VEBSMQVWR8ACohKcg+n2obhsuVt1Hw/MaaT6LNH+1j+fcUIzsFiObjZcHEO5W4bYM7pAN39/V3ur0DNY5aW/5c/+Rf//GnWuEtQ5AX3rRIrY+9kpfuLO9d6cYr4eZegFVcerxCir1LXXM3+FnWi9y+t30/vo0b9GsZnQwkitKdOvq+Eh90eqTEm1QdYA0vld1GqT6XH2H+rkEsCJYERBTHQCH9/qEiNxsbHYtk0uulwe+Nh1+f42Ftf7fs5E/9wbqmjVW1lYb9/q3H8LDj1ziZmbebFWOQAHvGHiPoq56Qal2RiS2JO08gXaOSHSiE/OovqgtL2yACX+rjzYBVIXRNZHWzEz1dWzlzb8j/9Dddzq/Uv1QtNpEUTT8R42g1QdtT0zYUCN47zcY4XMwcZVs/M6meiNro/hP30BVFUSMgNPv3bXU/+H7f89v3X5JVrgD8I6BqgsHU03wkOM3q9kC1Y7rSq0uMbP6c7Ul1G64cZfd7Q1LrarjX1k08sTS2SENG1K7y9q6pPnXyIFr31XDzzV+5trEwYdT7EHoG2MRi1O33Yq5CiMflsfX7f55rfFn2kB9z3uMXHmlxwrFRX94trnjvj8z23cd5cqCEkoFa6oj115YGkuq30E6txuJX82+6ejei7SLHfxsY9zSeEuNYmu8gel9RdqYqK0NjbjzxDvUz18bbL2VCmKk9RvauVJ1WJKbAx5UVF1mbGZNhsc/7IV35RtuujZc6z1GuNL/hzdQr7nGyrnnOlWd8Oe/44Pmzvvfzu69DKyUClYUEdHIYEbdlnSsI8IgzYltAAUCOua5R8xM61PRsVjpxEQdf53IUtivpUp7WOqPGFN9Xlv3W7vb2GwilyzxPeLTEw6bour6xmYYi8d/zBh7mTy+bv5ncanys2ze7OzOI/oXXPEFc/t9Jw+KgcNaEVWj0ctJc461i3g6a1qd3eRttXGL7aJLd+cbq6ujU3Pu48DUuE8atIt2g25qwc2B6X42PjS0ix4/k0S/ryLBA8SAaFwUFmliqNbIVdQLaM/0rMffMuhN/OrUo9/Z8NM20fxUy3tkw3H9NZffYG754cmDYlCItVa8N80K1SFB4kfV6MSl7lDjk6saLR7pKa2uocnrV4ujvoo22ljzOCAk2r1mZAmR+1SlWfT2pMko0IpjtWqLUuuDkCyBVj/2kZVGcRxFfTi4AfKIUcQO3LAwnpP7w8ENg6NfdZyw1oW4+HNYYLN5O6aP9b/9rhvMun89aL5nSoPJ4rg2Gsuk9WoxnK+PW40cdIxpRie/PsVNztgc9y5SbHM0iRO4DpKtN0+ihU08cg1cjFRpx5gY2FktVW1z2HHuvmO1cU4rEqPo9j4qgniPQtk3NvM221ouW/zy/t3/dN/+LFFGAYsauVK8qh5evvGSf8m+f8czB7ktBTKS0FM/EBGwkBTVkSbhccxLEKam8CdcwyfIVIjASQ1cIjerzcKnqYY0iXrkWutDUsffbmYqjFpjfGxVG8CUeA+R/eynoKZCzzq66g04qmNmeMuyLzYrjTxWHLzil6Zu/+rGccBGxqQKgmpevun3b8q+c8tJA9FSkKzZLNIkeTRNliTZTV9U2oVuECUJW9JFm2nkkgRXNK5b44Rf6Fyx3Ys2MEYHr2Z+pAEbMbYJxpt80bo/KgQqEjaHNFaPIFrvxyNcotxTJcpotOybPCt7dn12zORpXH99Ub2yjo+B5641Yo0f/sGffyS76Y6T5rQsRSTTOL/pLo+0/kiS+Fed7sbny7jDR518aJPv08YkbTMxxqUZsQVE94ihgzQpQrS40rJsddbX+P0oVErExmgT70L+Sr1xGm9MHFx9+3vSjZU64palAWaRLxKTzWtRZoU/afjA/EdE8LDGjAUxes01Vtae64ovfuOs3vdue+tgero0WZapanpS2hV+Wgg7Ci58WO/MgrVgDZpZMJaWkNL0gDSbqwkMalJmqWF9CjLUh8UTjR9bR55Pm3jacUgabWZsIPU3vHZ/3Oy2NtYlzaar863lJ2Cu/WWtYqBKGu8Fkw3LYdkr/Vvnj33VWV1QIx3Xuah44yX3yL+sP7yc6Kmomvi0JotbJbNSEcP1w8uY3KtmPGRYwuxsi9xFwBpk4QJ8hRpFOuC7jpFjGTGF+QH0euHuxoDzwQvZLIpbNb2mICah6TQmMCPUKsaEw1ZZKWKgLKD0kAV+ExcsT/q9cGjqIGIMMhii9doIUJRIr4dak3qr0ncAmu+kL4oiPkNE82xjfvTzjuc7n5iuXWnWuE5wxRUfuiy/56Ej5nNTimrWdeOth4hijY+TA23jS8xZisD8EDlmFeYtZ4eF8YpmFv/gT/CfvgYxNqKi0mRcO+AECIs3NUH2ifcjzzocLcoQw3o5xR9/BP3295HFC4N78x5feQwVN0rLjcQuwvX27K04UwOzM8ipJ5Ff9b42j/Ued9EfonfcCxMTqHOINejcDOaKS7EXnAWDIUz00Icep/i1dyBlUd1bkDyDhVMtFhDCQUl5OgyYUn054fSI8pEHL8vhjyvKzYm+5z2GK69UfvKTZxTnvvN+Ht242PV7IhrXDnTUTTUMfHpzkbQmowQrY+du7IXnYP/6vcl58I9tpHjR2SnQayoZnfywNl1rw/UufTPZB/8o2Vq/ay/FS86B7Tsgz8IGTk6Acy2MjwGVKjSHR6AsYVBgDz4Q8+tvgH4vvMrcHHL8MZjXn5F6l3/6Lv7eB4J1qYIRZDBEznk18txntkfPOdxfXw2z8+F7eQ73/Bj9+g3Q60X5sEkIjVC+Au9VM0XVmr35IUufx/pvbAEk48YbjUDp/urq38m37Fo6n9lgfTFrMpIkx5BcEGkBfvAYMhq3BPxwiC0dOiyCkeU57NlX0U0mQO3EVyr4eBOrk+8cLFmEvXBNcF1FGTZjoo//1DXwkw3wjBWwcw/Ze9+JOedMGBYhvoiMBGsRAe9Qm1H+5SfwH/+/yEXnYP7oktHgPiwSLCKvewXmda8YjweKooFSiGAvfUvqrZ/YTPHt70PpwsY3LtREqU7wEqIqDlxf7NJy2/Tv5PBu5XSbybp1paouKk497yKdnVXyzDRgRVIGP6GQVNBuOaCxVx3lRLVyV5kNyWoFaNSYUSYmZnLooDdjYfcezJpXwbHPgaIMLtkIumcaf/VXYNFUxXAAxz8XjjxsPAIeE1bl8EOAsn2uTibYxLAkfdkPkDMmWkIZvZ41FY4sR8mKhmbVOB823pWqKhdte+nr/1x+8LXpDMBd/pevzLfsXDkvOAHb8Jqq6H544LbEoGhcf0j4wBbICyDWjKRBIm1inELsUSIAApGseY79rV9t3bnziO3hrv0m/sFHkRVL29g2Nx/c6HCIWttmlCJJVUGcR3o5DAao6aN3/Qi94RZ0MES9Q4YleshB2BedULljCfHuth/iN29Dsgz1ilgLwyHyi89HDlsZPIQxyPwA/y/rg4v2CsuXoD+4KzzfRN4xmBRQRfStKVRdn2zlsq17XgmszbCC/9H9a+zsrGKNNlSxaLOJaJ2ga1LPS4hnU22e861loo38IFBVJvoVSYCf1JXvOi7VLtqY5riLFdg7g/nlFyOnnQhliRoJVjk/wH1mLTLRD9ZXG20vDwtoQ/pSHxSlrX40hLcxAb1KD3/PAxSvuhCOWgUvOAq270LOOAX7ohMShsdddyP6wx9B3kedw/Qy/O59ZJdfjBxxaPAQ1sLsfPAO8wN0dh5/533I7mlYtgi8D2un+6HmNAGRivfq5t0aYG2mpV9arH79KepKwRirHWGIRO4tkackzJGGmw+GsGAifN9VmzcsKv+uEeLTFBDVwdq78PdEXsW+ClSUJVrni96T/dZ5IR3wlevJDO7L30JvuRNZvgQG88E7OI/u2RcstFokpFOVrFkW7/GlQ/dMQ27Be8wLjyX/zufQRQuaAr53LhwGAOfI3vuOsSIRDwGV5lm4/vKl5Fd/uMnI/Ne/h7vwDyIpR7QuDWMUeaPGjar16kWdnqInvGFpVl76p6vN7pmVg5r66PpMbXdM6PKO1WeMQadnyd7/+5jX/XJYcKeYfs7wY1fjP/759qWTCnZliVbQQYEceSi9v/8wOjURFtxamJlj+GvvgE1bYOAxq49FXnV6ADI2FEXEe+xLXojc+PlgcaqYfp/hZX9G+bvvRz7+D+ievciJx9H75AfCoQDIMti5m+EFvwe79oTD9MRmZMki2D0NJzw3bN5ggBiLF0Gy6D2cA+fwlfvVatPU+5AfV/XDZkOLElGP5Dn2lF/ELV0MO/ci/XxMTXKU+arx8xDVHFk5v2vL6kzve+Ql2dxAhiLOKHa0KDta4hGpqg51buUcOtlDXn0arDo8PY3Ll4bFzrKUyU+AjwkvNtmH444ePdGHHgwbn4JiiPmNcwK0Hw4Ra0M2q4qsOhxb3RtAp2fQrdtg3wx69/2waw+ybMko0VI69J4fw45d0MuRPA8QH9Bh2VpDniFbt1Oc9z/RJzeTXf4/ML91HloUiHrK838Xd+td2MsuJnvbryNFAcbiLngn/l/vgbPOIPuLd0FR58WDjt6nw4vGRWDVBplWG+utWEvJSzJ27XohzkUllKTAF9dcOgIUbXQtOI8sXYhOTCBekbIMp7CXoxs2tWRvxRlKzItW7gtr0el96I7dYaFdSA3IMmTpYpidQ456Juas/xZgdYQSw0aUVX3NIf0Jyo9ejf7bI8jBK8ApTE2GfLCLGoXws/lBxbxUTq6yIrwi3ofrT/Sxbzsf3TsLq18QDmYVo835r8ec+Utw/DFoEYCKqsO++SzkZS9Gn30kUlknziGZrVBoHfMZRe2kyDw5eAre8sKMufnnqPpIhSSj0qsGykqLGEUaAhrnYfGSYG2GACzEhpfbsauirxQdV3eNi7WzAxgOQ8z0FUo0BjlgKb4cwKEHwoqlAe1VXqAtDwpqgovTmRn0mq8jC6ZgWAEd71HnE3lgw1+rDwvrTQTxLbptJ8YafLXxZvEiZM1r29S0Qq9qBPPaV4xT1WDOPD2V1mQVwTUo0H2zwYuojiW90mJ0i2YUlYqLfE6mzh/sVFFpSZRu5TouzI4ovQINgBy4FJmaCIABAvviHGzZgeQWBsMmVMdlM4m1mXNzMD0DK4mEtMCSRZD34b6HcNd+k+y/nxmQp2pwgbXQ1nvIctyXv43/t0dg2SJ0WFY0XVusHaVVpXUuSiCfF0yht99D8XsfQJ/3bLBVTbGsUOVgiHnxC5FfPDbEwqIEa3A33Q4PPApTE+hgSKlgDlyObt+NZAExa1GgV38toNAlCxAXeSaR/WlRkrJLiUe9HJz5+eGyCp0JY3RJIm1OmKil4410LsQpwklvgM3OPfhtFaU1P0gqCd0SkViDzg/Q3XuJ1RkKcMCyYPGlUrz1Ctz//kyIqSuWkH/qfwUXW6PDQYH7xBegF/hWiXKVpP7aVRRopOnRoN5mZh698z5kKtBk6jQcTBGYmUWf9+y6bhfqgtbC1h34Bx6FRZNhrXbupfjUNdjzXgsnHx+8lVfkLW9E9uxFH3sC7feqZ43Vce2J6oZKUcShKGZZJt7lKoytJsQpRYw8JZZRVKSuHL6yKbVoTedt2wm79oYX85H1alRaqXQvIia4z+07R9TYcsDysKaZQQofQMf0LszFb0KWLUGHRfh8L0O/dRN+/b2YJQsqoZTpCixGWEEdJ/vOLDhP9jfvwxz9rARUJf8uywZhq/fY816DOe81Ta3OA3r6izBrXp24SHf3j9Gde8LhrkFdV9RFKv/oUvugedbkZiIVfknlsegYJk0ixXJNaB95aComAvTJLTAzF6gtSZ+kLqQ2xl+VgvyWHZhEFw1y0PIQK7wPLneij0w8g+x3f6O9ng15YvnJLyK9LFBh3kVXkk7heYSkS2grduzGD+coPnAV9pTVeHWIsaF6by0MBpgTj8O86ATUuXAPa3DfuxV/30OYyT5+2TLkzFMxa16NL8rKSxj0pvWUr7kYLYbIActDvmq6Xi86xJFEQDtMVqYihUBey9ADIIg2URqyKQT7pPJSIdBejqw6bJTze3wTDApkqanYHRnfy9BUB4Cntoy6/AOWQ78X3I+1ISU46wzk+RUXKiDW4m64Ff+17yILJtC9MzDRCwsWUXyjEaWVFoZCcJBJ2Lecjaxaid++G3//g9DP8a5S0WUWpmdh1RGR9rO66KYt6IOP4PMce+bLYKKPVmQGvRxm59F7foy9/CL08afwX/0u9LK6QNo5ZJJsona0OQpFZsTsMuoPKpvSoyTC5zTeRUBA2rqcLFuErDq8KYTWQMY/+ngq0tX9UshtEfXxTa17qixdDloBixbCzExVzbcJFyqVmsysOpTe1z6ONwbJLMUf/xX+Rw9iFk5WYVDHsFPaUmom8JgcspLsqivDfTryhREX6lx45yqU2AvegLngDUn1IpRkQ98IvQx5x0VkgNv4FP6bNwUQaCTZwJGUIkkaVa2KeNVdmcBmixxUBg2fEGtIVBreL/W/0vKcgwJWHYasPLBJO6RiH/ShxwK096O0vUSrIlXeRWbRxza1Cuj6bgcsR5YvRfftQ6dnMKtfgLz85JaNIbAxsupwWHU4GeA3b0c3bUXyQDJ3mY6knayO75U8QytAopHmJJZg6DCUicSERpXYK/nO70gvH1uxUEJMx5pQTqpbAlRH5Ix1fTsu7llEnMjmTI0+JJ7jUdVWgTWqpEt4w6DsD18PC+T5z4V+Hy2KABqyALP1kY3NC8TNJiMMRP1FnsMTm9G9+2BRBa9LB1MTsOpQ9JHHEPWYC9eERR4WTYVDRaAowvemJnH/52+RjZuQg1YE1/g0Mk+pRUrq0V5gXAYXXo457GCkLBGv6EQfli/Bnng85sUnhCQ8qhbUZLw8uQX3+a/ht+0IxDqxgAoQDzaHBRPoPQ/CzDzS77WCqUT22KY5kvZkaDASfSgT+CFwdqJgF0blfOPEPxKYCvPSExoEKrZK8jdsgo1Phg10PqDI/aifahcjWYZu3oY+/iRy3NGJctu84DnoN25EpvqYY58dTn+1QMkZy3Pczj2UX7gOs2RBABgiI8nD2DDcqOwM8uBjsHcvHHQA+qwjMMc8Gzl6FXLIwfjaq3iXykKN4HfsQo9YiRx5SCAkjAkpldPgDTY+iX/vxwLBMTEBCybb+EfKctVCqrZtwbcg1YB4fpg5Y281lCqxQq2bStToJ6lP1QE9w990B+bi8wNg8B5Rxd/1byGFWLooTTm6/Ut1pcOHF2TnHvTeB6oNDNdnMERvvB2ZnAAjlH/+N2Tv/h1k0cKkRwXnUGvxf/eVYMkrlgbXXAuUbDaGSpPws8yieQZFgSxcQH79Z2HRgvEnznnUGkxFbMfHwx5/DBx/TFoE7iBfv3QxxVv/BFmyMDBFRFIikyrx03Qu7JwIxuHVGW7N5sXeLlo81RNzyABVoxpj0KY3ru3OiZTXzsGCSdx1N2LrRZ8fBAu84dYQW6wN7sAatK4CSIfbq+Xm9VusvxfOf31AnT2D/+4P8OvvgqVLYG4O/fL1DL/ynVCtqOUYmUFLh4hBFk0iyxaj23aDusqlT6PTM2PkUYru3A3bd0GeoyKYbdtxf/sl7NvOh7n5kKJktu1ntBbZuw//91/FD4ZNetPqWCr128wcnLYae+pqvHPhXfMMViwP/KzznY6mcYXsuAfFoIL2RaRQ3TTRm7g9W/b4ut2DlSffbJBzxBUOyGTEUrQVwCaMRaDMZGYG97f/SPahKxor8t+9BZmahN1B2SXz08iBK1rmw4xRLHqFiT7u++sx8wM0zxFVyk9fg+YZMjuH+ZVTMaedhM7NRgyLCVXzXo5ueAr/D9fBsMS+5Y3osw4LZPRgiDx3VdJXoZXgKb/8YnRuvupNAP3ndbhPfxF76ZuQhQuC86oJ/1qKX5b4nXvww0H4ncqbGBG8EQyCzsxhhkXY8Fr8ZW3IB6WTb3fKRhq3pqUVISeSWcHfLI+v251VtOVavKzRug1axlQj6DBtdXLvSmTBFP5L34R3XgSHrQzF1Q1PIMuXkP3ppbDyoABaf+XUSmJgGwZefNSa5V2Q593/MH7dbdgzfwl3293od2/FTE4imSH/yBVwxKH77T90a79BedVnsa97JfmnPtDpbaJKutumFqYmsZf9dvIZ97yjGJx7CeVVn4eli9EnN5G/8zcrIwieR1YsI3v32/eLMBuVXEU1BqLCtdihYVqk0ZPXpHzb0SVJ6A6iMRWMijGshaphxS6U64d73VM9Yw8u1HvxmISQHBMGAkqqiOteDzY8hfvSNzFv+3X8Rz6DLJhEZ+eRU05CTjquBQo1qPCBE9QntsDsfIgHpWse2H/ks2EDP/clGAxgHuTXXhs2b34+SjMiADEoKD/wSURMsD6v6Px8cKGRxDGJTarocNhqTfMcHQww+QTu3R/C79yBOfkkuOxiKMtwaI2B3XspPvmFoEKI3F6N9cRYdH4ec+pqzK+c0m5ebGmSlMpH2CEaEqUp7vpcjBm68qneMLs+MDGcnskD66bdoad8xqBXDJ1zIvXUAGnZ0xFtRtTW4hUWLsB/7svoD+5CH3sSlixENu/A//ONZL/wfHQYFNQ0PXMeYwT/5W+HOFVvsXOwcAp/850UF16Orlsf0OawwP7mmpbfjFVjrgJT37oZ/dE9mGOfjznjtACC8izhniQejlDftb6WdoRXU5OYwaIg04gbccTgnUO37Qx5cIJxpbFUnZ1HZ+faInbdR+F81eNYI8s2TUBrfUwjHY84FPWZsVmp/jOy4wfTyulZButCF95w+NHCmLfnYheXqIpqVGNJ2nDHWKSHiR785An8Az8JBdKihIke/ls3wZ9cimRTbaJfu6prrsNdcx2yeFFAkHWO6Bz0e/gvXBeQ4GCAOeMU5NTV4fb9Xuq2sgrd/d2XUDcI6u/FC8MhqxLy/c2rSP7YavDC1GTTTSQIsmtPeO5KKCyArFiG/Yt3/WwDIryvRFUh+fc/uBN1HhPzyTGBplHreYVyvKrmYkzhy9256kfDbqzzWaiVr7Gybe3mYuVLPpph3l26ogzLMtpWlcosojCsBNlBnlXNHMCCSfwP76f89Frs+a8LLlI9uuGpsHkf+/vQZ1CH7riLR4HFCwOT4zxy4gtg264g2atLOrX15xZ3853oN2/GLD0QeeHzgnUUZWVd7USMqhs2CfGNhLkio/z6e8KCew9Tk+h9D+M+9UXsm97YquSiJpo0PdK0582Y5hmYH+K+8i38Z/8x6G6cT0BKw3pJp28uPJ/LJMuGuI/K1vWb64bPtKnqWWcsKmb23iNqDi/UqRGMdmZLaNRuGXpiNEW6tZvSGpgoqlW5qWZLtuxA9+5DliyK2gN1TAU6kkvmFpmcrGbBkMZAkUBwiwncQr8XrFTHDOWJ1AVxVb/i0IJL2z0dKK7IRasrkaOeiUyEZ9B0gkjU85hyYGKiGLd3Gn10Q6imZKYFLXGbG6NsmKr3uVjx6Ma8cMez646muSV6/LCj8we96Ky+sV8e+LJUrVMK7YxtkdH6WdOfqDVh0L4UBBFS/d08Cwl63a/QGUJQP3+7n5UkcUStHYGAzLTlMF8PTZCu/jECBDpWMQ0SaWM6/nZuSIBu6fs1FGFnqIV0+Ds1VSmsrrGOE00jrehLmthZ9m2WDcS9ceKpf/1K3G7dKRVWm/iM1Vf1pffWOTcoRUwkJ5MOgpLGIhplY7cCrlG3kowZ6qOR0q3LuicqnjF9DfHi+rjNOy7ExD3pkvQhjnQ41qvvtdtv3W6WyNjBT2P6p6rnMCmSTCZipBXJuO07YAXFq5aTtpcN3PDjE9tuv6TbK9+t9Qq8Rzjqtrzcu/OmTMxJc74sDWTjF68SC9WtxppC6bFFye6YLNL6jNIOvWtMWav8a2yHg3ZFNm2PXywH6cxd024fdTLHZXTmTHe+Ql0/HRkzM6JOiiTV2jYCxedDGZUWihg8Wk6aPCt9uT7buvM0uKCAK/ffYl3/QB6+flBk/bNL9Y9Nis08WjYhymvL1WkkYdd4WF3KAySjNzSWaTS6+ubvtslD0xZq1dFRHnGrpHZnzEjUFp16T03Ud+kO6eiMw0jQPH6a1Gg36/hvpD382g7Ii6SCUg1k8Gg5KSYrfflYkfmzhYcHcOWIAsSM2tSVXlljpzbdtNGLvtar3zopWdjEmMesJfEj2YU2LeJJ37q2TaCNvCHqRNUxU5a0O/oxOWk6qitTHTsOJHGPGgMNjaZhaOKH9tuO3Z3bqKPbnjgHTV9EInc6Mtay+iWPlpPYzKlu9TJ47dSm2zcG14n/mQb91H3Y/S3r7yvFn+HRRyYly1R9ocnQAU0ZtwSQaCJDlKhW1bLrfjR2RAekGVAgnVEFWvVixMLg7i7HffwjXbgkI7K0PpDV4ZI47CabI2M3S5Dxlle/f2RmqS5VxrWKFJM2z7zoIw53Rn/L3fc93bQms/9euWoTt95x78C6l3v1t0zaXi7gVGoObWQKVtQ8oonf0e74He2W6OPGE0knAEYzY7o98toMPJCqqiHjM/Y4iHVcZizt0BH2dPygn8R9J6O7xtQZjYybiJCkDhpe0k2YLPfO3zIw5cv7W++496eN2vrpw+6qC+iRR074wcEfNCpvV++YV1+KYCXUlyAa0Ji6Fhlt2JAxE1pTIc7+WR/pjOkYO8iu24ATyUo61+iOQUsGE0krZtZu+jT2nUaHDI1d4holSw0j1PUwmREJw+4mt14mjz/+Hx92Fz2iqf1vceDqs0X5M2uzo0p1FN6XINYIkSy13cA2gY7LXDE+1TTQyH7mQo4RBHfga+qikwaa/eHXFr43OyxBtS5dC2mmQ42Dm5rA6TQkyP6mHiuIy0SyXCwO97Cqvivfdvu13TV/uj+Gn22oqA/xeI3Nt91+rS2Kk7z378OzfdJkWV9EVNWpeqeoxqMnY8Qat1/XQ+vQTjfq0yC6tjIZSThHcEVoFpHOVMFut3HD4Wob/7R606T+GUMxjeOaj26ZKspGUkVpwIn6ap16YmTS2EzQ7V7L99nB8KR82+3XKmtsPQPjv2bkcmTWuuIXDsHklzj0zVbMEXjFizIIL+faZAuRjiZN0aSRUXQ/rrBKrKWTQ7adVF2XKsmExHTggiSTeZ/OpY8ztqbLK85X2+ltyanzYfiOSq2X92p7gJFQ2nL4Ddaaz1EWV8mOu/7rRy6PJvxr2qHnK166CC1fWVKercIpYsxhGaZhHkoU11hAdLa127w4Zini4QdJfiLtAKH9iU86KvDR5JrRljkhmUKl3aF13YmHNZ/Z+Q0rhsyYZvab8x6Pf0LU3JwZuRa/53rZ8cD//6Hnoxt5evq/HVhy3LKy3z9Rvb4YlRM8/mjxerAzstRY09PIkuoUwVfxRWKyuWL9FR9ShmiaX6097V6nJrilsYr6d3wzf0WaJD9qKRBBvU+vFdF3yUD1WrsTJarG2nBN58K1inIog+Fu0M0GHjDK3WrktmxicIdsuPc/9X878P8ANYy2lncPuXgAAAAASUVORK5CYII=";
 
+// ---------------------------------------------------------------------------
+// Workbench screens, built to the design canvas (desk-app-xhs): 工作台, 账号档案, 冷启动方案,
+// 内容, 发布, 设置. Every action goes through the plugin command endpoint; the backend owns the rules.
+// ---------------------------------------------------------------------------
+
 const css2 = `
-  .xhs-groups { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
-  .xhs-group { display:inline-flex; align-items:center; gap:5px; }
-  .xhs-group.active { background:#182230; border-color:#182230; color:#fff; }
-  .xhs-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:12px; }
-  .xhs-stat-value { font-size:20px; font-weight:700; margin-top:4px; }
+body{margin:0}
+a{color:#b93b07}a:hover{color:#8f2d05}
+
+.xhs-app{color:var(--fn-text-primary,#182230);font-size:13px;min-height:100%;overflow-wrap:anywhere}
+.xhs-tabs{display:flex;gap:6px;overflow:auto;border-bottom:1px solid var(--fn-border,#e5e7eb);margin-bottom:16px}
+.xhs-tab{border:0;background:transparent;color:var(--fn-text-secondary,#6b7280);padding:9px 12px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;font:inherit}
+.xhs-tab.is-active{color:#ff2442;border-bottom-color:#ff2442;font-weight:700}
+.xhs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.xhs-card{background:var(--fn-bg-elevated,#fff);border:1px solid var(--fn-border,#e5e7eb);border-radius:10px;padding:14px;min-width:0;box-sizing:border-box}
+.xhs-card h3{margin:0 0 9px;font-size:15px}
+.xhs-card h4{margin:12px 0 6px;font-size:13px}
+.xhs-meta{color:var(--fn-text-secondary,#6b7280);font-size:12px}
+.xhs-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--fn-border,#e5e7eb)}
+.xhs-row:last-child{border-bottom:0}
+.xhs-btn{border:1px solid var(--fn-border,#e5e7eb);border-radius:7px;background:var(--fn-bg-elevated,#fff);color:var(--fn-text-primary,#182230);padding:7px 11px;cursor:pointer;font:inherit;white-space:nowrap}
+.xhs-btn.primary{background:#ff2442;border-color:#ff2442;color:#fff}
+.xhs-btn.danger{color:#ff2442}
+.xhs-btn:disabled{opacity:.45;cursor:not-allowed}
+.xhs-input,.xhs-textarea,.xhs-select{width:100%;box-sizing:border-box;border:1px solid var(--fn-border,#e5e7eb);border-radius:7px;padding:8px;background:var(--fn-bg-elevated,#fff);color:var(--fn-text-primary,#182230);margin-top:5px;font:inherit}
+.xhs-textarea{min-height:88px;resize:vertical}
+.xhs-field{margin:9px 0;display:block}
+.xhs-label{color:var(--fn-text-secondary,#6b7280);font-size:12px}
+.xhs-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.xhs-pill{display:inline-flex;border-radius:999px;padding:3px 8px;background:var(--fn-bg-secondary,#f7f8fa);color:var(--fn-text-secondary,#6b7280);font-size:11px;white-space:nowrap}
+.xhs-pill.ok{color:#149447}.xhs-pill.warn{color:#b7791f}.xhs-pill.bad{color:#ff2442}
+.xhs-danger{color:#ff2442}
+.xhs-empty{color:var(--fn-text-secondary,#6b7280);text-align:center;padding:28px 10px}
+.xhs-preview{width:92px;height:92px;object-fit:cover;border-radius:6px;border:1px solid var(--fn-border,#e5e7eb);margin:4px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
+.xhs-stack{display:flex;flex-direction:column;gap:12px}
+.xhs-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.xhs-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px}
+.xhs-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 12px}
+.xhs-check{display:flex;align-items:flex-start;gap:6px;margin:9px 0}
+.xhs-tbl{width:100%;border-collapse:collapse}.xhs-tbl th,.xhs-tbl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--fn-border,#e5e7eb);font-size:12px}.xhs-tbl th{color:var(--fn-text-secondary,#6b7280);font-weight:500}
+.xhs-btn{display:inline-flex;align-items:center;gap:5px}.xhs-tab{display:inline-flex;align-items:center;gap:5px}.xhs-h{display:flex;align-items:center;gap:7px}.xhs-hic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:#fff0f2;color:#ff2442;flex:none}.xhs-tip{display:inline-flex;color:var(--fn-text-tertiary,#9aa1ad);cursor:help}.xhs-dot{width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:5px;align-self:center;flex:none}.xhs-group.is-active{background:#182230;border-color:#182230;color:#fff}.xhs-btn.is-active{background:#182230;border-color:#182230;color:#fff}.xhs-steps{display:grid;gap:10px 8px;margin:4px 0 10px}.xhs-step{display:flex;gap:7px;align-items:flex-start;min-width:0}.xhs-step-n{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}.xhs-bar{height:6px;border-radius:3px;background:var(--fn-bg-secondary,#f1f1f1);overflow:hidden;margin-top:5px}.xhs-bar>span{display:block;height:100%;background:#ff2442;border-radius:3px}.xhs-bar.ent>span{background:#5b4fc7}.xhs-lane{position:relative;height:26px;border-radius:6px;background:var(--fn-bg-secondary,#f7f8fa);margin:2px 0 8px;overflow:hidden}.xhs-blk{position:absolute;top:3px;bottom:3px;border-radius:4px;font-size:10px;line-height:20px;padding:0 5px;white-space:nowrap;overflow:hidden;box-sizing:border-box}.xhs-now{position:absolute;top:0;bottom:0;width:2px;background:#182230}.xhs-axis{display:flex;justify-content:space-between;font-size:10px;color:var(--fn-text-secondary,#6b7280)}.xhs-tdot{width:5px;height:5px;border-radius:50%;background:#2f5bd7;display:inline-block;margin-left:2px;vertical-align:super;flex:none}.xhs-btn.danger{border-color:#ffc2cb}
+  .xhs-tab.active{color:#ff2442;border-bottom-color:#ff2442;font-weight:700}
+  .xhs-group.active{background:#182230;border-color:#182230;color:#fff}
+  .xhs-thumb .xhs-x{position:absolute;right:2px;top:2px;border:0;border-radius:50%;width:18px;height:18px;line-height:16px;padding:0;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
+  .xhs-pill.nat-marketing,.xhs-chip.nat-marketing{background:#ffe3e7;color:#d81b3c}
+  .xhs-pill.nat-life,.xhs-chip.nat-life{background:#eaf7ee;color:#149447}
+  .xhs-pill.nat-knowledge,.xhs-chip.nat-knowledge{background:#eef4ff;color:#2f5bd7}
+
   .xhs-two { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:12px; align-items:start; }
-  .xhs-two.even { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .xhs-stack { display:flex; flex-direction:column; gap:12px; min-width:0; }
-  .xhs-pill.ok { color:${C.green}; } .xhs-pill.warn { color:${C.amber}; } .xhs-pill.bad { color:${C.red}; }
-  .xhs-pill.lock { background:#f1f0fb; color:#5b4fc7; }
-  .xhs-pill.src-ai { background:#eef4ff; color:#2f5bd7; } .xhs-pill.src-instruction { background:#fff4e5; color:${C.amber}; } .xhs-pill.src-material { background:#eaf7ee; color:${C.green}; }
-  .xhs-tbl { width:100%; border-collapse:collapse; }
-  .xhs-tbl th, .xhs-tbl td { text-align:left; padding:7px 8px; border-bottom:1px solid ${C.line}; font-size:12px; vertical-align:top; }
-  .xhs-tbl th { color:${C.muted}; font-weight:500; }
+  .xhs-even { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
   .xhs-tbl .xhs-btn { white-space:nowrap; }
+  .xhs-tbl td { vertical-align:top; }
+  .xhs-app textarea { font:inherit; }
   .xhs-link { border:0; background:none; padding:0; color:#2f5bd7; cursor:pointer; font:inherit; text-align:left; }
   .xhs-link:hover { text-decoration:underline; }
-  .xhs-app textarea { font:inherit; }
-  .xhs-steps { display:grid; gap:10px 8px; margin:4px 0 10px; }
-  .xhs-step { display:flex; gap:7px; align-items:flex-start; }
-  .xhs-step-n { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex:none; background:${C.soft}; color:${C.muted}; }
-  .xhs-step-n.done { background:#eaf7ee; color:${C.green}; } .xhs-step-n.cur { background:${C.red}; color:#fff; }
-  .xhs-lane { position:relative; height:26px; border-radius:6px; background:${C.soft}; margin:2px 0 8px; overflow:hidden; }
-  .xhs-blk { position:absolute; top:3px; bottom:3px; border-radius:4px; font-size:10px; line-height:20px; padding:0 5px; white-space:nowrap; overflow:hidden; box-sizing:border-box; }
+  .xhs-level { border:1px solid ${C.line}; border-radius:10px; padding:12px; cursor:pointer; background:${C.surface}; display:block; }
+  .xhs-level.is-active { border-color:${C.red}; }
+  .xhs-level.is-off { opacity:.5; cursor:not-allowed; }
+  .xhs-chip { display:block; border-radius:6px; padding:4px 6px; margin-bottom:4px; font-size:11px; background:${C.soft}; cursor:grab; }
+  .xhs-cell.is-over { background:#fff0f2; }
+  .xhs-thumb { position:relative; display:inline-block; margin:4px; border-radius:6px; cursor:pointer; outline:2px solid transparent; }
+  .xhs-thumb.is-active { outline-color:${C.red}; }
+  .xhs-thumb .xhs-preview { margin:0; display:block; }
+  .xhs-thumb .xhs-mark { position:absolute; left:3px; bottom:3px; font-size:10px; background:rgba(0,0,0,.55); color:#fff; border-radius:4px; padding:0 4px; }
+  .xhs-ov { position:fixed; inset:0; background:rgba(15,23,42,.38); display:flex; align-items:center; justify-content:center; z-index:60; }
+  .xhs-dlg { background:${C.surface}; border-radius:12px; width:min(520px,92vw); max-height:86vh; overflow:auto; padding:18px; box-shadow:0 18px 50px rgba(0,0,0,.2); }
+  .xhs-dlg h2 { margin:0 0 4px; font-size:16px; }
+  .xhs-toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#182230; color:#fff; border-radius:8px; padding:8px 14px; z-index:70; font-size:13px; }
+  .xhs-banner { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .xhs-banner.paused { background:#fff0f2; }
+  .xhs-pill.src-ai { background:#eef4ff; color:#2f5bd7; } .xhs-pill.src-instruction { background:#fff4e5; color:${C.amber}; } .xhs-pill.src-material { background:#eaf7ee; color:${C.green}; }
   .xhs-blk.publish { background:#ffe3e7; color:#d81b3c; } .xhs-blk.nurture, .xhs-blk.browse { background:#eef4ff; color:#2f5bd7; } .xhs-blk.reply, .xhs-blk.inbox { background:#eaf7ee; color:${C.green}; } .xhs-blk.paused { background:repeating-linear-gradient(45deg,#ececec,#ececec 5px,#f7f7f7 5px,#f7f7f7 10px); color:${C.muted}; }
-  .xhs-now { position:absolute; top:0; bottom:0; width:2px; background:#182230; }
-  .xhs-axis { display:flex; justify-content:space-between; font-size:10px; color:${C.muted}; }
-  .xhs-bar { height:6px; border-radius:3px; background:${C.soft}; overflow:hidden; margin-top:5px; }
-  .xhs-bar > span { display:block; height:100%; background:${C.red}; }
-  .xhs-bar.ent > span { background:#5b4fc7; }
-  .xhs-level { border:1px solid ${C.line}; border-radius:10px; padding:12px; cursor:pointer; background:${C.surface}; text-align:left; color:${C.ink}; font:inherit; }
-  .xhs-level.active { border-color:${C.red}; }
-  .xhs-level:disabled { opacity:.5; cursor:not-allowed; }
-  .xhs-check { display:flex; gap:6px; align-items:flex-start; margin:6px 0; }
-  .xhs-cal td { min-width:96px; }
-  .xhs-chip { display:block; border-radius:6px; padding:4px 6px; margin-bottom:4px; font-size:11px; background:${C.soft}; }
-  .xhs-chip.marketing { background:#ffe3e7; } .xhs-chip.life { background:#eaf7ee; } .xhs-chip.knowledge { background:#eef4ff; }
-  .xhs-banner { display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-left:3px solid #5b4fc7; }
-  .xhs-banner.paused { border-left-color:${C.red}; background:#fff0f2; }
-  @media (max-width:900px) { .xhs-stats, .xhs-two, .xhs-two.even { grid-template-columns:1fr; } }
+  .xhs-step-n { background:${C.soft}; color:${C.muted}; } .xhs-step-n.done { background:#eaf7ee; color:${C.green}; }
+  @media (max-width:900px) { .xhs-two, .xhs-even, .xhs-2, .xhs-3, .xhs-4 { grid-template-columns:1fr; } }
 `;
+
+// Icons taken from the design; looked up by the label they sit next to.
+const ICON_PATHS = [
+  '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/>',
+  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
+  '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  '<path d="M20 6 9 17l-5-5"/>',
+  '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  '<path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9L9.6 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>',
+  '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/>',
+  '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+  '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/>',
+  '<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
+  '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+  '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/>',
+  '<path d="M12 5v14M5 12h14"/>',
+  '<path d="m7.5 4.3 9 5.1"/><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',
+  '<path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/>',
+  '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 21v-4h6v4"/><path d="M8 7h.01M12 7h.01M16 7h.01M8 11h.01M12 11h.01M16 11h.01"/>',
+  '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  '<path d="m12 3 2.700 5.600 6.100.900-4.400 4.300 1 6.100L12 17l-5.400 2.900 1-6.100L3.200 9.500l6.100-.900Z"/>',
+  '<path d="M3 3v18h18"/><path d="M8 17V11M13 17V7M18 17v-4"/>',
+  '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  '<path d="M12 22a10 10 0 1 1 10-10"/><path d="M12 12 18 6"/>',
+  '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/>',
+  '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>',
+  '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/>',
+  '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+  '<path d="m15 18-6-6 6-6"/>',
+  '<path d="m9 18 6-6-6-6"/>',
+  '<path d="m6 3 14 9-14 9z"/>',
+  '<path d="M18 6 6 18M6 6l12 12"/>',
+  '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>',
+  '<path d="M19 14c1.5-1.5 3-3.200 3-5.500A5.500 5.500 0 0 0 16.500 3c-1.800 0-3 .500-4.500 2-1.500-1.500-2.700-2-4.500-2A5.500 5.500 0 0 0 2 8.500c0 2.300 1.500 4 3 5.500l7 7Z"/>',
+  '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>企业已用 7 / 20 个账号 · 5 / 10 台手机</span><span class="xhs-meta">一台手机同一时间只登录一个账号</span></div><div class="xhs-row"><div style="min-width: 0"><b>小个子通勤党</b><div class="xhs-meta">星河 · 秋冬通勤 · 新账号 · 小红薯号 <span class="num">xh_8826****41</span></div><div class="xhs-meta">设备就绪状态：Pixel 8 · 已配对 · 小红薯已登录</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>已配置设备</span><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>绑定手机</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>迁移已有设备</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>极简衣橱主理人</b><div class="xhs-meta">星河 · 秋冬通勤 · 新账号 · 待绑定平台账号</div><div class="xhs-meta">设备就绪状态：未选择设备</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill warn"><i class="xhs-dot"></i>待配置</span><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>绑定手机</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>迁移已有设备</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>星河科技官方号</b><div class="xhs-meta">星河 · 秋冬通勤 · 已有账号 · 小红薯号 <span class="num">xh_3391****65</span></div><div class="xhs-meta">设备就绪状态：Redmi K70 · 已配对 · 需要重新登录</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>已配置设备</span><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>绑定手机</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>迁移已有设备</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>周末探店的 HR</b><div class="xhs-meta">星河 · 秋冬通勤 · 新账号 · 小红薯号 <span class="num">xh_7710****08</span></div><div class="xhs-meta">设备就绪状态：Mate 60 · 已配对 · 小红薯已登录</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>已配置设备</span><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>绑定手机</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>迁移已有设备</button></div></div></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span>绑定现有账号的手机</span></h3><div class="xhs-3"><label class="xhs-field"><span class="xhs-label">所属项目</span><select class="xhs-select"><option>星河 · 秋冬通勤</option><option>选择项目</option></select></label><label class="xhs-field"><span class="xhs-label">账号名称</span><input class="xhs-input" value="" placeholder="例如：官方号"></label><label class="xhs-field"><span class="xhs-label">平台账号 ID</span><input class="xhs-input" value="" placeholder="小红薯号"></label></div><div class="xhs-2"><label class="xhs-field"><span class="xhs-label">接入方式</span><select class="xhs-select"><option>已有账号</option><option>新账号</option></select></label><label class="xhs-field"><span class="xhs-label">设备</span><select class="xhs-select"><option>选择设备</option><option>Pixel 8 · 已配对</option><option>Redmi K70 · 已配对</option><option>Mate 60 · 已配对</option></select></label></div><div class="xhs-meta">接入方式保存后不能更改。新账号从「人设规划」采用人设后出现在这里，只需要绑定手机。</div><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>保存账号</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>取消绑定编辑</button></div></section></div></sc-if><sc-if value="{{ p.g3_3 }}" hint-placeholder-val="{{ false }}"><div class="xhs-stack"><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span><span>号设档案库</span></h3><span class="xhs-pill" style="background: #fff0f2; color: #ff2442">新增</span></div><table class="xhs-tbl"><thead><tr><th>账号</th><th>年龄 / 性别 / 地区</th><th>职业</th><th>垂直标签</th><th>泛兴趣标签</th><th>角色来源</th><th>形象素材</th><th></th></tr></thead><tbody><tr><td><b>小个子通勤党</b></td><td>27 / 女 / 上海</td><td>产品经理</td><td>通勤穿搭、小个子</td><td>咖啡、租房改造</td><td><span class="xhs-pill">AI 生成</span></td><td>虚拟形象 6 张</td><td><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看档案</button></td></tr><tr><td><b>极简衣橱主理人</b></td><td>31 / 女 / 杭州</td><td>设计师</td><td>胶囊衣橱</td><td>家居、手冲咖啡、展览</td><td><span class="xhs-pill">AI 生成</span></td><td>虚拟形象 4 张</td><td><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看档案</button></td></tr><tr><td><b>周末探店的 HR</b></td><td>29 / 女 / 成都</td><td>HR</td><td>通勤包、职场妆容</td><td>探店、健身</td><td><span class="xhs-pill ok"><i class="xhs-dot"></i>本人授权</span></td><td>授权照片 12 张</td><td><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看档案</button></td></tr><tr><td><b>星河科技官方号</b></td><td>—</td><td>品牌账号</td><td>通勤女装</td><td>—</td><td><span class="xhs-pill">已有账号</span></td><td>品牌素材 30 张</td><td><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看档案</button></td></tr></tbody></table><div class="xhs-actions"><button class="xhs-btn primary" type="button" >批量生成账号人设</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>添加自定义角色</button></div></section><div class="xhs-2" style="gap: 12px; align-items: start"><div class="xhs-stack"><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><span>周末探店的 HR · 人设与兴趣池</span></h3></div><div class="xhs-4"><label class="xhs-field"><span class="xhs-label">年龄</span><input class="xhs-input" value="29" placeholder=""></label><label class="xhs-field"><span class="xhs-label">性别</span><input class="xhs-input" value="女" placeholder=""></label><label class="xhs-field"><span class="xhs-label">地区</span><input class="xhs-input" value="成都" placeholder=""></label><label class="xhs-field"><span class="xhs-label">职业或身份</span><input class="xhs-input" value="HR" placeholder=""></label></div><div class="xhs-2"><label class="xhs-field"><span class="xhs-label">内容风格</span><select class="xhs-select"><option>生活记录</option><option>知识分享</option><option>清单整理</option></select></label><label class="xhs-field"><span class="xhs-label">简介素材（星座 + MBTI + 自我介绍 + 兴趣）</span><input class="xhs-input" value="天秤 · ENFJ｜在成都做 HR，周末探店" placeholder=""></label></div><div class="xhs-3"><label class="xhs-field"><span class="xhs-label">核心兴趣池</span><textarea class="xhs-textarea" style="min-height: 56px" placeholder="">通勤包, 职场妆容</textarea></label><label class="xhs-field"><span class="xhs-label">扩展兴趣池</span><textarea class="xhs-textarea" style="min-height: 56px" placeholder="">面试穿搭, 办公室好物</textarea></label><label class="xhs-field"><span class="xhs-label">泛内容兴趣池</span><textarea class="xhs-textarea" style="min-height: 56px" placeholder="">探店, 健身, 火锅</textarea></label></div><div class="xhs-meta">兴趣池长期保存，每天的养号任务和内容建议都从这里取词。</div><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>保存档案</button></div></section></div><div class="xhs-stack"><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg></span><span>人物形象素材</span><span class="xhs-tip" title="保存后，生图时自动带上参考，保持同一个账号的人物形象一致。" aria-label="保存后，生图时自动带上参考，保持同一个账号的人物形象一致。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><span class="xhs-pill" style="background: #fff0f2; color: #ff2442">新增</span></div><div class="xhs-label">本人授权的形象照</div><span class="xhs-preview" style="background: #d8c3a5">正面</span><span class="xhs-preview" style="background: #c9b8c9">侧面</span><span class="xhs-preview" style="background: #b9c7b4">全身</span><div class="xhs-label" style="margin-top: 8px">服装、发型等形象参考</div><span class="xhs-preview" style="background: #e0cdb8">风衣</span><span class="xhs-preview" style="background: #c2cfdc">短发</span><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>上传授权照片</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg>生成虚拟人物素材</button><button class="xhs-btn" type="button" >用参考图生成场景图</button></div></section><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg></span><span>来源与授权</span></h3><span class="xhs-pill" style="background: #fff0f2; color: #ff2442">新增</span></div><table class="xhs-tbl"><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>角色来源</td><td>本人授权（员工：小王）· AI 补充了兴趣池</td></tr><tr><td>授权范围</td><td>形象照可用于本账号图文；不可用于其他账号</td></tr><tr><td>授权有效期</td><td>2026-09-01 至 2027-08-31 · <span class="xhs-pill ok"><i class="xhs-dot"></i>有效</span></td></tr><tr><td>真实经历素材</td><td>只能用于本账号，不能改写成其他账号的亲身经历</td></tr><tr><td>AI 人设的边界</td><td>AI 人设只指导内容风格，不作为真实消费体验或效果的证明</td></tr></tbody></table><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>上传授权书</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>调整使用范围</button></div></section></div></div></div></sc-if><sc-if value="{{ p.g3_4 }}" hint-placeholder-val="{{ false }}"><div class="xhs-stack"><div style="display: flex; gap: 12px; align-items: end; flex-wrap: wrap"><div style="width: 280px"><label class="xhs-field"><span class="xhs-label">新号公开资料</span><select class="xhs-select"><option>小个子通勤党</option><option>极简衣橱主理人</option><option>选择新号</option></select></label></div><div class="xhs-meta" style="padding-bottom: 14px">手机：Pixel 8 · 资料版本 v3</div><div style="padding-bottom: 9px"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>重新载入资料</button></div></div><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span>建号流程 · 小个子通勤党</span><span class="xhs-tip" title="注册、登录和兴趣标签由你在手机上完成，系统只给建议；资料一次只改一项。" aria-label="注册、登录和兴趣标签由你在手机上完成，系统只给建议；资料一次只改一项。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><span class="xhs-pill" style="background: #eef4ff; color: #2f5bd7">本次补充</span></div><div class="xhs-steps" style="grid-template-columns: repeat(7, minmax(0, 1fr))"><div class="xhs-step"><span class="xhs-step-n" style="background: #eaf7ee; color: #149447">✓</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">注册与登录</div><div class="xhs-meta">本人在手机完成</div></div></div><div class="xhs-step"><span class="xhs-step-n" style="background: #eaf7ee; color: #149447">✓</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">身份核对</div><div class="xhs-meta">小红薯号已锁定</div></div></div><div class="xhs-step"><span class="xhs-step-n" style="background: #eaf7ee; color: #149447">✓</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">兴趣标签选择</div><div class="xhs-meta">按建议在手机勾选</div></div></div><div class="xhs-step"><span class="xhs-step-n" style="background: #eaf7ee; color: #149447">✓</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">文字资料</div><div class="xhs-meta">昵称 · 简介 · 性别 · 年龄</div></div></div><div class="xhs-step"><span class="xhs-step-n" style="background: #ff2442; color: #fff">5</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">头像与背景图</div><div class="xhs-meta">已选候选，待应用</div></div></div><div class="xhs-step"><span class="xhs-step-n" style="background: var(--surface-2,#f7f8fa); color: var(--text-secondary,#6b7280)">6</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">逐项应用</div><div class="xhs-meta">一次只改一项</div></div></div><div class="xhs-step"><span class="xhs-step-n" style="background: var(--surface-2,#f7f8fa); color: var(--text-secondary,#6b7280)">7</span><div style="min-width: 0"><div style="font-weight: 600; font-size: 12.5px">人工核验</div><div class="xhs-meta">对照手机确认</div></div></div></div><div class="xhs-row"><div style="min-width: 0"><b>兴趣标签选择</b><div class="xhs-meta">首次打开小红薯时勾选，建议按兴趣池选这几个</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill">穿搭</span><span class="xhs-pill">职场</span><span class="xhs-pill">咖啡</span><span class="xhs-pill">家居</span><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>我已在手机上选好</button></div></div></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></span><span>手机准备与身份</span></h3><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>只读核对小红薯号</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>运行准备检查</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>读取手机当前资料</button><button class="xhs-btn danger" type="button"  disabled><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>停止当前检查或应用</button></div><div class="xhs-meta" style="margin-top: 10px">检查不会切换账号；需要登录或验证码时停下，由你在手机上处理。</div><div class="xhs-meta" style="margin-top: 4px">准备状态：ready · 10-29 09:12</div><div style="display: flex; gap: 8px; align-items: end; margin-top: 6px"><div style="flex: 1"><label class="xhs-field"><span class="xhs-label">手机回读的小红薯号：xh_8826****41。请与目标账号核对后，在下方输入确认</span><input class="xhs-input" value="" placeholder="请输入截图中核对后的小红薯号"></label></div><div style="padding-bottom: 9px; display: flex; gap: 7px"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认并锁定身份</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看身份核对截图</button></div></div></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span>填写与审核资料</span></h3><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg>生成文字资料</button></div><div class="xhs-2"><label class="xhs-field"><span class="xhs-label">昵称</span><input class="xhs-input" value="小个子通勤党" placeholder=""></label><label class="xhs-field"><span class="xhs-label">职业</span><input class="xhs-input" value="互联网 / 产品经理" placeholder=""></label></div><label class="xhs-field"><span class="xhs-label">简介（星座 + MBTI｜自我介绍｜兴趣，三段可分别重写）</span><textarea class="xhs-textarea" style="min-height: 56px" placeholder="">白羊 · ENFP｜155 的通勤穿搭记录｜每周一套不费脑的上班衣服</textarea></label><div class="xhs-3"><label class="xhs-field"><span class="xhs-label">性别</span><select class="xhs-select"><option>女</option><option>男</option><option>不展示</option><option>请选择</option></select></label><label class="xhs-field"><span class="xhs-label">生日</span><input class="xhs-input" value="1998-04-12" placeholder=""></label><label class="xhs-field"><span class="xhs-label">地区</span><input class="xhs-input" value="上海 · 徐汇" placeholder=""></label></div><label class="xhs-field"><span class="xhs-label">内部兴趣标签（不发送到手机）</span><input class="xhs-input" value="秋冬通勤, 小个子显高, 大衣搭配" placeholder=""></label><div class="xhs-meta">昵称最多 20 字，简介最多 100 字。生日、性别与地区须由你核对，职业可留空。</div><div class="xhs-2"><label class="xhs-field"><span class="xhs-label">候选图生成模型</span><select class="xhs-select"><option>默认个人生图模型</option></select></label><div></div></div><div class="xhs-2"><div><div class="xhs-label">头像候选</div><span class="xhs-preview" style="background: #d8c3a5">已选</span><span class="xhs-preview" style="background: #b9c7b4"></span><span class="xhs-preview" style="background: #c9b8c9"></span><label class="xhs-field"><span class="xhs-label">头像预设</span><select class="xhs-select"><option>人物半身照 + 自然环境背景</option><option>只拍环境，不出现人物</option><option>自定义</option></select></label><label class="xhs-field"><span class="xhs-label">头像生成要求</span><input class="xhs-input" value="暖色、侧脸、手持咖啡" placeholder=""></label><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg>生成头像候选（每组 3 张）</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>上传头像候选</button></div></div><div><div class="xhs-label">背景图候选</div><span class="xhs-preview" style="background: #e0cdb8">已选</span><span class="xhs-preview" style="background: #c2cfdc"></span><span class="xhs-preview" style="background: #cfd6c0"></span><label class="xhs-field"><span class="xhs-label">背景图预设</span><select class="xhs-select"><option>当地知名风景 + 人物背影</option><option>生活场景一角</option><option>自定义</option></select></label><label class="xhs-field"><span class="xhs-label">背景图生成要求</span><input class="xhs-input" value="衣架一角、自然光" placeholder=""></label><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg>生成背景图候选（每组 3 张）</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>上传背景图候选</button></div></div></div><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>保存公开资料草稿</button></div><label class="xhs-check"><input type="checkbox" checked="{{ cv.c9 }}" onChange="{{ cch.c9 }}"><span>我已逐项核对文字、生日、性别、地区与选中的头像和背景图</span></label><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认公开资料审核</button></div></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg></span><span>逐项比较与应用</span></h3><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看应用前资料截图</button></div><table class="xhs-tbl"><thead><tr><th></th><th>字段</th><th>手机当前</th><th>草稿</th></tr></thead><tbody><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c10 }}" onChange="{{ cch.c10 }}"><span></span></label></td><td>昵称</td><td>小红薯 6A2F</td><td>小个子通勤党</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c11 }}" onChange="{{ cch.c11 }}"><span></span></label></td><td>简介</td><td>留空</td><td>155 的通勤穿搭记录｜每周一套不费脑的上班衣服</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c12 }}" onChange="{{ cch.c12 }}"><span></span></label></td><td>职业</td><td>尚未回读</td><td>互联网 / 产品经理</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c13 }}" onChange="{{ cch.c13 }}"><span></span></label></td><td>头像</td><td>默认头像</td><td>图片不自动比对，选中后覆盖</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c14 }}" onChange="{{ cch.c14 }}"><span></span></label></td><td>背景图</td><td>默认背景</td><td>图片不自动比对，选中后覆盖</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c15 }}" onChange="{{ cch.c15 }}"><span></span></label></td><td>性别</td><td>不展示</td><td>女</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c16 }}" onChange="{{ cch.c16 }}"><span></span></label></td><td>生日</td><td>留空</td><td>1998-04-12</td></tr><tr><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c17 }}" onChange="{{ cch.c17 }}"><span></span></label></td><td>地区</td><td>留空</td><td>上海 · 徐汇</td></tr></tbody></table><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>预检所选资料变更</button></div></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></span><span>核对本次应用</span><span class="xhs-tip" title="目标小红薯号：xh_8826****41 · 手机：Pixel 8" aria-label="目标小红薯号：xh_8826****41 · 手机：Pixel 8"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><div class="xhs-row"><div style="min-width: 0"><b>昵称</b></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-meta">小红薯 6A2F → 小个子通勤党</span></div></div><div class="xhs-row"><div style="min-width: 0"><b>简介</b></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-meta">空 → 155 的通勤穿搭记录｜…</span></div></div><div class="xhs-row"><div style="min-width: 0"><b>头像</b></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-meta">默认头像 → 覆盖为选中的候选图</span></div></div><div class="xhs-meta" style="margin-top: 8px">每次只改一个字段，保存后回读；名字遇到次数或敏感词限制就停，不自动换名。</div><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认应用到新号</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>重新独立核验</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看独立核验截图</button></div><div style="margin-top: 10px"><span class="xhs-pill ok"><i class="xhs-dot"></i>手机回报一致</span></div><label class="xhs-field"><span class="xhs-label">人工核验记录</span><textarea class="xhs-textarea" style="min-height: 56px" placeholder="记录你对照手机看到的结果"></textarea></label><label class="xhs-check"><input type="checkbox" checked="{{ cv.c18 }}" onChange="{{ cch.c18 }}"><span>我已对照手机、选中候选图和截图核对全部八项资料</span></label><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>记录人工核验完成</button></div></section></div></sc-if><sc-if value="{{ p.g3_5 }}" hint-placeholder-val="{{ false }}"><div class="xhs-stack"><section class="xhs-card"><div style="display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 12px"><div style="width: 320px"><label class="xhs-field"><span class="xhs-label">选择账号</span><select class="xhs-select"><option>星河科技官方号 · 已有账号</option><option>选择账号</option></select></label></div><div class="xhs-meta" style="padding-bottom: 14px">小红薯号 xh_3391****65 · Redmi K70 · 接管第 6 天</div><span style="flex: 1"></span><div style="padding-bottom: 9px; display: flex; gap: 7px"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>暂停接管</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>释放设备占用</button><button class="xhs-btn danger" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>撤销方案</button></div></div><div style="display: flex; gap: 6px; align-items: center"><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eaf7ee; color: #149447; display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size: 12px; color: #149447; font-weight: 400; white-space: nowrap">1 授权接管</span><span style="flex: 1; height: 1px; background: var(--border,#e5e7eb)"></span></div><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eaf7ee; color: #149447; display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size: 12px; color: #149447; font-weight: 400; white-space: nowrap">2 锁定身份</span><span style="flex: 1; height: 1px; background: var(--border,#e5e7eb)"></span></div><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eaf7ee; color: #149447; display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size: 12px; color: #149447; font-weight: 400; white-space: nowrap">3 只读盘点</span><span style="flex: 1; height: 1px; background: var(--border,#e5e7eb)"></span></div><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #eaf7ee; color: #149447; display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size: 12px; color: #149447; font-weight: 400; white-space: nowrap">4 生成诊断</span><span style="flex: 1; height: 1px; background: var(--border,#e5e7eb)"></span></div><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: #fff0f2; color: #ff2442; display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size: 12px; color: #ff2442; font-weight: 600; white-space: nowrap">5 采纳方案</span><span style="flex: 1; height: 1px; background: var(--border,#e5e7eb)"></span></div><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2,#f7f8fa); color: var(--text-secondary,#6b7280); display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span style="font-size: 12px; color: var(--text-secondary,#6b7280); font-weight: 400; white-space: nowrap">6 逐项变更</span><span style="flex: 1; height: 1px; background: var(--border,#e5e7eb)"></span></div><div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px"><span style="width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2,#f7f8fa); color: var(--text-secondary,#6b7280); display: inline-flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg></span><span style="font-size: 12px; color: var(--text-secondary,#6b7280); font-weight: 400; white-space: nowrap">7 观察与复核</span></div></div></section><div class="xhs-2" style="gap: 12px; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start"><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span>身份与盘点</span></h3><div class="xhs-row"><div style="min-width: 0"><b>接管授权</b><div class="xhs-meta">林清 · 10-23 14:02 · 实际资料变更另行确认</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>已授权</span></div></div><div class="xhs-row"><div style="min-width: 0"><b>身份</b><div class="xhs-meta">手机回读的小红薯号已由人工对照截图确认</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>已锁定</span><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看身份核对截图</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>账号审计</b><div class="xhs-meta">只读盘点公开资料、可见作品和页面显示的指标，不猜测缺失数据</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>已验证</span><button class="xhs-btn" type="button"  disabled><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认审计基线</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>重新盘点</button></div></div><table class="xhs-tbl"><thead><tr><th>项目</th><th>盘点结果</th></tr></thead><tbody><tr><td>粉丝 / 获赞与收藏</td><td>18.4k / 9.6万</td></tr><tr><td>笔记</td><td>126 篇 · 近 30 天 9 篇</td></tr><tr><td>近 7 日数据</td><td>观看 4.2万 · 互动 1,860（按页面原样读取）</td></tr><tr><td>公开资料</td><td>昵称 星河科技官方 · 简介 3 行 · 职业 未填 · 地区 上海</td></tr><tr><td>内容结构</td><td>近 30 篇：营销 24 · 知识 5 · 生活 1</td></tr></tbody></table></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></span><span>诊断</span></h3><div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px"><span class="xhs-pill warn"><i class="xhs-dot"></i>草稿 · 待你采纳</span><span class="xhs-pill">基于 10-24 的审计基线</span></div><div style="padding: 10px 12px; border-radius: 8px; background: var(--surface-2,#f7f8fa)"><b>摘要</b><div style="margin-top: 4px">账号有稳定的粉丝基础和辨识度，问题在于内容几乎全是营销，简介没有说明“这个号能给读者什么”。建议保留昵称和头像，先调整简介，再把内容结构往知识和生活内容上拉。</div></div><h4>发现</h4><div class="xhs-row"><div style="min-width: 0">近 30 篇里营销内容占 80%，生活内容只有 1 篇</div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill bad"><i class="xhs-dot"></i>内容结构</span></div></div><div class="xhs-row"><div style="min-width: 0">简介是公司介绍，没有读者利益点，含一处引流表述</div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill warn"><i class="xhs-dot"></i>公开资料</span></div></div><div class="xhs-row"><div style="min-width: 0">知识类笔记收藏率明显高于营销类</div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill ok"><i class="xhs-dot"></i>表现</span></div></div><div class="xhs-row"><div style="min-width: 0">创作者数据近 7 日可读，更早的数据页面未显示，记为未知</div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><span class="xhs-pill">数据</span></div></div><h4>建议</h4><ul style="margin: 0; padding-left: 18px"><li>保留昵称和头像，辨识度优先</li><li>简介只改与目标冲突的部分，去掉引流表述</li><li>每周至少 1 篇生活或兴趣内容，营销内容不超过 4 成</li></ul><div class="xhs-actions"><button class="xhs-btn" type="button"  disabled><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg>生成诊断</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>重新生成</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>记录采纳意见</button></div></section></div><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span>资料变更提案</span><span class="xhs-tip" title="每个采纳的提案会生成一张变更单，一次只改一个字段，核验完成并过了观察期再做下一项。" aria-label="每个采纳的提案会生成一张变更单，一次只改一个字段，核验完成并过了观察期再做下一项。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><table class="xhs-tbl"><thead><tr><th>字段</th><th>现在</th><th>建议改为</th><th>风险与节奏</th><th>你的决定</th></tr></thead><tbody><tr><td>简介</td><td>星河科技官方账号，欢迎咨询合作…</td><td>155–165 通勤穿搭｜每周一套不费脑的上班衣服</td><td><span class="xhs-pill ok"><i class="xhs-dot"></i>L1 · 观察 72 小时</span> <span class="xhs-pill">7 天内最多 1 次</span></td><td><div style="display: flex; gap: 4px"><button class="xhs-btn {{ t.g12_0 }}" type="button" onClick="{{ on.g12_0 }}" style="padding: 4px 9px">采纳</button><button class="xhs-btn {{ t.g12_1 }}" type="button" onClick="{{ on.g12_1 }}" style="padding: 4px 9px">修改</button><button class="xhs-btn {{ t.g12_2 }}" type="button" onClick="{{ on.g12_2 }}" style="padding: 4px 9px">不采纳</button></div></td></tr><tr><td>职业</td><td>未填</td><td>服饰 / 品牌主理人</td><td><span class="xhs-pill ok"><i class="xhs-dot"></i>L1 · 观察 72 小时</span> <span class="xhs-pill">14 天内最多 1 次</span></td><td><div style="display: flex; gap: 4px"><button class="xhs-btn {{ t.g13_0 }}" type="button" onClick="{{ on.g13_0 }}" style="padding: 4px 9px">采纳</button><button class="xhs-btn {{ t.g13_1 }}" type="button" onClick="{{ on.g13_1 }}" style="padding: 4px 9px">修改</button><button class="xhs-btn {{ t.g13_2 }}" type="button" onClick="{{ on.g13_2 }}" style="padding: 4px 9px">不采纳</button></div></td></tr><tr><td>背景图</td><td>品牌 logo 平铺</td><td>通勤街拍横图（需先上传到私有素材）</td><td><span class="xhs-pill warn"><i class="xhs-dot"></i>L2 · 观察 168 小时</span> <span class="xhs-pill">昵称和头像不同批</span></td><td><div style="display: flex; gap: 4px"><button class="xhs-btn {{ t.g14_0 }}" type="button" onClick="{{ on.g14_0 }}" style="padding: 4px 9px">采纳</button><button class="xhs-btn {{ t.g14_1 }}" type="button" onClick="{{ on.g14_1 }}" style="padding: 4px 9px">修改</button><button class="xhs-btn {{ t.g14_2 }}" type="button" onClick="{{ on.g14_2 }}" style="padding: 4px 9px">不采纳</button></div></td></tr><tr><td>昵称</td><td>星河科技官方</td><td>保留不改</td><td><span class="xhs-pill warn"><i class="xhs-dot"></i>L2 · 观察 168 小时</span> <span class="xhs-pill">首个观察期内不改</span></td><td><div style="display: flex; gap: 4px"><button class="xhs-btn {{ t.g15_0 }}" type="button" onClick="{{ on.g15_0 }}" style="padding: 4px 9px">采纳</button><button class="xhs-btn {{ t.g15_1 }}" type="button" onClick="{{ on.g15_1 }}" style="padding: 4px 9px">修改</button><button class="xhs-btn {{ t.g15_2 }}" type="button" onClick="{{ on.g15_2 }}" style="padding: 4px 9px">不采纳</button></div></td></tr><tr><td>地区</td><td>上海</td><td>—</td><td><span class="xhs-pill">仅在你明确要求时才改</span></td><td><div style="display: flex; gap: 4px"><button class="xhs-btn {{ t.g16_0 }}" type="button" onClick="{{ on.g16_0 }}" style="padding: 4px 9px">采纳</button><button class="xhs-btn {{ t.g16_1 }}" type="button" onClick="{{ on.g16_1 }}" style="padding: 4px 9px">修改</button><button class="xhs-btn {{ t.g16_2 }}" type="button" onClick="{{ on.g16_2 }}" style="padding: 4px 9px">不采纳</button></div></td></tr></tbody></table><label class="xhs-check"><input type="checkbox" checked="{{ cv.c19 }}" onChange="{{ cch.c19 }}"><span>我已逐项核对提案，理解每项的观察期</span></label><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认方案</button><button class="xhs-btn danger" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>撤销方案</button></div></section><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg></span><span>内容与运营建议</span><span class="xhs-tip" title="诊断里和资料无关的建议，采纳后会写入对应的地方，而不是只留一段文字。" aria-label="诊断里和资料无关的建议，采纳后会写入对应的地方，而不是只留一段文字。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><span class="xhs-pill" style="background: #fff0f2; color: #ff2442">新增</span></div><div class="xhs-row"><div style="min-width: 0"><b>内容方向</b><div class="xhs-meta">主支柱：小个子通勤穿搭（知识类）· 辅支柱：办公室好物（生活类）· 营销内容占比 ≤ 40%</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>采纳到内容计划</button><button class="xhs-btn" type="button" >修改</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>兴趣池</b><div class="xhs-meta">核心 通勤穿搭、大衣搭配 · 扩展 通勤包、职场妆容 · 泛 咖啡、探店（已有账号原先没有兴趣池）</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><button class="xhs-btn primary" type="button" >写入兴趣池</button><button class="xhs-btn" type="button" >修改</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>发布节奏</b><div class="xhs-meta">每周 3 篇，同一账号间隔 ≥ 48 小时；资料变更当天不发布、不养号</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><button class="xhs-btn primary" type="button" >写入排期规则</button><button class="xhs-btn" type="button" >修改</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>养号档位</b><div class="xhs-meta">按 1.8 万粉体量建议“低”档：每日浏览 40 篇、点赞上限 3；档位只降不升，调整由你确认</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><button class="xhs-btn primary" type="button" >设为该账号档位</button><button class="xhs-btn" type="button" >修改</button></div></div><div class="xhs-row"><div style="min-width: 0"><b>首批选题</b><div class="xhs-meta">3 个选题已按「知识清单型」「常见误区型」准备好草稿任务</div></div><div style="display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; align-items: center"><button class="xhs-btn primary" type="button" >加入内容计划</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>查看</button></div></div></section><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span>变更单</span><span class="xhs-tip" title="每次只提交一个字段；地区必须明确请求，头像和背景图需先上传到私有素材。" aria-label="每次只提交一个字段；地区必须明确请求，头像和背景图需先上传到私有素材。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><table class="xhs-tbl"><thead><tr><th>#</th><th>字段</th><th>旧值 → 新值</th><th>状态</th><th>观察期</th><th>操作</th></tr></thead><tbody><tr><td>12</td><td>简介</td><td>星河科技官方账号… → 155–165 通勤穿搭｜…</td><td><span class="xhs-pill warn"><i class="xhs-dot"></i>待预检</span></td><td>—</td><td><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>预检查</button><button class="xhs-btn primary" type="button"  disabled><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认执行</button><button class="xhs-btn danger" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>取消变更单</button></td></tr><tr><td>11</td><td>头像</td><td>旧头像已存档 → 新头像</td><td><span class="xhs-pill ok"><i class="xhs-dot"></i>已核验</span></td><td>至 10-27 · 已结束</td><td><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>图片对照</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>观察期复查</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>创建回滚单</button></td></tr><tr><td>—</td><td>职业</td><td>未填 → 服饰 / 品牌主理人</td><td><span class="xhs-pill">排队 · 等 #12 观察期结束</span></td><td>—</td><td><button class="xhs-btn danger" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>取消变更单</button></td></tr></tbody></table><div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px"><span class="xhs-pill">每批最多 2 个公开字段</span><span class="xhs-pill">批与批之间隔一个观察期</span><span class="xhs-pill">改前存档旧值</span><span class="xhs-pill">保存后独立回读</span></div><div class="xhs-actions"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>创建变更单</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>补跑核验</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>人工检查</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>确认复核</button></div></section></div></sc-if></sc-if><sc-if value="{{ p.g1_2 }}" hint-placeholder-val="{{ false }}"><div class="xhs-tabs" role="tablist"><button class="xhs-tab {{ t.g4_0 }}" type="button" role="tab" onClick="{{ on.g4_0 }}"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>日常运营<i class="xhs-tdot" title="本次补充"></i></button><button class="xhs-tab {{ t.g4_1 }}" type="button" role="tab" onClick="{{ on.g4_1 }}"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>冷启动方案 <span style="color: #ff2442; font-size: 10px; vertical-align: super">新</span></button><button class="xhs-tab {{ t.g4_2 }}" type="button" role="tab" onClick="{{ on.g4_2 }}"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>评论审核</button></div><sc-if value="{{ p.g4_0 }}" hint-placeholder-val="{{ true }}"><div class="xhs-stack"><div class="xhs-meta">服务器日期 2026-10-29 · 时区 Asia/Shanghai。每段先只读核对小红薯号；同一手机串行，登录或账号不符时停止，不自动切换账号。</div><div style="width: 320px"><label class="xhs-field"><span class="xhs-label">运营账号</span><select class="xhs-select"><option>小个子通勤党 · Pixel 8</option><option>星河科技官方号 · Redmi K70</option><option>选择运营账号</option></select></label></div><div class="xhs-meta">选择已绑定手机并完成准备或接管的账号。</div><section class="xhs-card"><h3 class="xhs-h"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></span><span>账号日常预算</span><span class="xhs-tip" title="先保存预算，再生成计划。每段互动上限同时受账号日预算和已用量约束；评论仅在评论页审核后发送。" aria-label="先保存预算，再生成计划。每段互动上限同时受账号日预算和已用量约束；评论仅在评论页审核后发送。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><div class="xhs-4"><label class="xhs-field"><span class="xhs-label">每日浏览目标</span><input class="xhs-input" value="90" placeholder=""></label><label class="xhs-field"><span class="xhs-label">每日分段数</span><input class="xhs-input" value="2" placeholder=""></label><label class="xhs-field"><span class="xhs-label">搜索占比（%）</span><input class="xhs-input" value="80" placeholder=""></label><label class="xhs-field"><span class="xhs-label">按词模式每词篇数</span><input class="xhs-input" value="5" placeholder=""></label></div><div class="xhs-4"><label class="xhs-field"><span class="xhs-label">按词模式首页篇数</span><input class="xhs-input" value="6" placeholder=""></label><label class="xhs-field"><span class="xhs-label">默认最少停留秒数</span><input class="xhs-input" value="11" placeholder=""></label><label class="xhs-field"><span class="xhs-label">默认最多停留秒数</span><input class="xhs-input" value="25" placeholder=""></label><label class="xhs-field"><span class="xhs-label">首页点开比例（%）</span><input class="xhs-input" value="35" placeholder=""></label></div><div class="xhs-4"><label class="xhs-field"><span class="xhs-label">两次点开最少间隔秒数</span><input class="xhs-input" value="6" placeholder=""></label><label class="xhs-field"><span class="xhs-label">两次点开最多间隔秒数</span><input class="xhs-input" value="20" placeholder=""></label><label class="xhs-field"><span class="xhs-label">预算来源</span><select class="xhs-select"><option>本账号单独设置</option><option>沿用项目默认</option></select></label><div style="align-self: end; padding-bottom: 9px"><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>另存为项目默认</button></div></div><table class="xhs-tbl"><thead><tr><th></th><th>启用</th><th>每日上限</th><th>比例（%）</th><th>限定</th></tr></thead><tbody><tr><td>点赞</td><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c20 }}" onChange="{{ cch.c20 }}"><span></span></label></td><td><input class="xhs-input" value="5" placeholder=""></td><td><input class="xhs-input" value="10" placeholder=""></td><td><select class="xhs-select"><option>不限</option><option>仅核心与扩展兴趣内容</option></select></td></tr><tr><td>收藏</td><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c21 }}" onChange="{{ cch.c21 }}"><span></span></label></td><td><input class="xhs-input" value="2" placeholder=""></td><td><input class="xhs-input" value="3" placeholder=""></td><td><select class="xhs-select"><option>仅核心兴趣内容</option><option>不限</option></select></td></tr><tr><td>关注</td><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c22 }}" onChange="{{ cch.c22 }}"><span></span></label></td><td><input class="xhs-input" value="0" placeholder=""></td><td><input class="xhs-input" value="0" placeholder=""></td><td><select class="xhs-select"><option>同兴趣的个人创作者</option><option>不限</option></select></td></tr><tr><td>评论</td><td><label class="xhs-check"><input type="checkbox" checked="{{ cv.c23 }}" onChange="{{ cch.c23 }}"><span></span></label></td><td><input class="xhs-input" value="2" placeholder=""></td><td><input class="xhs-input" value="3" placeholder=""></td><td><span class="xhs-meta">审核后发送 · 正向具体 · 2–10 字 · 不含营销</span></td></tr></tbody></table><div class="xhs-actions"><button class="xhs-btn primary" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>保存运营预算</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 3v4M17 5h4"/></svg>生成今日计划</button><button class="xhs-btn" type="button" ><svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>新建下一轮</button></div></section><section class="xhs-card"><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px"><h3 class="xhs-h" style="margin: 0; flex: 1"><span class="xhs-hic"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><span>目标完成量与异常处理</span><span class="xhs-tip" title="每份当日任务都带这组规则。前两项以外可以按账号调整。" aria-label="每份当日任务都带这组规则。前两项以外可以按账号调整。"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></h3><span class="xhs-pill" style="background: #eef4ff; color: #2f5bd7">本次补充</span></div><div class="xhs-3"><label class="xhs-field"><span class="xhs-label">本次目标完成量</span><input class="xhs-input" value="56 篇（搜索 44 + 首页 12）" placeholder=""></label><label class="xhs-field"><span class="xhs-label">完成不足时</span><select class="xhs-select"><option>记为未完成，不补刷</option><option>下一段补到目标的 80%</option></select></label><label class="xhs-field"><span class="xhs-label">同一分段连续异常</span><select class="xhs-select"><option>2 次即停止这一段</option><option>3 次即停止这一段</option></select></label></div><table class="xhs-tbl"><thead><tr><th>异常</th><th>系统怎么处理</th><th>之后</th></tr></thead><tbody><tr><td>账号受限或平台提示</td><td><span class="xhs-pill" style="background: #f1f0fb; color: #5b4fc7; gap: 3px; align-items: center"><svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+];
+const ICON_OF = {
+  "h:AI 运营助手": 0,
+  "h:系统已为你准备好": 0,
+  "h:上一条指令的结果": 1,
+  "h:今天": 2,
+  "h:账号概览": 3,
+  "h:Pixel 8 · 小个子通勤党": 4,
+  "h:Redmi K70 · 星河科技官方号": 4,
+  "h:Mate 60 · 周末探店的 HR": 4,
+  "h:不在队列里": 5,
+  "h:排队规则": 6,
+  "h:待处理": 5,
+  "h:已自动处理 · 近 7 天": 7,
+  "h:提醒方式": 8,
+  "h:账号健康": 9,
+  "h:项目流程 · 星河 · 秋冬通勤": 10,
+  "h:项目与目标画像": 11,
+  "h:编辑客户资料": 12,
+  "h:目标受众画像": 3,
+  "h:人设规划与分布审核": 3,
+  "h:分布与差异度检查": 9,
+  "h:账号人设": 3,
+  "h:编辑新号人设": 12,
+  "h:账号与设备": 4,
+  "h:绑定现有账号的手机": 13,
+  "h:号设档案库": 14,
+  "h:周末探店的 HR · 人设与兴趣池": 3,
+  "h:人物形象素材": 15,
+  "h:来源与授权": 16,
+  "h:建号流程 · 小个子通勤党": 6,
+  "h:手机准备与身份": 4,
+  "h:填写与审核资料": 12,
+  "h:逐项比较与应用": 17,
+  "h:核对本次应用": 9,
+  "h:身份与盘点": 18,
+  "h:诊断": 9,
+  "h:资料变更提案": 12,
+  "h:内容与运营建议": 0,
+  "h:变更单": 6,
+  "h:账号日常预算": 19,
+  "h:目标完成量与异常处理": 5,
+  "h:2026-10-29 · 第 1 轮": 2,
+  "h:确认日常运营": 9,
+  "h:分段 1": 10,
+  "h:冷启动方案": 20,
+  "h:新号进度": 10,
+  "h:运营观察": 21,
+  "h:浏览规则": 6,
+  "h:从已完成浏览生成候选": 0,
+  "h:手写评论草稿": 12,
+  "h:评论 155 小个子的秋冬通勤外套合集": 1,
+  "h:评论 通勤穿搭别再买这三样": 1,
+  "h:AI 本周建议": 0,
+  "h:内容任务池": 6,
+  "h:同一推广任务的 10 篇": 22,
+  "h:审核流": 9,
+  "h:内容草稿": 23,
+  "h:编辑内容": 12,
+  "h:笔记预览": 4,
+  "h:发布前检查": 9,
+  "h:审核记录": 6,
+  "h:添加素材": 24,
+  "h:生活场景 AI 补图": 0,
+  "h:系统整理结果": 0,
+  "h:素材资产库": 25,
+  "h:内容母版库": 22,
+  "h:智能匹配示例": 0,
+  "h:配图指令预设": 15,
+  "h:我提交的母版候选": 26,
+  "h:业务资料": 27,
+  "h:排期日历": 2,
+  "h:排期提醒": 5,
+  "h:批量发布": 28,
+  "h:编辑发布批次": 12,
+  "h:核对本次发布": 9,
+  "h:发布确认": 9,
+  "h:运行记录": 10,
+  "h:待你审核": 21,
+  "h:已自动回复 · 今天": 28,
+  "h:意向线索": 29,
+  "h:回复规则": 9,
+  "h:运营复盘": 30,
+  "h:账号 × 日期": 2,
+  "h:关键词表现": 31,
+  "h:首页与异常": 5,
+  "h:异常记录 · 近 7 天": 5,
+  "h:根据记录调整下一轮": 32,
+  "h:运营备注 · 10-26": 12,
+  "h:同步与历史导入演练": 32,
+  "h:内容表现": 33,
+  "h:已发布笔记": 23,
+  "h:按母版": 22,
+  "h:反馈到下一轮": 32,
+  "h:数据回收": 32,
+  "h:从内容到线索": 29,
+  "h:自动化程度": 20,
+  "h:发布节奏": 34,
+  "h:敏感词": 5,
+  "h:账号保护": 9,
+  "h:授权台账": 16,
+  "h:登记新授权": 24,
+  "h:撤回或到期后": 5,
+  "h:使用边界": 9,
+  "h:我的用量与企业额度": 33,
+  "h:企业规则": 18,
+  "h:没有分配到的能力会这样显示": 18,
+  "h:我的申请": 28,
+  暂停全部自动任务: 35,
+  工作台: 36,
+  建号: 3,
+  养号: 10,
+  内容: 12,
+  发布: 28,
+  复盘: 30,
+  设置: 37,
+  总览: 36,
+  执行队列: 34,
+  异常与告警: 5,
+  "发送给 AI": 28,
+  手动创作: 12,
+  添加素材: 24,
+  查看内容计划: 21,
+  预览: 21,
+  通过: 7,
+  退回: 38,
+  批量通过所选: 7,
+  全部内容计划: 6,
+  去审核: 39,
+  查看: 21,
+  去处理: 39,
+  停止此分段: 35,
+  查看截图证据: 21,
+  提前: 40,
+  改时间: 2,
+  改期: 2,
+  去绑定: 13,
+  "我已重新登录，重新核对身份": 7,
+  查看受影响任务: 21,
+  保持暂停: 35,
+  "替换为“托特包通勤”": 17,
+  忽略: 41,
+  查看处理规则: 21,
+  登记平台通知: 24,
+  导出健康记录: 42,
+  项目: 11,
+  人设规划: 3,
+  账号与设备: 4,
+  账号档案: 14,
+  号资料: 23,
+  老号接管: 9,
+  确认并同步到人设: 7,
+  只用于新生成的人设: 7,
+  编辑客户资料: 12,
+  编辑目标画像: 12,
+  生成目标画像: 0,
+  新建项目: 24,
+  填写结构化: 6,
+  原始资料: 23,
+  保存客户资料: 7,
+  取消: 41,
+  保存画像草稿: 7,
+  确认画像: 7,
+  关闭画像编辑: 41,
+  生成候选人设: 0,
+  采用为新号: 7,
+  重新生成重复的这一个: 32,
+  编辑人设: 12,
+  确认人设分布: 7,
+  保存人设草稿: 7,
+  关闭人设编辑: 41,
+  绑定手机: 13,
+  迁移已有设备: 17,
+  保存账号: 7,
+  取消绑定编辑: 41,
+  查看档案: 21,
+  添加自定义角色: 24,
+  保存档案: 7,
+  上传授权照片: 26,
+  生成虚拟人物素材: 0,
+  上传授权书: 26,
+  调整使用范围: 19,
+  重新载入资料: 32,
+  我已在手机上选好: 7,
+  只读核对小红薯号: 21,
+  运行准备检查: 9,
+  读取手机当前资料: 21,
+  停止当前检查或应用: 35,
+  确认并锁定身份: 7,
+  查看身份核对截图: 21,
+  生成文字资料: 0,
+  "生成头像候选（每组 3 张）": 0,
+  上传头像候选: 26,
+  "生成背景图候选（每组 3 张）": 0,
+  上传背景图候选: 26,
+  保存公开资料草稿: 7,
+  确认公开资料审核: 7,
+  查看应用前资料截图: 21,
+  预检所选资料变更: 9,
+  确认应用到新号: 7,
+  重新独立核验: 32,
+  查看独立核验截图: 21,
+  记录人工核验完成: 7,
+  暂停接管: 35,
+  释放设备占用: 18,
+  撤销方案: 43,
+  确认审计基线: 7,
+  重新盘点: 32,
+  生成诊断: 0,
+  重新生成: 32,
+  记录采纳意见: 7,
+  确认方案: 7,
+  采纳到内容计划: 7,
+  预检查: 9,
+  确认执行: 7,
+  取消变更单: 41,
+  图片对照: 21,
+  观察期复查: 21,
+  创建回滚单: 24,
+  创建变更单: 24,
+  补跑核验: 32,
+  人工检查: 21,
+  确认复核: 7,
+  日常运营: 34,
+  冷启动方案: 20,
+  评论审核: 1,
+  另存为项目默认: 7,
+  保存运营预算: 7,
+  生成今日计划: 0,
+  新建下一轮: 24,
+  移除关键词: 43,
+  添加关键词: 24,
+  保存编辑后的计划: 7,
+  预检当前计划: 9,
+  预检未执行部分: 9,
+  确认本日手机任务已停止: 7,
+  确认启动日常运营: 7,
+  返回检查: 38,
+  查看账号核对截图: 21,
+  查看分块截图: 21,
+  保存为项目默认方案: 7,
+  应用到所选新号: 7,
+  暂停: 35,
+  提前转日常: 40,
+  记录并用于下一轮: 7,
+  生成所选候选: 0,
+  保存评论草稿: 7,
+  保存改写: 7,
+  审核通过: 7,
+  拒绝: 41,
+  预检发送: 9,
+  查看评论核验截图: 21,
+  只读回查评论: 21,
+  确认实际评论: 7,
+  内容计划: 6,
+  创作编辑器: 12,
+  素材库: 25,
+  内容母版: 22,
+  业务资料: 27,
+  采纳: 7,
+  生成选题: 0,
+  批量通过: 7,
+  批量排期: 2,
+  批量换账号: 3,
+  退回修改: 38,
+  新建内容任务: 24,
+  重新安排失败任务: 32,
+  编辑: 12,
+  新建草稿: 24,
+  提交为内容母版: 28,
+  "AI 润色": 0,
+  按母版重写: 0,
+  换一个角度: 32,
+  上传参考并仿写: 26,
+  裁切: 12,
+  替换: 17,
+  移除: 43,
+  生成并插入: 0,
+  保存草稿: 7,
+  设置发布时间: 2,
+  提交审核: 28,
+  提交发布: 28,
+  一键补上标识与披露: 7,
+  重新检查: 32,
+  上传图片: 26,
+  上传语音: 26,
+  上传文件: 26,
+  保存素材: 7,
+  立即用它生成内容: 20,
+  "生成 3 张": 0,
+  带人物参考生成: 3,
+  确认归属与边界: 7,
+  改为公共素材: 12,
+  "AI 补图": 0,
+  生成内容: 0,
+  提交提炼母版: 28,
+  用它创作: 12,
+  查看示例: 21,
+  提交优质内容为母版: 28,
+  建议新母版: 1,
+  撤回提交: 38,
+  保存: 7,
+  添加项目: 24,
+  添加人员: 24,
+  排期日历: 2,
+  批量发布: 28,
+  发布与历史: 10,
+  笔记维护: 1,
+  上一周: 38,
+  下一周: 39,
+  "AI 重新排期": 0,
+  "改到 11-04": 12,
+  保持: 35,
+  编辑批次: 12,
+  预检发布批次: 9,
+  停止批次: 35,
+  新建发布批次: 24,
+  移除第1篇: 43,
+  移除第2篇: 43,
+  添加一篇: 24,
+  保存发布批次: 7,
+  取消编辑: 41,
+  确认启动批次: 7,
+  返回修改: 38,
+  生成操作预览: 0,
+  确认并开始: 7,
+  我已核验: 7,
+  停止: 35,
+  确认手机任务已停止: 7,
+  通过并发送: 28,
+  记为线索: 29,
+  "通过，登录后发送": 7,
+  转给同事: 28,
+  手写回复: 12,
+  删除回复: 43,
+  暂停自动回复: 35,
+  改回等我通过: 12,
+  转交同事: 28,
+  导出线索表: 42,
+  管理短句: 6,
+  复盘报表: 30,
+  内容表现: 33,
+  保留: 7,
+  调整兴趣池: 19,
+  编辑画像: 12,
+  应用调整并新建下一轮: 7,
+  保存运营备注: 7,
+  载入最新备注: 32,
+  "同步审计 outbox": 32,
+  "生成导入 dry-run 报告": 0,
+  确认导入本地历史: 7,
+  应用到内容计划: 7,
+  自动化与风控: 19,
+  授权台账: 16,
+  能力与配额: 33,
+  查看能力与配额: 21,
+  测试一段文案: 40,
+  撤回: 38,
+  续期: 32,
+  查看已发布内容: 21,
+  我已处理: 7,
+  向管理员申请: 28,
+  已采用: 7,
+  调整计划: 19,
+  今天不跑: 41,
+  补上标识并通过: 7,
+  退回重写: 38,
+  "批量通过剩余 7 篇": 7,
+  "确认启动 2 篇": 7,
+  去绑定手机: 13,
+  确认发送一次: 28,
+  重新审核: 38,
+  已采纳: 7,
+  查看盘点截图: 21,
+  加入内容计划: 7,
+  调整: 19,
+  保存素材并生成草稿: 7,
+  重新生成图片: 32,
+  知道了: 7,
+  查看全部: 21,
+  删除某条回复: 43,
+  "通过并发送 1 条": 28,
+  查看执行队列: 21,
+  确认并恢复: 7,
+  返回: 38,
+  "s:待审核内容": 21,
+  "s:本周已排期": 2,
+  "s:今日养号": 10,
+  "s:待处理异常": 5,
+  "s:今日任务": 6,
+  "s:执行中": 10,
+  "s:排队": 34,
+  "s:已暂停": 35,
+  "s:待处理": 5,
+  "s:今日自动暂停": 35,
+  "s:7 天内异常": 5,
+  "s:健康账号": 9,
+  "s:新评论": 1,
+  "s:已自动回复": 28,
+  "s:待你审核": 21,
+  "s:需要注意": 5,
+  "s:计划任务数": 6,
+  "s:计划篇数": 23,
+  "s:手机回执浏览": 21,
+  "s:手机回执点赞": 44,
+  "s:手机回执收藏": 29,
+  "s:手机回执关注": 3,
+  "s:未决块": 5,
+  "s:有效授权": 7,
+  "s:30 天内到期": 34,
+  "s:已撤回": 38,
+  "s:待补授权书": 5,
+  "p:固定": 18,
+  "p:待合规复核 · 张法务": 18,
+  "p:合规复核人 · 张法务": 18,
+  "p:企业母版范围：通用 + 服饰": 18,
+  "p:企业规则生效中": 18,
+  "p:只读": 18,
+  "p:企业规则": 18,
+};
+const ICON_TIP =
+  '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>';
+
+function Icon({ id, size = 14 }) {
+  return React.createElement("svg", {
+    className: "ic",
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.75,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+    dangerouslySetInnerHTML: { __html: ICON_PATHS[id] || "" },
+  });
+}
+function ic(key, size) {
+  return ICON_OF[key] == null
+    ? null
+    : React.createElement(Icon, { id: ICON_OF[key], size });
+}
 
 async function send(host, command, payload) {
   return host.request("/plugin-apps/xhs-ops/commands", {
@@ -6033,16 +6144,43 @@ async function send(host, command, payload) {
     body: JSON.stringify({ command, payload }),
   });
 }
-function pill(label, tone) {
-  return h("span", { className: `xhs-pill${tone ? " " + tone : ""}` }, label);
+function toast(text) {
+  window.dispatchEvent(new CustomEvent("octop:xhs-toast", { detail: text }));
 }
-function Lock({ children = "企业规则" }) {
-  return h("span", { className: "xhs-pill lock" }, "🔒 ", children);
+function pill(label, tone, dot) {
+  return h(
+    "span",
+    { className: `xhs-pill${tone ? " " + tone : ""}` },
+    dot && h("i", { className: "xhs-dot" }),
+    label,
+  );
 }
-function Card({ title, right, hint, children, style }) {
+function Lock({ children = "固定" }) {
+  return h("span", { className: "xhs-pill" }, ic("p:固定", 12), " ", children);
+}
+function Tip({ text }) {
+  return h(
+    "span",
+    { className: "xhs-tip", title: text, "aria-label": text },
+    React.createElement("svg", {
+      className: "ic",
+      width: 14,
+      height: 14,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.75,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": true,
+      dangerouslySetInnerHTML: { __html: ICON_TIP },
+    }),
+  );
+}
+function Card({ title, icon, tip, right, children, style, className }) {
   return h(
     "section",
-    { className: "xhs-card", style },
+    { className: `xhs-card${className ? " " + className : ""}`, style },
     (title || right) &&
       h(
         "div",
@@ -6054,7 +6192,17 @@ function Card({ title, right, hint, children, style }) {
             marginBottom: 9,
           },
         },
-        h("h3", { style: { margin: 0, flex: 1 }, title: hint }, title),
+        h(
+          "h3",
+          { className: "xhs-h", style: { margin: 0, flex: 1 } },
+          h(
+            "span",
+            { className: "xhs-hic" },
+            ic("h:" + (icon || title), 15) || ic("h:内容任务池", 15),
+          ),
+          h("span", null, title),
+          tip && h(Tip, { text: tip }),
+        ),
         right,
       ),
     children,
@@ -6064,9 +6212,56 @@ function Stat({ label, value, sub }) {
   return h(
     "div",
     { className: "xhs-card" },
-    h("div", { className: "xhs-meta" }, label),
-    h("div", { className: "xhs-stat-value" }, value),
-    sub && h("div", { className: "xhs-meta" }, sub),
+    h(
+      "div",
+      {
+        className: "xhs-meta",
+        style: { display: "flex", alignItems: "center", gap: 5 },
+      },
+      ic("s:" + label, 13),
+      label,
+    ),
+    h("div", { style: { fontSize: 20, fontWeight: 700, marginTop: 4 } }, value),
+    h("div", { className: "xhs-meta" }, sub || " "),
+  );
+}
+function Stats({ items }) {
+  return h(
+    "div",
+    {
+      className: "xhs-grid",
+      style: { gridTemplateColumns: "repeat(4, minmax(0, 1fr))" },
+    },
+    items.map((s) => h(Stat, { key: s.label, ...s })),
+  );
+}
+function Row({ title, sub, extra, children, lead }) {
+  return h(
+    "div",
+    { className: "xhs-row" },
+    h(
+      "div",
+      { style: { minWidth: 0 } },
+      lead,
+      lead && " ",
+      title && h("b", null, title),
+      sub && h("div", { className: "xhs-meta" }, sub),
+      extra,
+    ),
+    h(
+      "div",
+      {
+        style: {
+          display: "flex",
+          gap: 6,
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "flex-end",
+          flex: "none",
+        },
+      },
+      children,
+    ),
   );
 }
 function Table({ head, body, empty = "暂无数据" }) {
@@ -6097,29 +6292,42 @@ function Table({ head, body, empty = "暂无数据" }) {
       )
     : h("div", { className: "xhs-empty" }, empty);
 }
-function Select({ label, value, onChange, options, disabled }) {
-  return h(
-    "label",
-    { className: "xhs-field" },
-    label && h("div", { className: "xhs-label" }, label),
-    h(
-      "select",
-      {
-        className: "xhs-select",
-        value: value ?? "",
-        disabled,
-        onChange: (e) => onChange(e.target.value),
-      },
-      options.map(([v, l]) => h("option", { key: v, value: v }, l)),
-    ),
+function Select({ label, value, onChange, options, disabled, style }) {
+  const control = h(
+    "select",
+    {
+      className: "xhs-select",
+      value: value ?? "",
+      disabled,
+      style,
+      "aria-label": label,
+      onChange: (e) => onChange(e.target.value),
+    },
+    options.map(([v, l]) => h("option", { key: v, value: v }, l)),
   );
+  return label
+    ? h(
+        "label",
+        { className: "xhs-field" },
+        h("span", { className: "xhs-label" }, label),
+        control,
+      )
+    : control;
 }
-function Check({ label, checked, onChange, disabled }) {
+function Check({
+  label,
+  checked,
+  onChange,
+  disabled,
+  type = "checkbox",
+  name,
+}) {
   return h(
     "label",
     { className: "xhs-check" },
     h("input", {
-      type: "checkbox",
+      type,
+      name,
       checked: !!checked,
       disabled,
       onChange: (e) => onChange(e.target.checked),
@@ -6127,20 +6335,45 @@ function Check({ label, checked, onChange, disabled }) {
     h("span", null, label),
   );
 }
-function NumberField({ label, value, onChange, disabled, hint }) {
-  return h(
-    "label",
-    { className: "xhs-field" },
-    h("div", { className: "xhs-label" }, label),
-    h("input", {
-      className: "xhs-input",
-      type: "number",
-      value: value ?? 0,
-      disabled,
-      onChange: (e) => onChange(Number(e.target.value)),
-    }),
-    hint && h("div", { className: "xhs-meta" }, hint),
-  );
+// A text or number field that reports its value when the member leaves it, so settings save once.
+function Blur({
+  label,
+  value,
+  onCommit,
+  type = "text",
+  disabled,
+  suffix,
+  placeholder,
+  multiline,
+}) {
+  const [draft, setDraft] = useState(value ?? "");
+  useEffect(() => setDraft(value ?? ""), [value]);
+  const props = {
+    className: multiline ? "xhs-textarea" : "xhs-input",
+    type,
+    value: draft,
+    disabled,
+    placeholder,
+    "aria-label": label,
+    onChange: (e) => setDraft(e.target.value),
+    onBlur: () =>
+      String(draft) !== String(value ?? "") &&
+      onCommit(type === "number" ? Number(draft) : draft),
+  };
+  const control = h(multiline ? "textarea" : "input", props);
+  return label
+    ? h(
+        "label",
+        { className: "xhs-field" },
+        h(
+          "span",
+          { className: "xhs-label" },
+          label,
+          suffix ? `（${suffix}）` : "",
+        ),
+        control,
+      )
+    : control;
 }
 function Bar({ ratio, ent }) {
   return h(
@@ -6149,6 +6382,27 @@ function Bar({ ratio, ent }) {
     h("span", {
       style: { width: `${Math.min(100, Math.round((ratio || 0) * 100))}%` },
     }),
+  );
+}
+function Dialog({ title, desc, onClose, footer, children }) {
+  return h(
+    "div",
+    {
+      className: "xhs-ov",
+      onClick: (e) => e.target === e.currentTarget && onClose(),
+    },
+    h(
+      "section",
+      { className: "xhs-dlg", role: "dialog", "aria-label": title },
+      h("h2", null, title),
+      desc && h("div", { className: "xhs-meta" }, desc),
+      h("div", { style: { margin: "12px 0" } }, children),
+      h(
+        "div",
+        { className: "xhs-actions", style: { justifyContent: "flex-end" } },
+        footer,
+      ),
+    ),
   );
 }
 function tz(snapshot) {
@@ -6170,12 +6424,27 @@ function fmt(
 ) {
   if (!value) return "—";
   try {
-    return new Intl.DateTimeFormat("zh-CN", { timeZone: zone, ...opts }).format(
-      new Date(value),
-    );
+    return new Intl.DateTimeFormat("zh-CN", {
+      timeZone: zone,
+      hourCycle: "h23",
+      ...opts,
+    })
+      .format(new Date(value))
+      .replace(/\//g, "-");
   } catch {
     return String(value);
   }
+}
+const dayKey = (iso, zone) =>
+  fmt(iso, zone, { year: "numeric", month: "2-digit", day: "2-digit" });
+const hm = (iso, zone) =>
+  fmt(iso, zone, { hour: "2-digit", minute: "2-digit" });
+function localInput(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
 }
 function accountName(snapshot, id) {
   const account = rows(snapshot.data.accounts).find((a) => a.id === id);
@@ -6185,6 +6454,54 @@ function accountName(snapshot, id) {
     ? "已删除的账号"
     : "暂不指定";
 }
+function deviceName(snapshot, id) {
+  const device = rows(snapshot.devices).find((d) => d.device_id === id);
+  return device ? device.name || device.device_id : id || "未绑定";
+}
+function templateName(snapshot, id) {
+  return (
+    rows(snapshot.data.catalog_cache?.templates).find((t) => t.id === id)
+      ?.name || "—"
+  );
+}
+function download(name, text) {
+  const url = URL.createObjectURL(
+    new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+const csv = (table) =>
+  table
+    .map((r) =>
+      r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","),
+    )
+    .join("\n");
+function settingsPayload(snapshot, patch) {
+  const saved = snapshot.data.member_settings || {};
+  const skip = [
+    "paused",
+    "paused_at",
+    "paused_scope",
+    "paused_accounts",
+    "cold_start",
+    "updated_at",
+  ];
+  return {
+    ...Object.fromEntries(
+      Object.entries(saved).filter(([k]) => !skip.includes(k)),
+    ),
+    ...patch,
+  };
+}
+async function saveSettings(host, snapshot, refresh, patch) {
+  await send(host, "settings.save", settingsPayload(snapshot, patch));
+  toast("已保存");
+  await refresh();
+}
 const SOURCE_LABELS = {
   ai: "AI 主动",
   instruction: "运营指令",
@@ -6192,8 +6509,8 @@ const SOURCE_LABELS = {
   material: "素材",
 };
 const NATURE_LABELS = { marketing: "营销", life: "生活", knowledge: "知识" };
+const NATURE_MARK = { marketing: "营", life: "生", knowledge: "知" };
 const LEVEL_LABELS = { manual: "手动", semi: "半自动", full: "全自动" };
-const FREQ_LABELS = { off: "关闭", weekly: "每周一次", daily: "每天一次" };
 const REVIEW_LABELS = {
   to_make: "待制作",
   pending_review: "待审核",
@@ -6222,18 +6539,35 @@ const RUN_LABELS = {
   comment: "评论",
   profile: "资料变更",
 };
+const MATERIAL_KINDS = {
+  experience: "生活经历",
+  image: "图片",
+  business: "产品与项目资料",
+  reference: "内容参考",
+  topic: "内容选题",
+  file: "语音与文件",
+};
+const ORIGINS = {
+  real: "真实拍摄",
+  ai: "AI 生成",
+  ai_reconstruct: "AI 重现",
+  upload: "运营上传",
+  spoken: "本人口述",
+};
 function srcPill(source) {
   return pill(SOURCE_LABELS[source] || "手动创作", `src-${source || "manual"}`);
 }
-function checkPills(checks) {
+function checkPills(checks, short) {
   if (!checks) return pill("未检查");
-  if (checks.stale) return pill("内容已改，需重新检查", "warn");
+  if (checks.stale) return pill("! 内容已改，需重新检查", "warn");
   const bad = rows(checks.items).filter((i) => i.level === "bad");
   const warn = rows(checks.items).filter((i) => i.level === "warn");
   return h(
     "span",
     { style: { display: "inline-flex", gap: 4, flexWrap: "wrap" } },
-    !bad.length && !warn.length && pill("✓ 发布前检查通过", "ok"),
+    !bad.length &&
+      !warn.length &&
+      pill(short ? "✓ 通过" : "✓ 发布前检查通过", "ok"),
     bad.map((i) =>
       h(
         "span",
@@ -6245,68 +6579,334 @@ function checkPills(checks) {
       h(
         "span",
         { key: i.key, className: "xhs-pill warn", title: i.detail },
-        "! " + i.label,
+        "! " + i.detail,
       ),
     ),
-    checks.high_risk && pill("需合规复核", "lock"),
+  );
+}
+function draftStatus(snapshot, d) {
+  const failed =
+    rows(snapshot.data.runs).some(
+      (r) =>
+        r.kind === "publish" &&
+        r.draft_id === d.id &&
+        ["error", "failed"].includes(r.status),
+    ) && d.review_status !== "published";
+  return failed ? "failed" : d.review_status || "pending_review";
+}
+function stageText(snapshot, a) {
+  const stage = (snapshot.data.cold_start_status || {})[a.id];
+  if (stage)
+    return stage.graduated
+      ? `日常运营 · 第 ${stage.day} 天`
+      : `冷启动 · 第 ${stage.day} 天`;
+  if (a.entry_mode === "existing")
+    return a.plan_confirmed ? "接管 · 观察期" : "接管";
+  return a.device_id ? "建号 · 资料待核验" : "建号";
+}
+function natureMix(snapshot, id, days = 7) {
+  const since = Date.now() - days * 86400000;
+  const mine = rows(snapshot.data.drafts).filter(
+    (d) =>
+      d.account_id === id &&
+      d.review_status === "published" &&
+      new Date(d.published_at || d.updated_at || 0).getTime() >= since,
+  );
+  return {
+    total: mine.length,
+    marketing: mine.filter((d) => d.nature === "marketing").length,
+    life: mine.filter((d) => d.nature !== "marketing").length,
+  };
+}
+
+// ---- 暂停全部自动任务 ----
+function PauseDialog({ snapshot, host, refresh, onClose }) {
+  const [range, setRange] = useState("all");
+  const [projectId, setProjectId] = useState(
+    rows(snapshot.data.projects)[0]?.id || "",
+  );
+  const [accountIds, setAccountIds] = useState([]);
+  const [scope, setScope] = useState({
+    nurture: true,
+    publish: true,
+    reply: true,
+    collect: true,
+  });
+  return h(
+    Dialog,
+    {
+      title: "暂停全部自动任务",
+      desc: "用于平台提示异常、舆情或需要全部停下来核对的时候。",
+      onClose,
+      footer: [
+        h(Button, { key: "c", onClick: onClose }, "取消"),
+        h(
+          Button,
+          {
+            key: "ok",
+            danger: true,
+            disabled:
+              !Object.values(scope).some(Boolean) ||
+              (range === "accounts" && !accountIds.length),
+            onClick: async () => {
+              await send(host, "pause.set", {
+                paused: true,
+                scope: Object.keys(scope).filter((k) => scope[k]),
+                ...(range === "project" ? { project_id: projectId } : {}),
+                ...(range === "accounts" ? { account_ids: accountIds } : {}),
+              });
+              onClose();
+              toast("已暂停");
+              await refresh();
+            },
+          },
+          "暂停",
+        ),
+      ],
+    },
+    h("div", { className: "xhs-label" }, "范围"),
+    h(
+      "div",
+      { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+      [
+        ["all", "我的全部账号"],
+        ["project", "只暂停这个项目"],
+        ["accounts", "只暂停选中的账号"],
+      ].map(([k, l]) =>
+        h(Check, {
+          key: k,
+          type: "radio",
+          name: "xhs-pause-range",
+          label: l,
+          checked: range === k,
+          onChange: () => setRange(k),
+        }),
+      ),
+    ),
+    range === "project" &&
+      h(Select, {
+        label: "项目",
+        value: projectId,
+        onChange: setProjectId,
+        options: rows(snapshot.data.projects).map((p) => [p.id, p.name]),
+      }),
+    range === "accounts" &&
+      h(
+        "div",
+        { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+        rows(snapshot.data.accounts).map((a) =>
+          h(Check, {
+            key: a.id,
+            label: a.name || a.id,
+            checked: accountIds.includes(a.id),
+            onChange: (on) =>
+              setAccountIds(
+                on
+                  ? [...accountIds, a.id]
+                  : accountIds.filter((x) => x !== a.id),
+              ),
+          }),
+        ),
+      ),
+    h("div", { className: "xhs-label", style: { marginTop: 8 } }, "包括"),
+    h(
+      "div",
+      { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+      [
+        ["nurture", "养号"],
+        ["publish", "发布"],
+        ["reply", "评论与回复发送"],
+        ["collect", "数据回收"],
+      ].map(([k, l]) =>
+        h(Check, {
+          key: k,
+          label: l,
+          checked: scope[k],
+          onChange: (on) => setScope({ ...scope, [k]: on }),
+        }),
+      ),
+    ),
+    h(
+      "div",
+      { className: "xhs-card", style: { background: C.soft, marginTop: 8 } },
+      "正在执行的分段会在当前这一篇结束后停下。已排期的内容保留，恢复后按原时间继续，过期的需要重新排期。",
+    ),
+  );
+}
+function PauseButton({ snapshot, host, readOnly, refresh }) {
+  const settings = snapshot.data.member_settings || {};
+  const eff = snapshot.data.effective_policy || {};
+  const [open, setOpen] = useState(false);
+  return h(
+    "span",
+    { style: { display: "inline-flex", gap: 6, alignItems: "center" } },
+    eff.enterprise_paused && pill("企业已暂停", "bad", true),
+    h(
+      "span",
+      { className: "xhs-pill ok" },
+      `${LEVEL_LABELS[eff.automation_level] || "半自动"} · 关键动作需你确认`,
+    ),
+    settings.paused
+      ? h(
+          Button,
+          {
+            disabled: readOnly,
+            onClick: async () => {
+              await send(host, "pause.set", { paused: false });
+              toast("已恢复");
+              await refresh();
+            },
+          },
+          "恢复自动任务",
+        )
+      : h(
+          Button,
+          { disabled: readOnly, onClick: () => setOpen(true) },
+          "暂停全部自动任务",
+        ),
+    open &&
+      h(PauseDialog, {
+        snapshot,
+        host,
+        refresh,
+        onClose: () => setOpen(false),
+      }),
+  );
+}
+
+// ---- 向管理员申请 ----
+function RequestDialog({ host, refresh, onClose }) {
+  const [kinds, setKinds] = useState(["posts"]);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  return h(
+    Dialog,
+    {
+      title: "向管理员申请",
+      onClose,
+      footer: [
+        h(Button, { key: "c", onClick: onClose }, "取消"),
+        h(
+          Button,
+          {
+            key: "ok",
+            primary: true,
+            disabled: !kinds.length,
+            onClick: async () => {
+              await send(host, "request.create", { kinds, amount, note });
+              onClose();
+              toast("已提交申请");
+              await refresh();
+            },
+          },
+          "提交申请",
+        ),
+      ],
+    },
+    h("div", { className: "xhs-label" }, "申请内容"),
+    h(
+      "div",
+      { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+      [
+        ["posts", "更多内容额度"],
+        ["images", "更多生图额度"],
+        ["accounts", "更多账号"],
+        ["feature", "未分配的能力"],
+        ["templates", "医疗美容母版"],
+      ].map(([k, l]) =>
+        h(Check, {
+          key: k,
+          label: l,
+          checked: kinds.includes(k),
+          onChange: (on) =>
+            setKinds(on ? [...kinds, k] : kinds.filter((x) => x !== k)),
+        }),
+      ),
+    ),
+    h(Field, {
+      label: "期望数量",
+      value: amount,
+      onChange: setAmount,
+      placeholder: "例如：每月内容 80 篇",
+    }),
+    h(Field, {
+      label: "说明",
+      multiline: true,
+      value: note,
+      onChange: setNote,
+      placeholder: "管理员会在企业后台「插件 → 小红薯运营」里看到这条申请",
+    }),
   );
 }
 
 // ---- 总览 ----
 function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
   const data = snapshot.data;
+  const zone = tz(snapshot);
   const drafts = rows(data.drafts);
   const pending = drafts.filter(
     (d) => (d.review_status || "pending_review") === "pending_review",
   );
-  const scheduled = drafts.filter((d) => d.review_status === "scheduled");
+  const weekEnd = Date.now() + 7 * 86400000;
+  const scheduled = drafts.filter(
+    (d) =>
+      d.review_status === "scheduled" &&
+      d.scheduled_at &&
+      new Date(d.scheduled_at).getTime() <= weekEnd,
+  );
+  const queue = rows(data.queue);
+  const nurture = queue.filter((q) => ["nurture", "browse"].includes(q.kind));
+  const publish = queue.filter((q) => q.kind === "publish");
   const alerts = rows(data.alerts).filter((a) => a.level === "action");
-  const [instruction, setInstruction] = useState("");
+  const health = rows(data.account_health);
   const eff = data.effective_policy || {};
   const plan = data.last_plan;
-  const health = rows(data.account_health);
-  const zone = tz(snapshot);
-  const suggestions = [
-    "最近几个账号生活内容偏少，加一些咖啡和探店",
-    "这个月效果好的选题，继续准备下一批",
-    "给新号各准备 2 篇人设类内容",
-  ];
+  const tasks = rows(data.content_tasks);
+  const [instruction, setInstruction] = useState("");
+  const manual = eff.automation_level === "manual";
+  const approvable = pending
+    .filter((d) => d.checks && !d.checks.blocking && !d.checks.stale)
+    .slice(0, 4);
+  const replyItems = rows(data.reply_items);
   return h(
     "div",
     { className: "xhs-stack" },
+    h(Stats, {
+      items: [
+        {
+          label: "待审核内容",
+          value: pending.length,
+          sub: `其中 ${
+            pending.filter((d) => d.source === "ai").length
+          } 篇来自 AI 主动`,
+        },
+        {
+          label: "本周已排期",
+          value: scheduled.length,
+          sub: `覆盖 ${
+            new Set(scheduled.map((d) => d.account_id)).size
+          } 个账号`,
+        },
+        {
+          label: "今日养号",
+          value: `${
+            nurture.filter((q) => ["running", "preparing"].includes(q.status))
+              .length
+          } / ${rows(data.accounts).length}`,
+          sub: "执行中 / 账号数",
+        },
+        {
+          label: "待处理异常",
+          value: alerts.length,
+          sub: `${
+            health.filter((x) => x.state === "paused").length
+          } 个已自动暂停`,
+        },
+      ],
+    }),
     h(
       "div",
-      { className: "xhs-stats" },
-      h(Stat, {
-        label: "待审核内容",
-        value: pending.length,
-        sub: `其中 ${
-          pending.filter((d) => d.source === "ai").length
-        } 篇来自 AI 主动`,
-      }),
-      h(Stat, {
-        label: "已排期",
-        value: scheduled.length,
-        sub: `覆盖 ${new Set(scheduled.map((d) => d.account_id)).size} 个账号`,
-      }),
-      h(Stat, {
-        label: "今日任务",
-        value: rows(data.queue).length,
-        sub: `${
-          rows(data.queue).filter((q) =>
-            ["running", "preparing"].includes(q.status),
-          ).length
-        } 个执行中`,
-      }),
-      h(Stat, {
-        label: "待处理异常",
-        value: alerts.length,
-        sub: alerts[0] ? alerts[0].label : "无",
-      }),
-    ),
-    h(
-      "div",
-      { className: "xhs-two" },
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         "div",
         { className: "xhs-stack" },
@@ -6314,9 +6914,9 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
           Card,
           {
             title: "AI 运营助手",
-            hint: "像聊天一样下发运营要求，系统拆成内容任务放进内容计划，等你审核。",
+            tip: "像聊天一样下发运营要求，系统会拆成内容任务，放进「内容计划」等你审核。",
           },
-          eff.automation_level === "manual" &&
+          manual &&
             h(
               "div",
               { className: "xhs-meta" },
@@ -6326,7 +6926,8 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
             className: "xhs-textarea",
             style: { minHeight: 64 },
             value: instruction,
-            disabled: readOnly || eff.automation_level === "manual",
+            disabled: readOnly || manual,
+            "aria-label": "运营要求",
             placeholder:
               "例如：下周重点推广秋冬通勤大衣，准备 10 篇不同角度的内容",
             onChange: (e) => setInstruction(e.target.value),
@@ -6341,7 +6942,11 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
                 marginTop: 8,
               },
             },
-            suggestions.map((s) =>
+            [
+              "最近几个账号生活内容偏少，加一些咖啡和探店",
+              "这个月小个子穿搭效果不错，继续准备下一批选题",
+              "给新号各准备 2 篇人设类内容",
+            ].map((s) =>
               h(
                 "button",
                 {
@@ -6361,10 +6966,7 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
               Button,
               {
                 primary: true,
-                disabled:
-                  readOnly ||
-                  !instruction.trim() ||
-                  eff.automation_level === "manual",
+                disabled: readOnly || !instruction.trim() || manual,
                 onClick: async () => {
                   await send(host, "plan.generate", {
                     instruction,
@@ -6378,18 +6980,9 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
             ),
             h(
               Button,
-              {
-                disabled: readOnly || eff.automation_level === "manual",
-                onClick: async () => {
-                  await send(host, "plan.generate", {
-                    model_ref: modelRef || undefined,
-                  });
-                  await refresh();
-                },
-              },
-              "让 AI 主动准备一批",
+              { onClick: () => go("content", "editor", "new") },
+              "手动创作",
             ),
-            h(Button, { onClick: () => go("content", "editor") }, "手动创作"),
             h(
               Button,
               { onClick: () => go("content", "materials") },
@@ -6402,24 +6995,19 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
           Card,
           {
             title: "系统已为你准备好",
-            hint: "按账号人设、近期发布和素材准备的草稿。通过前会再做一次发布前检查。",
+            tip: "按账号人设、近期发布和素材准备的草稿。通过前会再做一次发布前检查。",
           },
-          pending.slice(0, 6).map((d) =>
+          pending.slice(0, 4).map((d) =>
             h(
-              "div",
-              { key: d.id, className: "xhs-row" },
-              h(
-                "div",
-                { style: { minWidth: 0 } },
-                h("b", null, d.title),
-                h(
-                  "div",
-                  { className: "xhs-meta" },
-                  accountName(snapshot, d.account_id),
-                  " · ",
-                  NATURE_LABELS[d.nature] || "未标注",
-                ),
-                h(
+              Row,
+              {
+                key: d.id,
+                title: d.title,
+                sub: `${accountName(
+                  snapshot,
+                  d.account_id,
+                )} · 母版 ${templateName(snapshot, d.template_id)}`,
+                extra: h(
                   "div",
                   {
                     style: {
@@ -6432,145 +7020,202 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
                   srcPill(d.source),
                   checkPills(d.checks),
                 ),
+              },
+              h(
+                Button,
+                { onClick: () => go("content", "editor", d.id) },
+                "预览",
               ),
               h(
-                "div",
-                { style: { display: "flex", gap: 6 } },
-                h(
-                  Button,
-                  {
-                    primary: true,
-                    disabled: readOnly,
-                    onClick: async () => {
-                      await send(host, "plan.update", {
-                        action: "approve",
-                        ids: [d.id],
-                      });
-                      await refresh();
-                    },
+                Button,
+                {
+                  primary: true,
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "plan.update", {
+                      action: "approve",
+                      ids: [d.id],
+                    });
+                    await refresh();
                   },
-                  "通过",
-                ),
-                h(
-                  Button,
-                  {
-                    disabled: readOnly,
-                    onClick: async () => {
-                      await send(host, "plan.update", {
-                        action: "return",
-                        ids: [d.id],
-                      });
-                      await refresh();
-                    },
+                },
+                "通过",
+              ),
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "plan.update", {
+                      action: "return",
+                      ids: [d.id],
+                    });
+                    await refresh();
                   },
-                  "退回",
-                ),
+                },
+                "退回",
               ),
             ),
           ),
           !pending.length &&
             h("div", { className: "xhs-empty" }, "没有待审核的内容"),
-          pending.length > 6 &&
+          h(
+            "div",
+            { className: "xhs-actions" },
             h(
-              "div",
-              { className: "xhs-actions" },
-              h(
-                Button,
-                { onClick: () => go("content", "plan") },
-                `全部 ${pending.length} 篇`,
-              ),
+              Button,
+              {
+                primary: true,
+                disabled: readOnly || !approvable.length,
+                onClick: async () => {
+                  await send(host, "plan.update", {
+                    action: "approve",
+                    ids: approvable.map((d) => d.id),
+                  });
+                  await refresh();
+                },
+              },
+              "批量通过所选",
             ),
+            h(Button, { onClick: () => go("content", "plan") }, "全部内容计划"),
+          ),
         ),
       ),
       h(
         "div",
         { className: "xhs-stack" },
-        plan &&
-          h(
-            Card,
-            { title: "上一条指令的结果" },
-            h(
-              "div",
-              { className: "xhs-meta" },
-              plan.instruction ? `“${plan.instruction}”` : "AI 主动准备",
-              " · ",
-              fmt(plan.at, zone),
-            ),
-            h(
-              "div",
-              { className: "xhs-row" },
-              h(
-                "div",
-                null,
-                h("b", null, `已拆成 ${plan.count} 个内容任务`),
+        h(
+          Card,
+          {
+            title: "上一条指令的结果",
+            tip: "指令会被拆成多个内容任务，各自匹配母版和账号。",
+          },
+          plan
+            ? [
                 h(
-                  "div",
-                  { className: "xhs-meta" },
-                  `用到 ${rows(plan.templates).length} 种母版`,
+                  Row,
+                  {
+                    key: "a",
+                    title: `已拆成 ${plan.count} 个内容任务`,
+                    sub: `匹配母版：${
+                      rows(plan.templates)
+                        .map((id) => templateName(snapshot, id))
+                        .filter((n) => n !== "—")
+                        .join(" · ") || "未使用母版"
+                    }`,
+                  },
+                  pill(`${pending.length} 篇待审核`, "warn", true),
+                  pill(
+                    `${
+                      tasks.filter((t) => t.status === "making").length
+                    } 篇制作中`,
+                  ),
                 ),
-              ),
-              h(
-                Button,
-                { primary: true, onClick: () => go("content", "plan") },
-                "去制作",
-              ),
-            ),
-          ),
+                h(
+                  Row,
+                  {
+                    key: "b",
+                    title: "已推荐发布账号与时间",
+                    sub: `${
+                      new Set(tasks.map((t) => t.account_id).filter(Boolean))
+                        .size
+                    } 个账号 · 同一账号间隔 ≥ ${
+                      eff.min_interval_hours ?? 48
+                    } 小时`,
+                  },
+                  h(
+                    Button,
+                    { primary: true, onClick: () => go("content", "plan") },
+                    "去审核",
+                  ),
+                ),
+                tasks.some((t) => t.status === "to_make") &&
+                  h(
+                    Row,
+                    {
+                      key: "c",
+                      title: "需要你补充",
+                      sub: `${
+                        tasks.filter((t) => t.status === "to_make").length
+                      } 个任务还没有制作，缺素材时可以先添加`,
+                    },
+                    h(
+                      Button,
+                      { onClick: () => go("content", "materials") },
+                      "添加素材",
+                    ),
+                  ),
+              ]
+            : h("div", { className: "xhs-empty" }, "还没有下发过指令"),
+        ),
         h(
           Card,
           { title: "今天" },
           h(
-            "div",
-            { className: "xhs-row" },
-            h(
-              "div",
-              null,
-              h("b", null, "执行队列"),
-              h(
-                "div",
-                { className: "xhs-meta" },
-                `${rows(data.queue).length} 项 · ${
-                  rows(data.queue).filter((q) => q.status === "paused").length
-                } 项已暂停`,
-              ),
-            ),
-            h(Button, { onClick: () => go("home", "queue") }, "查看"),
+            Row,
+            {
+              title: "养号",
+              sub: `${rows(data.accounts).length} 个账号 · ${
+                nurture.filter((q) => q.status === "running").length
+              } 个执行中 · ${
+                nurture.filter((q) =>
+                  ["completed", "success"].includes(q.status),
+                ).length
+              } 个已完成 · ${
+                nurture.filter((q) => q.status === "paused").length
+              } 个已暂停`,
+            },
+            h(Button, { onClick: () => go("nurture", "operations") }, "查看"),
           ),
           h(
-            "div",
-            { className: "xhs-row" },
-            h(
-              "div",
-              null,
-              h("b", null, "笔记维护"),
-              h(
-                "div",
-                { className: "xhs-meta" },
-                `${
-                  rows(data.reply_items).filter((i) => i.status === "new")
-                    .length
-                } 条待你审核 · 已自动回复 ${
-                  rows(data.reply_items).filter(
-                    (i) => i.auto && i.status === "sent",
-                  ).length
-                } 条`,
-              ),
-            ),
+            Row,
+            {
+              title: "发布",
+              sub: `${publish.length} 篇已排期 · ${
+                publish.filter((q) => q.status === "awaiting_confirmation")
+                  .length
+              } 篇到点待你确认 · ${
+                publish.filter((q) => q.status === "paused").length
+              } 篇已暂停`,
+            },
+            h(Button, { onClick: () => go("publish", "runs") }, "查看"),
+          ),
+          h(
+            Row,
+            {
+              title: "评论审核",
+              sub: `${
+                rows(data.comments).filter((c) =>
+                  ["draft", "pending", "candidate"].includes(c.status),
+                ).length
+              } 条候选评论待审核`,
+            },
+            h(Button, { onClick: () => go("nurture", "comments") }, "查看"),
+          ),
+          h(
+            Row,
+            {
+              title: "笔记维护",
+              sub: `${
+                replyItems.filter((i) => i.status === "new").length
+              } 条待你审核 · 已自动回复 ${
+                replyItems.filter((i) => i.auto && i.status === "sent").length
+              } 条闲聊`,
+            },
             h(Button, { onClick: () => go("publish", "upkeep") }, "查看"),
           ),
           h(
-            "div",
-            { className: "xhs-row" },
-            h(
-              "div",
-              null,
-              h("b", null, "需要处理"),
-              h(
-                "div",
-                { className: "xhs-meta" },
-                alerts[0] ? alerts[0].label : "没有需要你处理的异常",
-              ),
-            ),
+            Row,
+            {
+              title: "需要处理",
+              sub: alerts[0]
+                ? `${
+                    alerts[0].account_id
+                      ? accountName(snapshot, alerts[0].account_id)
+                      : ""
+                  }${alerts[0].label}`
+                : "没有需要你处理的异常",
+            },
             alerts.length > 0 &&
               h(
                 Button,
@@ -6585,13 +7230,18 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
       Card,
       { title: "账号概览" },
       h(Table, {
-        head: ["账号", "接入", "手机", "阶段", "近 7 天发布", "状态"],
+        head: [
+          "账号",
+          "接入",
+          "手机",
+          "阶段",
+          "近 7 天发布",
+          "内容结构",
+          "状态",
+        ],
         body: rows(data.accounts).map((a) => {
           const hl = health.find((x) => x.account_id === a.id) || {};
-          const stage = (data.cold_start_status || {})[a.id];
-          const device = rows(snapshot.devices).find(
-            (d) => d.device_id === a.device_id,
-          );
+          const mix = natureMix(snapshot, a.id);
           return [
             h(
               "button",
@@ -6602,246 +7252,320 @@ function OverviewPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
               a.name || a.id,
             ),
             a.entry_mode === "existing" ? "已有账号" : "新账号",
-            device
-              ? device.name || device.device_id
-              : a.device_id
-              ? a.device_id
-              : "未绑定",
-            stage
-              ? stage.graduated
-                ? "日常运营"
-                : `冷启动 · ${stage.name} · 第 ${stage.day} 天`
-              : a.entry_mode === "existing"
-              ? "接管"
-              : "建号",
-            `${hl.publish_ok ?? 0} 篇`,
+            deviceName(snapshot, a.device_id),
+            stageText(snapshot, a),
+            mix.total ? `${mix.total} 篇` : "—",
+            mix.total ? `营销 ${mix.marketing} · 生活 ${mix.life}` : "—",
             pill(
-              hl.state === "healthy"
+              hl.login === "lost"
+                ? "需重新登录"
+                : hl.state === "healthy"
                 ? "正常"
                 : hl.state === "paused"
                 ? "已暂停"
+                : hl.state === "transferring"
+                ? "转交中"
                 : "待配置",
               hl.state === "healthy"
                 ? "ok"
-                : hl.state === "paused"
+                : hl.state === "paused" || hl.login === "lost"
                 ? "bad"
                 : "warn",
+              true,
             ),
           ];
         }),
+        empty: "还没有账号",
       }),
+      h(
+        "div",
+        { className: "xhs-meta", style: { marginTop: 8 } },
+        "“内容结构”偏营销的账号，系统会在下一批建议里优先安排生活和兴趣内容。",
+      ),
     ),
   );
 }
 
 // ---- 执行队列 ----
-function QueuePanel({ snapshot }) {
+function QueuePanel({ snapshot, host, readOnly, refresh, go }) {
   const zone = tz(snapshot);
   const queue = rows(snapshot.data.queue);
+  const settings = snapshot.data.member_settings || {};
   const devices = [...new Set(queue.map((q) => q.device_id).filter(Boolean))];
   const unbound = rows(snapshot.data.accounts).filter((a) => !a.device_id);
+  const [moving, setMoving] = useState(null);
   const hour = (iso) => {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone,
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    })
-      .format(new Date(iso))
-      .split(":");
-    return Number(parts[0]) + Number(parts[1]) / 60;
+    const [a, b] = hm(iso, zone).split(":");
+    return Number(a) + Number(b) / 60;
   };
-  const nowH = hour(new Date().toISOString());
-  const pos = (v) => `${Math.max(0, Math.min(100, ((v - 8) / 15) * 100))}%`;
-  const eff = snapshot.data.effective_policy || {};
-  const settings = snapshot.data.member_settings || {};
+  const pos = (v) => `${Math.max(0, Math.min(93, ((v - 8) / 15) * 100))}%`;
+  const done = queue.filter((q) =>
+    ["completed", "success", "operator_verified"].includes(q.status),
+  ).length;
+  const waiting = queue.filter((q) =>
+    ["queued", "planned", "awaiting_confirmation"].includes(q.status),
+  );
+  const paused = queue.filter((q) => q.status === "paused");
+  const deviceCard = (deviceId) => {
+    const items = queue.filter((q) => q.device_id === deviceId);
+    const state = items.some((i) => i.status === "running")
+      ? ["执行中", "ok"]
+      : items.some((i) => i.status === "paused")
+      ? ["队列已暂停", "bad"]
+      : items.every((i) => ["completed", "success"].includes(i.status))
+      ? ["今日已完成", "ok"]
+      : ["排队", ""];
+    return h(
+      Card,
+      {
+        key: deviceId,
+        title: `${deviceName(snapshot, deviceId)} · ${accountName(
+          snapshot,
+          items[0]?.account_id,
+        )}`,
+        right: pill(state[0], state[1], true),
+      },
+      h(
+        "div",
+        { className: "xhs-axis" },
+        [8, 11, 14, 17, 20, 23].map((x) =>
+          h("span", { key: x }, `${String(x).padStart(2, "0")}:00`),
+        ),
+      ),
+      h(
+        "div",
+        { className: "xhs-lane" },
+        items.map((i) =>
+          h(
+            "span",
+            {
+              key: i.id,
+              className: `xhs-blk ${i.status === "paused" ? "paused" : i.kind}`,
+              style: { left: pos(hour(i.at)), width: "7%" },
+            },
+            RUN_LABELS[i.kind] || i.kind,
+          ),
+        ),
+        h("span", {
+          className: "xhs-now",
+          style: { left: pos(hour(new Date().toISOString())) },
+        }),
+      ),
+      items.map((i) =>
+        h(
+          Row,
+          {
+            key: i.id,
+            title: `${hm(i.at, zone)} ${RUN_LABELS[i.kind] || i.kind}${
+              i.title ? `「${i.title}」` : ""
+            }`,
+            sub:
+              i.error ||
+              (i.status === "awaiting_confirmation"
+                ? "已审核 · 到点后需要你确认才执行"
+                : ""),
+          },
+          pill(
+            i.status === "awaiting_confirmation"
+              ? "到点待你确认"
+              : i.status === "awaiting_verification"
+              ? "已发 · 待人工核验"
+              : i.status === "planned" || i.status === "queued"
+              ? "排队"
+              : statusLabel(i.status),
+            i.status === "running"
+              ? "ok"
+              : ["paused", "awaiting_verification", "unknown"].includes(
+                  i.status,
+                )
+              ? "warn"
+              : "",
+            i.status !== "planned",
+          ),
+          i.source === "run" &&
+            i.status === "running" &&
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "run.cancel", {
+                    run_id: i.id,
+                    confirmed: true,
+                  });
+                  await refresh();
+                },
+              },
+              "停止此分段",
+            ),
+          i.status === "awaiting_verification" &&
+            h(Button, { onClick: () => go("publish", "runs") }, "查看截图证据"),
+          i.source === "schedule" &&
+            i.kind === "publish" &&
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: () => setMoving({ id: i.id, at: localInput(i.at) }),
+              },
+              i.status === "paused" ? "改期" : "改时间",
+            ),
+          ["login_required", "phone_interaction_required"].includes(i.error) &&
+            h(
+              Button,
+              { danger: true, onClick: () => go("home", "alerts") },
+              "去处理",
+            ),
+        ),
+      ),
+    );
+  };
+  const half = Math.ceil(devices.length / 2);
   return h(
     "div",
     { className: "xhs-stack" },
+    h(Stats, {
+      items: [
+        {
+          label: "今日任务",
+          value: queue.length,
+          sub: `${devices.length} 台手机 · 已完成 ${done}`,
+        },
+        {
+          label: "执行中",
+          value: queue.filter((q) =>
+            ["running", "preparing"].includes(q.status),
+          ).length,
+          sub: deviceName(
+            snapshot,
+            queue.find((q) => q.status === "running")?.device_id,
+          ),
+        },
+        {
+          label: "排队",
+          value: waiting.length,
+          sub: waiting[0] ? `下一项 ${hm(waiting[0].at, zone)}` : "",
+        },
+        {
+          label: "已暂停",
+          value: paused.length,
+          sub: paused[0] ? `${deviceName(snapshot, paused[0].device_id)}` : "",
+        },
+      ],
+    }),
+    moving &&
+      h(
+        Dialog,
+        {
+          title: "改时间",
+          onClose: () => setMoving(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setMoving(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !moving.at,
+                onClick: async () => {
+                  await send(host, "plan.update", {
+                    action: "schedule",
+                    ids: [moving.id],
+                    scheduled_at: new Date(moving.at).toISOString(),
+                  });
+                  setMoving(null);
+                  await refresh();
+                },
+              },
+              "保存",
+            ),
+          ],
+        },
+        h("input", {
+          className: "xhs-input",
+          type: "datetime-local",
+          "aria-label": "新的发布时间",
+          value: moving.at,
+          onChange: (e) => setMoving({ ...moving, at: e.target.value }),
+        }),
+      ),
     h(
       "div",
-      { className: "xhs-stats" },
-      h(Stat, {
-        label: "今日任务",
-        value: queue.length,
-        sub: `${devices.length} 台手机`,
-      }),
-      h(Stat, {
-        label: "执行中",
-        value: queue.filter((q) => ["running", "preparing"].includes(q.status))
-          .length,
-      }),
-      h(Stat, {
-        label: "排队",
-        value: queue.filter((q) =>
-          ["queued", "planned", "awaiting_confirmation"].includes(q.status),
-        ).length,
-      }),
-      h(Stat, {
-        label: "已暂停",
-        value: queue.filter((q) => q.status === "paused").length,
-        sub: eff.enterprise_paused
-          ? "企业已暂停"
-          : eff.member_paused
-          ? "你已暂停"
-          : "",
-      }),
-    ),
-    h(
-      "div",
-      { className: "xhs-two" },
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         "div",
         { className: "xhs-stack" },
-        devices.length === 0 &&
-          h(
-            Card,
-            { title: "今天还没有任务" },
-            h(
-              "div",
-              { className: "xhs-empty" },
-              "到点的发布、养号和回复会出现在这里。",
-            ),
-          ),
-        devices.map((deviceId) => {
-          const items = queue.filter((q) => q.device_id === deviceId);
-          const device = rows(snapshot.devices).find(
-            (d) => d.device_id === deviceId,
-          );
-          return h(
-            Card,
-            {
-              key: deviceId,
-              title: `${device?.name || deviceId} · ${accountName(
-                snapshot,
-                items[0]?.account_id,
-              )}`,
-              right: pill(
-                items.some((i) => i.status === "running")
-                  ? "执行中"
-                  : items.some((i) => i.status === "paused")
-                  ? "已暂停"
-                  : "排队",
-                items.some((i) => i.status === "paused") ? "bad" : "ok",
-              ),
-            },
-            h(
-              "div",
-              { className: "xhs-axis" },
-              [8, 11, 14, 17, 20, 23].map((x) =>
-                h("span", { key: x }, `${String(x).padStart(2, "0")}:00`),
-              ),
-            ),
-            h(
-              "div",
-              { className: "xhs-lane" },
-              items.map((i) =>
-                h(
-                  "span",
-                  {
-                    key: i.id,
-                    className: `xhs-blk ${
-                      i.status === "paused" ? "paused" : i.kind
-                    }`,
-                    style: { left: pos(hour(i.at)), width: "7%" },
-                    title: RUN_LABELS[i.kind] || i.kind,
-                  },
-                  RUN_LABELS[i.kind] || i.kind,
-                ),
-              ),
-              h("span", { className: "xhs-now", style: { left: pos(nowH) } }),
-            ),
-            items.map((i) =>
+        devices.length
+          ? devices.slice(0, half).map(deviceCard)
+          : h(
+              Card,
+              { title: "今天还没有任务" },
               h(
                 "div",
-                { key: i.id, className: "xhs-row" },
-                h(
-                  "div",
-                  null,
-                  h(
-                    "b",
-                    null,
-                    `${fmt(i.at, zone, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })} ${RUN_LABELS[i.kind] || i.kind}`,
-                  ),
-                  i.title &&
-                    h("div", { className: "xhs-meta" }, `「${i.title}」`),
-                  i.error &&
-                    h("div", { className: "xhs-meta xhs-danger" }, i.error),
-                ),
-                pill(
-                  i.status === "awaiting_confirmation"
-                    ? "到点待你确认"
-                    : statusLabel(i.status),
-                  i.status === "paused" || i.status === "unknown"
-                    ? "bad"
-                    : i.status === "running"
-                    ? "ok"
-                    : "",
-                ),
+                { className: "xhs-empty" },
+                "到点的发布、养号和回复会出现在这里。",
               ),
             ),
-          );
-        }),
       ),
       h(
         "div",
         { className: "xhs-stack" },
+        devices.slice(half).map(deviceCard),
         unbound.length > 0 &&
           h(
             Card,
             { title: "不在队列里" },
             unbound.map((a) =>
               h(
-                "div",
-                { key: a.id, className: "xhs-row" },
-                h(
-                  "div",
-                  null,
-                  h("b", null, a.name),
-                  h(
-                    "div",
-                    { className: "xhs-meta" },
-                    "未绑定手机，到点的发布无法执行",
-                  ),
-                ),
+                Row,
+                {
+                  key: a.id,
+                  title: a.name,
+                  sub: "未绑定手机，排期的发布无法执行",
+                },
+                h(Button, { onClick: () => go("build", "accounts") }, "去绑定"),
               ),
             ),
           ),
         h(
           Card,
-          {
-            title: "排队规则",
-            hint: "这里只排队和提示冲突，不改你定好的发布时间。",
-          },
+          { title: "排队规则" },
           h(
             "div",
-            { className: "xhs-row" },
-            h("b", null, "同一台手机一次只执行一个任务"),
-            h(Lock, { children: "固定" }),
+            { className: "xhs-meta" },
+            "这里只排队和提示冲突，不改你定好的发布时间。",
           ),
           h(
-            "div",
-            { className: "xhs-row" },
-            h(
-              "b",
-              null,
-              "手机离线或登录失效时暂停这台手机的队列，不换手机执行",
-            ),
-            h(Lock, { children: "固定" }),
+            Row,
+            { title: "同一台手机一次只执行一个任务", sub: "不自动切换账号" },
+            h(Lock),
           ),
           h(
-            "div",
-            { className: "xhs-row" },
-            h("b", null, "到点的发布需要你确认后才执行"),
-            h(Lock, { children: "固定" }),
+            Row,
+            {
+              title: "手机离线或登录失效",
+              sub: "暂停这台手机的队列，不换手机执行",
+            },
+            h(Lock),
           ),
           h(
-            "div",
-            { className: "xhs-row" },
-            h("b", null, "资料变更当天"),
+            Row,
+            { title: "到点的发布" },
+            h(Select, {
+              label: "",
+              value: settings.publish_slot || "between_blocks",
+              disabled: readOnly,
+              onChange: (v) =>
+                saveSettings(host, snapshot, refresh, { publish_slot: v }),
+              options: [
+                ["between_blocks", "插在两个浏览块之间"],
+                ["strict", "严格按时间先后"],
+              ],
+            }),
+          ),
+          h(
+            Row,
+            { title: "资料变更当天", sub: "沿用「自动化与风控」的设置" },
             pill(
               settings.profile_change_day === "publish_only"
                 ? "只发布"
@@ -6849,10 +7573,33 @@ function QueuePanel({ snapshot }) {
             ),
           ),
           h(
+            Row,
+            { title: "闲聊类自动回复", sub: "排在其他任务之间，手机忙时顺延" },
+            pill("低优先级"),
+          ),
+          h(
             "div",
-            { className: "xhs-row" },
-            h("b", null, "每个账号每天自动操作时长上限"),
-            pill(`${settings.daily_minutes_cap || 60} 分钟`),
+            { className: "xhs-2" },
+            h(Blur, {
+              label: "每台手机每天最多自动执行",
+              suffix: "小时",
+              type: "number",
+              value: settings.device_daily_hours ?? 4,
+              disabled: readOnly,
+              onCommit: (v) =>
+                saveSettings(host, snapshot, refresh, {
+                  device_daily_hours: v,
+                }),
+            }),
+            h(Blur, {
+              label: "两个任务之间至少间隔",
+              suffix: "分钟",
+              type: "number",
+              value: settings.task_gap_minutes ?? 5,
+              disabled: readOnly,
+              onCommit: (v) =>
+                saveSettings(host, snapshot, refresh, { task_gap_minutes: v }),
+            }),
           ),
         ),
       ),
@@ -6861,72 +7608,87 @@ function QueuePanel({ snapshot }) {
 }
 
 // ---- 异常与告警 ----
+const HANDLED = {
+  unknown: "停下，等人工对账",
+  interrupted: "停止分段，对账后未补跑",
+  run_failed: "停下，记录原因",
+};
 function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
   const zone = tz(snapshot);
   const list = rows(snapshot.data.alerts);
+  const settings = snapshot.data.member_settings || {};
   const action = list.filter((a) => a.level === "action");
-  const auto = list.filter((a) => a.level !== "action");
+  const suggest = list.filter((a) => a.level === "suggest");
+  const handled = list.filter(
+    (a) => a.level !== "action" && a.level !== "suggest",
+  );
   const health = rows(snapshot.data.account_health);
-  const [notice, setNotice] = useState({
-    account_id: "",
-    text: "",
-    restricted: false,
-  });
+  const [notice, setNotice] = useState(null);
+  const set = (patch) => saveSettings(host, snapshot, refresh, patch);
+  const name = (a) =>
+    a.account_id
+      ? `${accountName(snapshot, a.account_id)} · ${a.label}`
+      : a.label;
   return h(
     "div",
     { className: "xhs-stack" },
-    h(
-      "div",
-      { className: "xhs-stats" },
-      h(Stat, { label: "待处理", value: action.length }),
-      h(Stat, { label: "提醒", value: auto.length }),
-      h(Stat, {
-        label: "已暂停账号",
-        value: health.filter((x) => x.state === "paused").length,
-      }),
-      h(Stat, {
-        label: "健康账号",
-        value: `${health.filter((x) => x.state === "healthy").length} / ${
-          health.length
-        }`,
-      }),
-    ),
-    h(
-      "div",
-      { className: "xhs-two" },
-      h(
-        Card,
+    h(Stats, {
+      items: [
         {
-          title: "待处理",
-          hint: "出现平台提示、验证码或登录失效时，系统只会停下来等你处理，不会重试、换设备或换账号继续。",
+          label: "待处理",
+          value: action.length,
+          sub: `${
+            action.filter((a) =>
+              ["login_required", "phone_interaction_required"].includes(a.code),
+            ).length
+          } 个需要你在手机上操作`,
         },
-        action.map((a) =>
-          h(
-            "div",
-            { key: a.id, className: "xhs-row", style: { display: "block" } },
+        {
+          label: "今日自动暂停",
+          value: health.filter((x) => x.state === "paused").length,
+          sub: accountName(
+            snapshot,
+            health.find((x) => x.state === "paused")?.account_id,
+          ),
+        },
+        {
+          label: "7 天内异常",
+          value: list.length,
+          sub: `${handled.length} 次已自动处理`,
+        },
+        {
+          label: "健康账号",
+          value: `${health.filter((x) => x.state === "healthy").length} / ${
+            health.length
+          }`,
+          sub: `${
+            health.filter((x) => x.state === "unconfigured").length
+          } 个待配置 · ${
+            health.filter((x) => x.state === "paused").length
+          } 个已暂停`,
+        },
+      ],
+    }),
+    h(
+      "div",
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          { title: "待处理" },
+          action.map((a) =>
             h(
-              "div",
-              null,
-              pill("需要你处理", "bad"),
-              " ",
-              h(
-                "b",
-                null,
-                a.account_id
-                  ? `${accountName(snapshot, a.account_id)} · ${a.label}`
-                  : a.label,
-              ),
-            ),
-            h(
-              "div",
-              { className: "xhs-meta" },
-              fmt(a.at, zone),
-              " · ",
-              RUN_LABELS[a.kind] || a.kind,
-            ),
-            h(
-              "div",
-              { className: "xhs-actions" },
+              Row,
+              {
+                key: a.id,
+                lead: pill("需要你处理", "bad", true),
+                title: name(a),
+                sub: `${fmt(a.at, zone)} · ${
+                  RUN_LABELS[a.kind] || "账号"
+                } · 已停下，没有重试，也没有换手机`,
+              },
               [
                 "login_required",
                 "phone_interaction_required",
@@ -6935,7 +7697,7 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
                 h(
                   Button,
                   { primary: true, onClick: () => go("build", "accounts") },
-                  "我已在手机上处理，去重新核对身份",
+                  "我已重新登录，重新核对身份",
                 ),
               ["unknown", "interrupted"].includes(a.code) &&
                 h(Button, { onClick: () => go("publish", "runs") }, "去对账"),
@@ -6951,25 +7713,113 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
                   { primary: true, onClick: () => go("build", "profile") },
                   "去接收",
                 ),
+              a.account_id &&
+                h(
+                  Button,
+                  { onClick: () => go("home", "queue") },
+                  "查看受影响任务",
+                ),
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "alert.dismiss", { id: a.id });
+                    await refresh();
+                  },
+                },
+                "保持暂停",
+              ),
+            ),
+          ),
+          suggest.map((a) =>
+            h(
+              Row,
+              {
+                key: a.id,
+                lead: pill("建议", "warn", true),
+                title: name(a),
+                sub: fmt(a.at, zone),
+              },
+              a.kind === "quota" &&
+                h(
+                  Button,
+                  { onClick: () => go("settings", "entitlement") },
+                  "查看额度",
+                ),
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "alert.dismiss", { id: a.id });
+                    await refresh();
+                  },
+                },
+                "忽略",
+              ),
+            ),
+          ),
+          !action.length &&
+            !suggest.length &&
+            h("div", { className: "xhs-empty" }, "没有需要你处理的异常"),
+        ),
+        h(
+          Card,
+          { title: "已自动处理 · 近 7 天" },
+          h(Table, {
+            head: ["时间", "账号", "异常", "系统做了什么"],
+            body: handled
+              .slice(0, 12)
+              .map((a) => [
+                fmt(a.at, zone),
+                a.account_id ? accountName(snapshot, a.account_id) : "—",
+                a.label,
+                HANDLED[a.code] || "已记录",
+              ]),
+            empty: "近 7 天没有自动处理的异常",
+          }),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              { onClick: () => go("settings", "settings") },
+              "查看处理规则",
             ),
           ),
         ),
-        !action.length &&
-          h("div", { className: "xhs-empty" }, "没有需要你处理的异常"),
       ),
       h(
         Card,
-        { title: "提醒与已自动处理" },
-        h(Table, {
-          head: ["时间", "账号", "内容"],
-          body: auto
-            .slice(0, 12)
-            .map((a) => [
-              fmt(a.at, zone),
-              a.account_id ? accountName(snapshot, a.account_id) : "—",
-              a.label,
-            ]),
-          empty: "近期没有提醒",
+        { title: "提醒方式" },
+        h(Check, {
+          label: "桌面通知",
+          checked: settings.notify_desktop !== false,
+          disabled: readOnly,
+          onChange: (v) => set({ notify_desktop: v }),
+        }),
+        h(Check, {
+          label: "在对话里用卡片提醒",
+          checked: settings.notify_card !== false,
+          disabled: readOnly,
+          onChange: (v) => set({ notify_card: v }),
+        }),
+        h(Check, {
+          label: "同时发到管理员配置的告警渠道",
+          checked: !!settings.notify_channel,
+          disabled: readOnly,
+          onChange: (v) => set({ notify_channel: v }),
+        }),
+        h(Select, {
+          label: "超过这个时间没处理",
+          value: settings.remind_after || "2h",
+          disabled: readOnly,
+          onChange: (v) => set({ remind_after: v }),
+          options: [
+            ["2h", "2 小时后再提醒一次"],
+            ["none", "不重复提醒"],
+          ],
         }),
       ),
     ),
@@ -6977,70 +7827,65 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
       Card,
       {
         title: "账号健康",
-        hint: "平台通知由你在手机上查看后登记；系统只读取页面上显示的内容，不推断是否被限流。",
+        tip: "平台通知由你在手机上查看后登记；系统只读取页面上显示的内容，不推断是否被限流。",
       },
       h(Table, {
         head: [
           "账号",
           "登录",
+          "手机",
           "7 天养号完成率",
-          "7 天发布",
+          "7 天发布成功",
           "平台通知",
           "状态",
         ],
-        body: health.map((x) => [
-          accountName(snapshot, x.account_id),
-          pill(
-            x.login === "ok"
-              ? "正常"
-              : x.login === "lost"
-              ? "登录失效"
+        body: health.map((x) => {
+          const device = rows(snapshot.devices).find(
+            (d) => d.device_id === x.device_id,
+          );
+          return [
+            accountName(snapshot, x.account_id),
+            x.login === "unbound"
+              ? "—"
+              : pill(
+                  x.login === "ok" ? "正常" : "登录失效",
+                  x.login === "ok" ? "ok" : "bad",
+                  true,
+                ),
+            device
+              ? `${device.name || device.device_id} · ${
+                  device.online ? "在线" : "离线"
+                }`
               : "未绑定",
-            x.login === "ok" ? "ok" : "bad",
-          ),
-          x.nurture_rate == null ? "—" : `${x.nurture_rate}%`,
-          `${x.publish_ok} / ${x.publish_total}${
-            x.publish_unknown ? ` · ${x.publish_unknown} 篇结果不明` : ""
-          }`,
-          rows(x.notices).length ? rows(x.notices).slice(-1)[0].text : "无",
-          pill(
-            x.state === "healthy"
-              ? "健康"
-              : x.state === "paused"
-              ? "已暂停"
-              : "待配置",
-            x.state === "healthy"
-              ? "ok"
-              : x.state === "paused"
-              ? "bad"
-              : "warn",
-          ),
-        ]),
-      }),
-      h(
-        "div",
-        { className: "xhs-two even", style: { marginTop: 12 } },
-        h(Select, {
-          label: "登记平台通知 · 账号",
-          value: notice.account_id,
-          onChange: (v) => setNotice({ ...notice, account_id: v }),
-          options: [
-            ["", "选择账号"],
-            ...rows(snapshot.data.accounts).map((a) => [a.id, a.name || a.id]),
-          ],
+            x.nurture_rate == null ? "—" : `${x.nurture_rate}%`,
+            x.publish_total
+              ? `${x.publish_ok} / ${x.publish_total}${
+                  x.publish_unknown ? ` · ${x.publish_unknown} 篇结果不明` : ""
+                }`
+              : "—",
+            rows(x.notices).length
+              ? rows(x.notices).slice(-1)[0].text
+              : x.login === "unbound"
+              ? "—"
+              : "无",
+            pill(
+              x.state === "healthy"
+                ? "健康"
+                : x.state === "paused"
+                ? "已暂停"
+                : x.state === "transferring"
+                ? "转交中"
+                : "待配置",
+              x.state === "healthy"
+                ? "ok"
+                : x.state === "paused"
+                ? "bad"
+                : "warn",
+              true,
+            ),
+          ];
         }),
-        h(Field, {
-          label: "通知内容",
-          value: notice.text,
-          onChange: (v) => setNotice({ ...notice, text: v }),
-          placeholder: "照手机上显示的抄写",
-        }),
-      ),
-      h(Check, {
-        label:
-          "这是限制或违规提示（会暂停该账号的养号、发布和回复至少 72 小时）",
-        checked: notice.restricted,
-        onChange: (v) => setNotice({ ...notice, restricted: v }),
+        empty: "还没有账号",
       }),
       h(
         "div",
@@ -7048,17 +7893,94 @@ function AlertsPanel({ snapshot, host, readOnly, refresh, go }) {
         h(
           Button,
           {
-            disabled: readOnly || !notice.account_id || !notice.text.trim(),
-            onClick: async () => {
-              await send(host, "notice.record", notice);
-              setNotice({ account_id: "", text: "", restricted: false });
-              await refresh();
-            },
+            disabled: readOnly,
+            onClick: () =>
+              setNotice({
+                account_id: rows(snapshot.data.accounts)[0]?.id || "",
+                text: "",
+                restricted: false,
+              }),
           },
           "登记平台通知",
         ),
+        h(
+          Button,
+          {
+            onClick: () =>
+              download(
+                "账号健康记录.csv",
+                csv([
+                  [
+                    "账号",
+                    "登录",
+                    "7 天养号完成率",
+                    "7 天发布",
+                    "平台通知",
+                    "状态",
+                  ],
+                  ...health.map((x) => [
+                    accountName(snapshot, x.account_id),
+                    x.login,
+                    x.nurture_rate ?? "",
+                    `${x.publish_ok}/${x.publish_total}`,
+                    rows(x.notices)
+                      .map((n) => n.text)
+                      .join("；"),
+                    x.state,
+                  ]),
+                ]),
+              ),
+          },
+          "导出健康记录",
+        ),
       ),
     ),
+    notice &&
+      h(
+        Dialog,
+        {
+          title: "登记平台通知",
+          desc: "照手机上显示的抄写。",
+          onClose: () => setNotice(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setNotice(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !notice.account_id || !notice.text.trim(),
+                onClick: async () => {
+                  await send(host, "notice.record", notice);
+                  setNotice(null);
+                  await refresh();
+                },
+              },
+              "登记",
+            ),
+          ],
+        },
+        h(Select, {
+          label: "账号",
+          value: notice.account_id,
+          onChange: (v) => setNotice({ ...notice, account_id: v }),
+          options: rows(snapshot.data.accounts).map((a) => [
+            a.id,
+            a.name || a.id,
+          ]),
+        }),
+        h(Field, {
+          label: "通知内容",
+          value: notice.text,
+          onChange: (v) => setNotice({ ...notice, text: v }),
+        }),
+        h(Check, {
+          label:
+            "这是限制或违规提示（会暂停该账号的养号、发布和回复至少 72 小时）",
+          checked: notice.restricted,
+          onChange: (v) => setNotice({ ...notice, restricted: v }),
+        }),
+      ),
   );
 }
 
@@ -7071,11 +7993,38 @@ function ColdStartPanel({ snapshot, host, readOnly, refresh }) {
     [JSON.stringify((snapshot.data.member_settings || {}).cold_start)],
   );
   const status = snapshot.data.cold_start_status || {};
+  const last = snapshot.data.coldstart_observation || {};
+  const [obs, setObs] = useState({ drift: last.drift || "closer", note: "" });
   const set = (i, key, value) =>
     setStages(stages.map((s, j) => (j === i ? { ...s, [key]: value } : s)));
   const fresh = rows(snapshot.data.accounts).filter(
     (a) => a.entry_mode === "new",
   );
+  const rate = (t) => (t && t[0] ? `${t[2]}% · 上限 ${t[1]}` : "关闭");
+  const num = (i, key) =>
+    h("input", {
+      className: "xhs-input",
+      type: "number",
+      style: { width: 70, marginTop: 0 },
+      value: stages[i][key],
+      disabled: readOnly,
+      "aria-label": `${stages[i].name} ${key}`,
+      onChange: (e) => set(i, key, Number(e.target.value)),
+    });
+  const rules =
+    rows(settings.browse_rules).length === 4
+      ? settings.browse_rules
+      : [true, true, true, true];
+  const next = (s) => {
+    const i = stages.findIndex((x) => x.name === s.name);
+    const left = (stages[i]?.day_to ?? s.day) - s.day + 1;
+    const to = stages[i + 1]?.name;
+    return to
+      ? left <= 1
+        ? `明天进入“${to}”`
+        : `${left} 天后进入“${to}”`
+      : `${Math.max(1, left)} 天后转日常`;
+  };
   return h(
     "div",
     { className: "xhs-stack" },
@@ -7083,7 +8032,7 @@ function ColdStartPanel({ snapshot, host, readOnly, refresh }) {
       Card,
       {
         title: "冷启动方案",
-        hint: "新号完成资料核验后，先按较低的强度养号，再过渡到账号日常预算。每一档仍要先生成计划、预检、由你确认后才执行。",
+        tip: "新号完成资料核验后，先按较低的强度养号，再过渡到账号日常预算。每一档仍要先生成计划、预检、由你确认后才执行。",
       },
       h(Table, {
         head: [
@@ -7091,78 +8040,41 @@ function ColdStartPanel({ snapshot, host, readOnly, refresh }) {
           "天数",
           "每日浏览",
           "分段",
-          "搜索占比 %",
-          "点赞（开 / 上限 / %）",
-          "收藏（开 / 上限 / %）",
+          "搜索占比",
+          "点赞",
+          "收藏",
+          "评论",
           "关注",
         ],
-        body: stages.map((s, i) => [
-          s.name,
-          `第 ${s.day_from}–${s.day_to} 天`,
-          h("input", {
-            className: "xhs-input",
-            type: "number",
-            value: s.daily_target_posts,
-            disabled: readOnly,
-            onChange: (e) =>
-              set(i, "daily_target_posts", Number(e.target.value)),
-          }),
-          h("input", {
-            className: "xhs-input",
-            type: "number",
-            value: s.segments,
-            disabled: readOnly,
-            onChange: (e) => set(i, "segments", Number(e.target.value)),
-          }),
-          h("input", {
-            className: "xhs-input",
-            type: "number",
-            value: s.search_ratio_percent,
-            disabled: readOnly,
-            onChange: (e) =>
-              set(i, "search_ratio_percent", Number(e.target.value)),
-          }),
-          ...["like", "collect"].map((k) =>
-            h(
-              "span",
-              {
-                key: k,
-                style: { display: "flex", gap: 4, alignItems: "center" },
-              },
-              h("input", {
-                type: "checkbox",
-                checked: !!s[k][0],
-                disabled: readOnly,
-                onChange: (e) =>
-                  set(i, k, [e.target.checked, s[k][1], s[k][2]]),
-              }),
-              h("input", {
-                className: "xhs-input",
-                style: { width: 52, marginTop: 0 },
-                type: "number",
-                value: s[k][1],
-                disabled: readOnly,
-                onChange: (e) =>
-                  set(i, k, [s[k][0], Number(e.target.value), s[k][2]]),
-              }),
-              h("input", {
-                className: "xhs-input",
-                style: { width: 52, marginTop: 0 },
-                type: "number",
-                value: s[k][2],
-                disabled: readOnly,
-                onChange: (e) =>
-                  set(i, k, [s[k][0], s[k][1], Number(e.target.value)]),
-              }),
-            ),
-          ),
-          "关闭",
-        ]),
+        body: [
+          ...stages.map((s, i) => [
+            s.name,
+            `第 ${s.day_from}–${s.day_to} 天`,
+            num(i, "daily_target_posts"),
+            num(i, "segments"),
+            num(i, "search_ratio_percent"),
+            rate(s.like),
+            rate(s.collect),
+            s.collect && s.collect[0] ? "3% · 审核后发送 · 上限 2" : "关闭",
+            "关闭",
+          ]),
+          [
+            "日常",
+            `第 ${(stages[stages.length - 1]?.day_to ?? 14) + 1} 天起`,
+            "按账号日常预算",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+          ],
+        ],
       }),
       h(
         "div",
         { className: "xhs-meta", style: { marginTop: 8 } },
-        "第 15 天起按账号日常预算。评论只发送评论审核里逐条批准过的原文。",
+        "数值来自运营建议（浏览 80–100 篇、点赞 10%、收藏 3%、搜索 70%–90%），分阶段递增，避免新号一开始就高强度互动。",
       ),
       h(
         "div",
@@ -7174,386 +8086,111 @@ function ColdStartPanel({ snapshot, host, readOnly, refresh }) {
             disabled: readOnly,
             onClick: async () => {
               await send(host, "coldstart.save", { stages });
+              toast("已保存");
               await refresh();
             },
           },
-          "保存为默认方案",
+          "保存为项目默认方案",
+        ),
+        h(
+          Button,
+          {
+            disabled:
+              readOnly || !fresh.some((a) => !status[a.id] && a.device_id),
+            onClick: async () => {
+              for (const a of fresh.filter((x) => !status[x.id] && x.device_id))
+                await send(host, "coldstart.apply", { account_id: a.id });
+              await refresh();
+            },
+          },
+          "应用到所选新号",
         ),
       ),
     ),
     h(
-      Card,
-      { title: "新号进度" },
-      fresh.map((a) => {
-        const s = status[a.id];
-        return h(
-          "div",
-          { key: a.id, className: "xhs-row" },
-          h(
-            "div",
-            null,
-            h("b", null, a.name),
-            h(
-              "div",
-              { className: "xhs-meta" },
-              s
-                ? s.graduated
-                  ? `第 ${s.day} 天 · 已转日常`
-                  : `第 ${s.day} 天 · ${s.name}`
-                : "未开始",
-            ),
-          ),
-          h(
-            "div",
-            { style: { display: "flex", gap: 6 } },
-            !s &&
-              h(
-                Button,
-                {
-                  primary: true,
-                  disabled: readOnly,
-                  onClick: async () => {
-                    await send(host, "coldstart.apply", { account_id: a.id });
-                    await refresh();
-                  },
-                },
-                "开始冷启动",
-              ),
-            s &&
-              !s.graduated &&
-              h(
-                Button,
-                {
-                  disabled: readOnly,
-                  onClick: async () => {
-                    await send(host, "coldstart.apply", {
-                      account_id: a.id,
-                      graduate: true,
-                    });
-                    await refresh();
-                  },
-                },
-                "提前转日常",
-              ),
-          ),
-        );
-      }),
-      !fresh.length && h("div", { className: "xhs-empty" }, "还没有新账号"),
-    ),
-  );
-}
-
-// ---- 内容计划 ----
-function PlanPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
-  const zone = tz(snapshot);
-  const drafts = rows(snapshot.data.drafts);
-  const tasks = rows(snapshot.data.content_tasks).filter(
-    (t) => t.status === "to_make" || t.status === "making",
-  );
-  const [filter, setFilter] = useState("pending_review");
-  const [selected, setSelected] = useState([]);
-  const [when, setWhen] = useState("");
-  const [assignTo, setAssignTo] = useState("");
-  const [review, setReview] = useState(null);
-  const buckets = {
-    to_make: tasks.length,
-    pending_review: drafts.filter((d) =>
-      ["pending_review", "returned", undefined].includes(d.review_status),
-    ).length,
-    approved: drafts.filter((d) =>
-      ["approved", "scheduled"].includes(d.review_status),
-    ).length,
-    published: drafts.filter((d) => d.review_status === "published").length,
-    failed: drafts.filter((d) => d.review_status === "failed").length,
-  };
-  const shown = drafts.filter((d) => {
-    const s = d.review_status || "pending_review";
-    if (filter === "pending_review")
-      return ["pending_review", "returned"].includes(s);
-    if (filter === "approved") return ["approved", "scheduled"].includes(s);
-    return s === filter;
-  });
-  const batch = async (action, extra = {}) => {
-    await send(host, "plan.update", { action, ids: selected, ...extra });
-    setSelected([]);
-    await refresh();
-  };
-  const toggle = (id, on) =>
-    setSelected(
-      on ? [...new Set([...selected, id])] : selected.filter((x) => x !== id),
-    );
-  const accounts = rows(snapshot.data.accounts);
-  return h(
-    "div",
-    { className: "xhs-stack" },
-    h(
-      Card,
-      {
-        title: "内容任务池",
-        hint: "AI 主动生成、运营指令、素材和手动创作的内容都在这里，使用同一套审核、排期和发布。",
-      },
+      "div",
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         "div",
-        { className: "xhs-tabs", style: { marginBottom: 10 } },
-        [
-          ["to_make", "待制作"],
-          ["pending_review", "待审核"],
-          ["approved", "待发布"],
-          ["published", "已发布"],
-          ["failed", "发布失败"],
-        ].map(([k, l]) =>
-          h(
-            "button",
-            {
-              key: k,
-              className: `xhs-tab${filter === k ? " active" : ""}`,
-              onClick: () => {
-                setFilter(k);
-                setSelected([]);
-              },
-            },
-            `${l} ${buckets[k]}`,
-          ),
-        ),
-      ),
-      filter === "to_make"
-        ? h(Table, {
-            head: ["选题", "来源", "账号", "性质", "为什么这样安排", ""],
-            body: tasks.map((t) => [
-              h("b", null, t.title),
-              srcPill(t.source),
-              accountName(snapshot, t.account_id),
-              NATURE_LABELS[t.nature],
-              h("span", { className: "xhs-meta" }, t.reason || "—"),
-              t.status === "making"
-                ? pill("制作中")
-                : h(
-                    "span",
-                    { style: { display: "flex", gap: 6 } },
-                    h(
-                      Button,
-                      {
-                        primary: true,
-                        disabled: readOnly,
-                        onClick: async () => {
-                          await send(host, "task.generate", {
-                            id: t.id,
-                            model_ref: modelRef || undefined,
-                          });
-                          await refresh();
-                        },
-                      },
-                      "生成草稿",
-                    ),
-                    h(
-                      Button,
-                      {
-                        disabled: readOnly,
-                        onClick: async () => {
-                          await send(host, "task.dismiss", { id: t.id });
-                          await refresh();
-                        },
-                      },
-                      "忽略",
-                    ),
-                  ),
-            ]),
-            empty:
-              "没有待制作的任务。可以在工作台让 AI 准备一批，或在素材库用素材生成。",
-          })
-        : h(
-            "div",
-            null,
-            selected.length > 0 &&
-              h(
-                "div",
-                {
-                  className: "xhs-actions",
-                  style: {
-                    alignItems: "flex-end",
-                    marginTop: 0,
-                    marginBottom: 8,
-                  },
-                },
-                h(
-                  "span",
-                  { className: "xhs-meta" },
-                  `已选 ${selected.length} 篇`,
-                ),
-                filter === "pending_review" &&
-                  h(
-                    Button,
-                    {
-                      primary: true,
-                      disabled: readOnly,
-                      onClick: () => batch("approve"),
-                    },
-                    "批量通过",
-                  ),
-                filter === "pending_review" &&
-                  h(
-                    Button,
-                    { disabled: readOnly, onClick: () => batch("return") },
-                    "退回修改",
-                  ),
-                h("input", {
-                  className: "xhs-input",
-                  style: { width: 200, marginTop: 0 },
-                  type: "datetime-local",
-                  value: when,
-                  onChange: (e) => setWhen(e.target.value),
-                }),
-                h(
-                  Button,
-                  {
-                    disabled: readOnly || !when,
-                    onClick: () =>
-                      batch("schedule", {
-                        scheduled_at: new Date(when).toISOString(),
-                      }),
-                  },
-                  "批量排期",
-                ),
-                h(
-                  "select",
-                  {
-                    className: "xhs-select",
-                    style: { width: 160, marginTop: 0 },
-                    value: assignTo,
-                    onChange: (e) => setAssignTo(e.target.value),
-                  },
-                  h("option", { value: "" }, "换到账号…"),
-                  accounts.map((a) =>
-                    h("option", { key: a.id, value: a.id }, a.name || a.id),
-                  ),
-                ),
-                h(
-                  Button,
-                  {
-                    disabled: readOnly || !assignTo,
-                    onClick: () => batch("assign", { account_id: assignTo }),
-                  },
-                  "批量换账号",
-                ),
-                h(
-                  Button,
-                  { disabled: readOnly, onClick: () => batch("pause") },
-                  "暂停",
-                ),
-              ),
-            h(Table, {
-              head: [
-                "",
-                "选题",
-                "来源",
-                "账号",
-                "排期",
-                "发布前检查",
-                "状态",
-                "",
-              ],
-              body: shown.map((d) => [
-                h("input", {
-                  type: "checkbox",
-                  checked: selected.includes(d.id),
-                  onChange: (e) => toggle(d.id, e.target.checked),
-                }),
-                h("b", null, d.title),
-                srcPill(d.source),
-                accountName(snapshot, d.account_id),
-                d.scheduled_at ? fmt(d.scheduled_at, zone) : "未排期",
-                checkPills(d.checks),
-                pill(
-                  REVIEW_LABELS[d.review_status || "pending_review"],
-                  d.review_status === "failed" ? "bad" : "",
-                ),
-                h(
-                  "span",
-                  { style: { display: "flex", gap: 6 } },
-                  h(
-                    Button,
-                    {
-                      disabled: readOnly,
-                      onClick: async () => {
-                        await send(host, "content.precheck", { id: d.id });
-                        await refresh();
-                      },
-                    },
-                    "检查",
-                  ),
-                  d.checks?.blocking &&
-                    h(
-                      Button,
-                      {
-                        disabled: readOnly,
-                        onClick: async () => {
-                          await send(host, "content.meta", {
-                            id: d.id,
-                            meta: {},
-                            fix_labels: true,
-                          });
-                          await refresh();
-                        },
-                      },
-                      "补上标识与披露",
-                    ),
-                  d.checks?.high_risk &&
-                    h(
-                      Button,
-                      {
-                        disabled: readOnly,
-                        onClick: () =>
-                          setReview({
-                            id: d.id,
-                            reviewer:
-                              snapshot.data.effective_policy?.reviewer_name ||
-                              "",
-                            reference: "",
-                            decision: "approved",
-                          }),
-                      },
-                      "记录合规复核",
-                    ),
-                ),
-              ]),
-              empty: "这里没有内容",
-            }),
-          ),
-      review &&
+        { className: "xhs-stack" },
         h(
-          "div",
-          {
-            className: "xhs-card",
-            style: { marginTop: 12, borderColor: "#5b4fc7" },
-          },
-          h("h4", { style: { marginTop: 0 } }, "记录合规复核"),
-          h(
-            "div",
-            { className: "xhs-meta" },
-            "高风险内容由企业指定的复核人在审批流程里签字，这里记录结论和单号。内容再改动需要重新复核。",
-          ),
-          h(
-            "div",
-            { className: "xhs-two even" },
-            h(Field, {
-              label: "复核人",
-              value: review.reviewer,
-              onChange: (v) => setReview({ ...review, reviewer: v }),
-            }),
-            h(Field, {
-              label: "审批单号或链接",
-              value: review.reference,
-              onChange: (v) => setReview({ ...review, reference: v }),
-            }),
-          ),
+          Card,
+          { title: "新号进度" },
+          fresh.map((a) => {
+            const s = status[a.id];
+            return h(
+              Row,
+              {
+                key: a.id,
+                title: a.name,
+                sub: s
+                  ? s.graduated
+                    ? `第 ${s.day} 天 · 已转日常`
+                    : `第 ${s.day} 天 · ${s.name}${
+                        a.cold_start_paused ? " · 已暂停" : ""
+                      }`
+                  : a.device_id
+                  ? "未开始"
+                  : "未开始 · 新号资料待核验",
+              },
+              !s && pill("未受理", "warn", true),
+              s && !s.graduated && pill(next(s)),
+              s &&
+                !s.graduated &&
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "coldstart.pause", {
+                        account_id: a.id,
+                        paused: !a.cold_start_paused,
+                      });
+                      await refresh();
+                    },
+                  },
+                  a.cold_start_paused ? "继续" : "暂停",
+                ),
+              s &&
+                !s.graduated &&
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "coldstart.apply", {
+                        account_id: a.id,
+                        graduate: true,
+                      });
+                      await refresh();
+                    },
+                  },
+                  "提前转日常",
+                ),
+            );
+          }),
+          !fresh.length && h("div", { className: "xhs-empty" }, "还没有新账号"),
+        ),
+        h(
+          Card,
+          { title: "运营观察" },
           h(Select, {
-            label: "结论",
-            value: review.decision,
-            onChange: (v) => setReview({ ...review, decision: v }),
+            label: "推荐流是否更接近目标兴趣",
+            value: obs.drift,
+            onChange: (v) => setObs({ ...obs, drift: v }),
             options: [
-              ["approved", "通过"],
-              ["rejected", "退回"],
+              ["closer", "明显更接近"],
+              ["slightly", "略有变化"],
+              ["same", "没有变化"],
+              ["away", "偏离了"],
             ],
+          }),
+          h(Field, {
+            label: "需要调整的兴趣池或关键词",
+            value: obs.note,
+            onChange: (v) => setObs({ ...obs, note: v }),
+            placeholder:
+              last.note || "例如：“通勤包”回执偏少，换成“托特包通勤”",
           }),
           h(
             "div",
@@ -7561,6 +8198,537 @@ function PlanPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
             h(
               Button,
               {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "coldstart.observe", obs);
+                  setObs({ ...obs, note: "" });
+                  toast("已记录");
+                  await refresh();
+                },
+              },
+              "记录并用于下一轮",
+            ),
+          ),
+        ),
+      ),
+      h(
+        Card,
+        { title: "浏览规则" },
+        [
+          "每篇要看完正文并进入评论区，停留不少于 11 秒",
+          "不是每篇都点进去；前 1–2 篇只浏览不互动",
+          "首页浏览时定期回到首页刷新，换一批内容",
+          "点赞、收藏、评论可以落在同一篇，也可以分散",
+        ].map((label, i) =>
+          h(Check, {
+            key: i,
+            label,
+            checked: rules[i],
+            disabled: readOnly,
+            onChange: (v) =>
+              saveSettings(host, snapshot, refresh, {
+                browse_rules: rules.map((r, j) => (j === i ? v : r)),
+              }),
+          }),
+        ),
+        h(
+          "div",
+          { className: "xhs-meta" },
+          "评论只发送「评论审核」里逐条批准过的原文，10 字以内，不含营销内容。",
+        ),
+      ),
+    ),
+  );
+}
+
+// ---- 内容计划 ----
+function similarity(a, b) {
+  const grams = (s) =>
+    new Set([...String(s)].map((c, i, arr) => c + (arr[i + 1] || "")));
+  const x = grams(a);
+  const y = grams(b);
+  const both = [...x].filter((g) => y.has(g)).length;
+  return both / Math.max(1, x.size + y.size - both);
+}
+function PlanPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
+  const zone = tz(snapshot);
+  const data = snapshot.data;
+  const accounts = rows(data.accounts);
+  const eff = data.effective_policy || {};
+  const tasks = rows(data.content_tasks).filter((t) =>
+    ["to_make", "making"].includes(t.status),
+  );
+  const items = [
+    ...rows(data.drafts).map((d) => ({
+      ...d,
+      type: "draft",
+      state: draftStatus(snapshot, d),
+    })),
+    ...tasks.map((t) => ({ ...t, type: "task", state: "to_make" })),
+  ];
+  const bucket = (i) =>
+    ["pending_review", "returned"].includes(i.state)
+      ? "pending_review"
+      : ["approved", "scheduled", "paused"].includes(i.state)
+      ? "approved"
+      : i.state;
+  const [filter, setFilter] = useState("pending_review");
+  const [selected, setSelected] = useState([]);
+  const [mine, setMine] = useState(false);
+  const [when, setWhen] = useState("");
+  const [assignTo, setAssignTo] = useState("");
+  const [review, setReview] = useState(null);
+  const [creating, setCreating] = useState(null);
+  const count = (k) => items.filter((i) => bucket(i) === k).length;
+  const needsMe = (i) =>
+    i.state === "to_make" ||
+    i.state === "pending_review" ||
+    i.state === "returned" ||
+    i.state === "failed" ||
+    i.checks?.blocking;
+  const shown = items.filter(
+    (i) => (filter === "all" || bucket(i) === filter) && (!mine || needsMe(i)),
+  );
+  const draftsSelected = selected.filter(
+    (id) => items.find((i) => i.id === id)?.type === "draft",
+  );
+  const batch = async (action, extra = {}) => {
+    await send(host, "plan.update", { action, ids: draftsSelected, ...extra });
+    setSelected([]);
+    await refresh();
+  };
+  const toggle = (id, on) =>
+    setSelected(
+      on ? [...new Set([...selected, id])] : selected.filter((x) => x !== id),
+    );
+  const failed = items.filter((i) => i.state === "failed");
+  const planTasks = data.last_plan
+    ? rows(data.content_tasks)
+        .filter((t) => t.source === "instruction" || t.source === "ai")
+        .slice(-10)
+    : [];
+  const titles = planTasks.map((t) => t.title);
+  const maxSim = titles.reduce(
+    (m, a, i) =>
+      Math.max(m, ...titles.slice(i + 1).map((b) => similarity(a, b)), 0),
+    0,
+  );
+  const bodies = rows(data.drafts)
+    .filter((d) => planTasks.some((t) => t.draft_id === d.id))
+    .flatMap((d) =>
+      String(d.content || "")
+        .split(/\n+/)
+        .filter((p) => p.length > 30),
+    );
+  const dupBody = new Set(bodies).size !== bodies.length;
+  const statusPill = (i) =>
+    pill(
+      i.type === "task"
+        ? i.status === "making"
+          ? "制作中"
+          : "待制作"
+        : REVIEW_LABELS[i.state],
+      i.state === "failed"
+        ? "bad"
+        : ["pending_review", "returned"].includes(i.state)
+        ? "warn"
+        : "",
+      ["pending_review", "failed"].includes(i.state),
+    );
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    rows(data.plan_suggestions).length > 0 &&
+      h(
+        Card,
+        { title: "AI 本周建议" },
+        rows(data.plan_suggestions).map((s) =>
+          h(
+            Row,
+            { key: s.id, title: s.title, sub: s.detail },
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "task.add", {
+                    ...s.task,
+                    source: "ai",
+                    reason: s.title,
+                  });
+                  await send(host, "alert.dismiss", { id: s.id });
+                  await refresh();
+                },
+              },
+              "采纳",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "alert.dismiss", { id: s.id });
+                  await refresh();
+                },
+              },
+              "忽略",
+            ),
+          ),
+        ),
+      ),
+    h(
+      Card,
+      {
+        title: "内容任务池",
+        tip: "AI 主动生成、运营指令、素材和手动创作的内容都在这里，使用同一套审核、排期和发布。",
+      },
+      h(
+        "div",
+        { className: "xhs-tabs", role: "tablist" },
+        [
+          ["all", "全部", items.length],
+          ["to_make", "待制作", count("to_make")],
+          ["pending_review", "待审核", count("pending_review")],
+          ["approved", "待发布", count("approved")],
+          ["published", "已发布", count("published")],
+          ["failed", "发布失败", count("failed")],
+        ].map(([k, l, n]) =>
+          h(
+            "button",
+            {
+              key: k,
+              role: "tab",
+              className: `xhs-tab${filter === k ? " is-active" : ""}`,
+              onClick: () => {
+                setFilter(k);
+                setSelected([]);
+              },
+            },
+            `${l} ${n}`,
+          ),
+        ),
+      ),
+      h(
+        "div",
+        {
+          style: {
+            display: "flex",
+            gap: 7,
+            alignItems: "center",
+            flexWrap: "wrap",
+            marginBottom: 8,
+          },
+        },
+        h("b", null, `已选 ${selected.length} 篇`),
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly || !draftsSelected.length,
+            onClick: () => batch("approve"),
+          },
+          "批量通过",
+        ),
+        h("input", {
+          className: "xhs-input",
+          style: { width: 190, marginTop: 0 },
+          type: "datetime-local",
+          "aria-label": "排期时间",
+          value: when,
+          onChange: (e) => setWhen(e.target.value),
+        }),
+        h(
+          Button,
+          {
+            disabled: readOnly || !when || !draftsSelected.length,
+            onClick: () =>
+              batch("schedule", { scheduled_at: new Date(when).toISOString() }),
+          },
+          "批量排期",
+        ),
+        h(Select, {
+          label: "",
+          style: { width: 150, marginTop: 0 },
+          value: assignTo,
+          onChange: setAssignTo,
+          options: [
+            ["", "换到账号…"],
+            ...accounts.map((a) => [a.id, a.name || a.id]),
+          ],
+        }),
+        h(
+          Button,
+          {
+            disabled: readOnly || !assignTo || !draftsSelected.length,
+            onClick: () => batch("assign", { account_id: assignTo }),
+          },
+          "批量换账号",
+        ),
+        h(
+          Button,
+          {
+            disabled: readOnly || !draftsSelected.length,
+            onClick: () => batch("pause"),
+          },
+          "暂停",
+        ),
+        h(
+          Button,
+          {
+            disabled: readOnly || !draftsSelected.length,
+            onClick: () => batch("return"),
+          },
+          "退回修改",
+        ),
+        h("span", { style: { flex: 1 } }),
+        h(Check, {
+          label: "只看我需要处理的",
+          checked: mine,
+          onChange: setMine,
+        }),
+      ),
+      h(Table, {
+        head: [
+          "",
+          "选题",
+          "来源",
+          "母版",
+          "发布账号（AI 推荐，可改）",
+          "排期",
+          "发布前检查",
+          "状态",
+        ],
+        body: shown.map((i) => [
+          h("input", {
+            type: "checkbox",
+            "aria-label": `选择 ${i.title}`,
+            checked: selected.includes(i.id),
+            onChange: (e) => toggle(i.id, e.target.checked),
+          }),
+          i.type === "draft"
+            ? h(
+                "button",
+                {
+                  className: "xhs-link",
+                  style: { fontWeight: 700 },
+                  onClick: () => go("content", "editor", i.id),
+                },
+                i.title,
+              )
+            : h("b", null, i.title),
+          srcPill(i.source),
+          templateName(snapshot, i.template_id),
+          i.type === "draft" && i.state !== "published"
+            ? h(Select, {
+                label: "",
+                style: { marginTop: 0, minWidth: 130 },
+                value: i.account_id || "",
+                disabled: readOnly,
+                onChange: async (v) => {
+                  if (!v) return;
+                  await send(host, "plan.update", {
+                    action: "assign",
+                    ids: [i.id],
+                    account_id: v,
+                  });
+                  await refresh();
+                },
+                options: [
+                  ["", "暂不指定"],
+                  ...accounts
+                    .filter((a) => a.project_id === i.project_id)
+                    .map((a) => [a.id, a.name || a.id]),
+                ],
+              })
+            : accountName(snapshot, i.account_id),
+          i.type === "draft" && i.state !== "published"
+            ? h("input", {
+                className: "xhs-input",
+                type: "datetime-local",
+                style: { marginTop: 0, width: 180 },
+                "aria-label": `${i.title} 排期`,
+                value: localInput(i.scheduled_at),
+                disabled: readOnly || !i.account_id,
+                onChange: async (e) => {
+                  if (!e.target.value) return;
+                  await send(host, "plan.update", {
+                    action: "schedule",
+                    ids: [i.id],
+                    scheduled_at: new Date(e.target.value).toISOString(),
+                  }).catch((error) =>
+                    window.dispatchEvent(
+                      new CustomEvent("octop:xhs-error", { detail: error }),
+                    ),
+                  );
+                  await refresh();
+                },
+              })
+            : i.scheduled_at
+            ? fmt(i.scheduled_at, zone)
+            : "—",
+          i.type === "task"
+            ? i.status === "making"
+              ? h("span", { className: "xhs-meta" }, "制作中")
+              : h(
+                  Button,
+                  {
+                    primary: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "task.generate", {
+                        id: i.id,
+                        model_ref: modelRef || undefined,
+                      });
+                      await refresh();
+                    },
+                  },
+                  "生成草稿",
+                )
+            : h(
+                "div",
+                null,
+                checkPills(i.checks, true),
+                i.checks?.high_risk &&
+                  h(
+                    "div",
+                    { style: { marginTop: 4 } },
+                    h(
+                      "button",
+                      {
+                        className: "xhs-pill",
+                        style: { border: 0, cursor: "pointer" },
+                        onClick: () =>
+                          setReview({
+                            id: i.id,
+                            reviewer: eff.reviewer_name || "",
+                            reference: "",
+                            decision: "approved",
+                          }),
+                      },
+                      ic("p:固定", 12),
+                      ` ${
+                        i.compliance_review?.decision === "approved"
+                          ? "已复核"
+                          : "待合规复核"
+                      }${eff.reviewer_name ? " · " + eff.reviewer_name : ""}`,
+                    ),
+                  ),
+                !i.checks &&
+                  h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "content.precheck", { id: i.id });
+                        await refresh();
+                      },
+                    },
+                    "检查",
+                  ),
+              ),
+          statusPill(i),
+        ]),
+        empty: "这里没有内容",
+      }),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly,
+            onClick: () =>
+              setCreating({
+                title: "",
+                account_id: accounts[0]?.id || "",
+                nature: "life",
+              }),
+          },
+          "新建内容任务",
+        ),
+        h(
+          Button,
+          {
+            disabled: readOnly || !failed.length,
+            onClick: async () => {
+              await send(host, "plan.reschedule", { failed: true });
+              toast("已重新安排");
+              await refresh();
+            },
+          },
+          "重新安排失败任务",
+        ),
+      ),
+    ),
+    creating &&
+      h(
+        Dialog,
+        {
+          title: "新建内容任务",
+          onClose: () => setCreating(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setCreating(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !creating.title.trim(),
+                onClick: async () => {
+                  await send(host, "task.add", {
+                    ...creating,
+                    source: "manual",
+                  });
+                  setCreating(null);
+                  setFilter("to_make");
+                  await refresh();
+                },
+              },
+              "保存",
+            ),
+          ],
+        },
+        h(Field, {
+          label: "选题",
+          value: creating.title,
+          onChange: (v) => setCreating({ ...creating, title: v.slice(0, 40) }),
+        }),
+        h(Select, {
+          label: "发布账号",
+          value: creating.account_id,
+          onChange: (v) => setCreating({ ...creating, account_id: v }),
+          options: [
+            ["", "暂不指定"],
+            ...accounts.map((a) => [a.id, a.name || a.id]),
+          ],
+        }),
+        h(Select, {
+          label: "内容性质",
+          value: creating.nature,
+          onChange: (v) => setCreating({ ...creating, nature: v }),
+          options: [
+            ["marketing", "营销内容 · 需披露"],
+            ["life", "生活内容"],
+            ["knowledge", "知识内容"],
+          ],
+        }),
+      ),
+    review &&
+      h(
+        Dialog,
+        {
+          title: "记录合规复核",
+          desc: "高风险内容由企业指定的复核人在审批流程里签字，这里记录结论和单号。内容再改动需要重新复核。",
+          onClose: () => setReview(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setReview(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
                 primary: true,
                 disabled: !review.reviewer.trim() || !review.reference.trim(),
                 onClick: async () => {
@@ -7571,350 +8739,1582 @@ function PlanPanel({ snapshot, host, readOnly, refresh, modelRef, go }) {
               },
               "保存",
             ),
-            h(Button, { onClick: () => setReview(null) }, "取消"),
-          ),
-        ),
-    ),
-    h(
-      Card,
-      { title: "审核流" },
-      h(
-        "div",
-        { className: "xhs-row" },
-        h(
-          "div",
-          null,
-          h("b", null, "普通内容"),
-          h("div", { className: "xhs-meta" }, "生活、知识类"),
-        ),
-        pill("运营本人"),
-      ),
-      h(
-        "div",
-        { className: "xhs-row" },
-        h(
-          "div",
-          null,
-          h("b", null, "营销内容"),
-          h("div", { className: "xhs-meta" }, "补全商业推广披露后才能通过"),
-        ),
-        pill("运营本人"),
-      ),
-      h(
-        "div",
-        { className: "xhs-row" },
-        h(
-          "div",
-          null,
-          h("b", null, "高风险内容"),
-          h(
-            "div",
-            { className: "xhs-meta" },
-            "效果描述、案例、对比类；医疗美容内容一律走这一档",
-          ),
-        ),
-        h(Lock, {
-          children: `合规复核人${
-            snapshot.data.effective_policy?.reviewer_name
-              ? " · " + snapshot.data.effective_policy.reviewer_name
-              : ""
-          }`,
+          ],
+        },
+        h(Field, {
+          label: "复核人",
+          value: review.reviewer,
+          onChange: (v) => setReview({ ...review, reviewer: v }),
         }),
+        h(Field, {
+          label: "审批单号或链接",
+          value: review.reference,
+          onChange: (v) => setReview({ ...review, reference: v }),
+        }),
+        h(Select, {
+          label: "结论",
+          value: review.decision,
+          onChange: (v) => setReview({ ...review, decision: v }),
+          options: [
+            ["approved", "通过"],
+            ["rejected", "退回"],
+          ],
+        }),
+      ),
+    h(
+      "div",
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+      h(
+        Card,
+        {
+          title: `同一推广任务的 ${planTasks.length} 篇`,
+          icon: "同一推广任务的 10 篇",
+          tip: "同一条指令拆出的内容会错开角度和母版，避免几个账号发相似的内容。",
+        },
+        planTasks.length
+          ? h(
+              "div",
+              { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+              planTasks.map((t) =>
+                h(
+                  "span",
+                  { key: t.id, className: "xhs-pill" },
+                  `${t.title} · ${templateName(snapshot, t.template_id).replace(
+                    /型$/,
+                    "",
+                  )}`,
+                ),
+              ),
+            )
+          : h("div", { className: "xhs-empty" }, "还没有下发过指令"),
+        planTasks.length > 1 &&
+          h(
+            Row,
+            { title: "重复度检查" },
+            pill(
+              `${maxSim < 0.3 ? "✓" : "!"} 标题两两相似度 ${
+                maxSim < 0.3 ? "<" : "≥"
+              } 30%`,
+              maxSim < 0.3 ? "ok" : "warn",
+            ),
+            pill(
+              dupBody ? "! 正文有整段重复" : "✓ 正文无整段重复",
+              dupBody ? "warn" : "ok",
+            ),
+          ),
+      ),
+      h(
+        Card,
+        {
+          title: "审核流",
+          tip: "谁来审由内容性质决定；高风险内容的复核人由企业管理员指定。",
+        },
+        h(Row, { title: "普通内容", sub: "生活、知识类" }, pill("运营本人")),
+        h(
+          Row,
+          { title: "营销内容", sub: "补全商业推广披露后才能通过" },
+          pill("运营本人"),
+        ),
+        h(
+          Row,
+          {
+            title: "高风险内容",
+            sub: "效果描述、案例、对比类；医疗美容内容一律走这一档",
+          },
+          h(Lock, {
+            children: `合规复核人${
+              eff.reviewer_name ? " · " + eff.reviewer_name : ""
+            }`,
+          }),
+        ),
       ),
     ),
   );
 }
 
-// ---- 素材库 ----
-function MaterialsPanel({ snapshot, host, readOnly, refresh, go }) {
-  const materials = rows(snapshot.data.materials);
-  const consents = rows(snapshot.data.authorizations).filter(
-    (c) => c.status === "active",
+// ---- 创作编辑器 ----
+const IMAGE_STYLES = ["生活摄影", "插画", "信息卡片", "日记拼贴"];
+async function cropToPortrait(blob) {
+  const bitmap = await createImageBitmap(blob);
+  const ratio = 3 / 4;
+  let w = bitmap.width;
+  let hgt = bitmap.height;
+  if (w / hgt > ratio) w = Math.round(hgt * ratio);
+  else hgt = Math.round(w / ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = hgt;
+  canvas
+    .getContext("2d")
+    .drawImage(
+      bitmap,
+      (bitmap.width - w) / 2,
+      (bitmap.height - hgt) / 2,
+      w,
+      hgt,
+      0,
+      0,
+      w,
+      hgt,
+    );
+  const out = await new Promise((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.92),
   );
-  const accounts = rows(snapshot.data.accounts);
-  const blank = {
-    kind: "experience",
-    title: "",
-    text: "",
-    owner: "public",
-    account_ids: [],
-    origin: "spoken",
-    consent_id: "",
-    images: [],
-  };
-  const [form, setForm] = useState(blank);
-  const [kind, setKind] = useState("");
-  const shown = materials.filter((m) => !kind || m.kind === kind);
-  const KINDS = {
-    experience: "生活经历",
-    image: "图片",
-    business: "产品与项目资料",
-    reference: "内容参考",
-    topic: "内容选题",
-    file: "语音与文件",
-  };
-  const ORIGINS = {
-    real: "真实拍摄",
-    ai: "AI 生成",
-    ai_reconstruct: "AI 重现",
-    upload: "运营上传",
-    spoken: "本人口述",
-  };
-  const save = async () => {
-    await send(host, "material.save", {
-      ...form,
-      id: form.id || "",
-      version: form.version ?? null,
+  const data = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.readAsDataURL(out);
+  });
+  return { mime_type: "image/jpeg", data_base64: data, size: out.size };
+}
+function EditorPanel({
+  snapshot,
+  host,
+  readOnly,
+  refresh,
+  modelRef,
+  go,
+  focus,
+}) {
+  const data = snapshot.data;
+  const zone = tz(snapshot);
+  const drafts = rows(data.drafts);
+  const projects = rows(data.projects);
+  const accounts = rows(data.accounts);
+  const templates = rows(data.catalog_cache?.templates).filter(
+    (t) => t.available !== false,
+  );
+  const [draft, setDraft] = useState(null);
+  const [form, setForm] = useState({});
+  const [images, setImages] = useState([]);
+  const [picked, setPicked] = useState(0);
+  const [source, setSource] = useState("upload");
+  const [ai, setAi] = useState({
+    prompt: "",
+    persona: "none",
+    style: IMAGE_STYLES[0],
+    preset: "",
+    ref: "none",
+  });
+  const [imitate, setImitate] = useState(null);
+  const [imageModels, setImageModels] = useState([]);
+  const [drag, setDrag] = useState(null);
+  const [theme, setTheme] = useState("");
+  const open = (d) => {
+    setDraft({ ...d });
+    setForm({
+      project_id: d.project_id || projects[0]?.id || "",
+      account_id: d.account_id || "",
+      title: d.title || "",
+      content: d.content || "",
+      hashtags: rows(d.hashtags).join(" "),
+      nature: d.nature || "",
+      template_id: d.template_id || "",
+      scheduled_at: localInput(d.scheduled_at),
     });
-    setForm(blank);
+    setImages(rows(d.images));
+    setPicked(0);
+  };
+  useEffect(() => {
+    if (focus === "new") open({});
+    else if (focus) {
+      const found = drafts.find((d) => d.id === focus);
+      if (found) open(found);
+    }
+  }, [focus]);
+  useEffect(() => {
+    if (!draft || readOnly || typeof host.request !== "function") return;
+    host
+      .request("/plugin-apps/xhs-ops/image-models")
+      .then((v) => setImageModels(rows(v)))
+      .catch(() => setImageModels([]));
+  }, [Boolean(draft), readOnly]);
+  const current = draft?.id
+    ? drafts.find((d) => d.id === draft.id) || draft
+    : draft;
+  const account = accounts.find((a) => a.id === form.account_id);
+  const set = (patch) => setForm({ ...form, ...patch });
+  const save = async (meta = true) => {
+    const id = draft.id || crypto.randomUUID();
+    const projectId = account?.project_id || form.project_id;
+    let result = await send(host, "draft.save", {
+      id,
+      version: draft.version,
+      project_id: projectId,
+      account_id: form.account_id,
+      title: form.title,
+      content: form.content,
+      hashtags: form.hashtags.split(/[\s,，#]+/).filter(Boolean),
+      images,
+    });
+    let saved = rows(result.data?.drafts).find((d) => d.id === id);
+    if (!saved) throw new Error("草稿保存结果不完整，请刷新后检查。");
+    if (
+      meta &&
+      (form.nature !== (saved.nature || "") ||
+        form.template_id !== (saved.template_id || ""))
+    ) {
+      result = await send(host, "content.meta", {
+        id,
+        meta: { nature: form.nature, template_id: form.template_id },
+      });
+      saved = rows(result.data?.drafts).find((d) => d.id === id) || saved;
+    }
+    open(saved);
+    await refresh();
+    return saved;
+  };
+  const generate = async () => {
+    const id = draft.id || crypto.randomUUID();
+    const result = await send(host, "content.generate", {
+      id,
+      ...(draft.version ? { version: draft.version } : {}),
+      project_id: account?.project_id || form.project_id,
+      account_id: form.account_id,
+      theme: theme.trim() || form.title.trim(),
+      ...(modelRef ? { model_ref: modelRef } : {}),
+    });
+    const generated = rows(result.data?.drafts).find((d) => d.id === id);
+    if (!generated) throw new Error("文案生成结果不完整，请刷新后检查。");
+    const kept = images;
+    open(generated);
+    setImages(kept);
     await refresh();
   };
+  const rewrite = async (mode, reference = "") => {
+    const saved = await save();
+    const result = await send(host, "content.rewrite", {
+      id: saved.id,
+      version: saved.version,
+      mode,
+      reference,
+      ...(modelRef ? { model_ref: modelRef } : {}),
+    });
+    const next = rows(result.data?.drafts).find((d) => d.id === saved.id);
+    if (next) open(next);
+    await refresh();
+  };
+  const addFiles = async (files, replaceAt) => {
+    if (replaceAt == null && images.length + files.length > 9)
+      throw new Error("每篇最多上传 9 张图片。");
+    const added = (await readImageFiles(files)).map((image) => ({
+      ...image,
+      origin: "upload",
+    }));
+    setImages((list) =>
+      replaceAt == null
+        ? [...list, ...added]
+        : list.map((x, i) => (i === replaceAt ? added[0] : x)),
+    );
+  };
+  const crop = async () => {
+    const image = images[picked];
+    const blob = image.data_base64
+      ? await (
+          await fetch(`data:${image.mime_type};base64,${image.data_base64}`)
+        ).blob()
+      : await host.requestBlob(String(image.asset_url).replace(/^\/api/, ""));
+    const cropped = await cropToPortrait(blob);
+    setImages((list) =>
+      list.map((x, i) =>
+        i === picked
+          ? {
+              filename:
+                (image.filename || "image").replace(/\.\w+$/, "") + ".jpg",
+              display_name: image.display_name || "",
+              ...cropped,
+              origin: image.origin || "upload",
+            }
+          : x,
+      ),
+    );
+  };
+  const generateImage = async () => {
+    const saved = await save();
+    const template = templates.find((t) => t.id === form.template_id);
+    const persona =
+      ai.persona === "account" && account
+        ? `人物：${["age", "gender", "region", "occupation"]
+            .map((k) => account.persona?.[k])
+            .filter(Boolean)
+            .join("、")}的虚拟形象。`
+        : "";
+    const prompt = [
+      ai.prompt.trim(),
+      `风格：${ai.style}。`,
+      ai.preset ? `版式：${ai.preset}。` : "",
+      persona,
+      "不出现品牌标识；不生成虚构的前后对比。",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const result = await send(host, "image.generate", {
+      draft_id: saved.id,
+      version: saved.version,
+      prompt,
+      aspect_ratio: "3:4",
+      ...(imageModels[0] && ai.model ? { model_ref: ai.model } : {}),
+    });
+    const next = rows(result.data?.drafts).find((d) => d.id === saved.id);
+    if (next) open(next);
+    await refresh();
+  };
+  const usable = rows(data.materials).filter(
+    (m) =>
+      m.status !== "frozen" &&
+      rows(m.images).length &&
+      (m.owner === "public" ||
+        !form.account_id ||
+        rows(m.account_ids).includes(form.account_id)),
+  );
+  const checks = current?.checks;
+  const presets = [
+    ...new Set(templates.map((t) => t.image_preset).filter(Boolean)),
+  ];
+  const hashtags = (form.hashtags || "").split(/[\s,，#]+/).filter(Boolean);
   return h(
     "div",
     { className: "xhs-stack" },
     h(
-      "div",
-      { className: "xhs-two even" },
-      h(
-        Card,
-        {
-          title: "添加素材",
-          hint: "文字、图片、文件都可以。不用马上做成笔记，系统会先整理保存，之后做内容计划时自动匹配。",
-        },
-        h(Field, {
-          label: "标题（可选）",
-          value: form.title,
-          onChange: (v) => setForm({ ...form, title: v }),
-        }),
-        h(Field, {
-          label: "内容",
-          multiline: true,
-          value: form.text,
-          onChange: (v) => setForm({ ...form, text: v }),
-          placeholder:
-            "例如：小王周末去了天坛，下午阳光很好，想分享一下秋天的景色，但是没有拍照。",
-        }),
+      Card,
+      { title: "内容草稿" },
+      drafts.map((d) =>
         h(
-          "div",
-          { className: "xhs-two even" },
-          h(Select, {
-            label: "类型",
-            value: form.kind,
-            onChange: (v) => setForm({ ...form, kind: v }),
-            options: Object.entries(KINDS),
-          }),
-          h(Select, {
-            label: "来源",
-            value: form.origin,
-            onChange: (v) => setForm({ ...form, origin: v }),
-            options: Object.entries(ORIGINS),
-          }),
-          h(Select, {
-            label: "归属",
-            value: form.owner,
-            onChange: (v) =>
-              setForm({
-                ...form,
-                owner: v,
-                account_ids: v === "public" ? [] : form.account_ids,
-              }),
-            options: [
-              ["public", "公共素材库"],
-              ["account", "绑定账号"],
-              ["shared", "多账号共用"],
-            ],
-          }),
-          h(Select, {
-            label: "授权（真实人物或经历时必选）",
-            value: form.consent_id,
-            onChange: (v) => setForm({ ...form, consent_id: v }),
-            options: [
-              ["", "不涉及个人授权"],
-              ...consents.map((c) => [c.id, `${c.person} · 至 ${c.valid_to}`]),
-            ],
-          }),
-        ),
-        form.owner !== "public" &&
-          h(
-            "div",
-            { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
-            accounts.map((a) =>
-              h(Check, {
-                key: a.id,
-                label: a.name || a.id,
-                checked: form.account_ids.includes(a.id),
-                onChange: (on) =>
-                  setForm({
-                    ...form,
-                    account_ids: on
-                      ? [...form.account_ids, a.id]
-                      : form.account_ids.filter((x) => x !== a.id),
-                  }),
-              }),
-            ),
+          Row,
+          {
+            key: d.id,
+            title: text(d.title, "未命名草稿"),
+            sub: `${
+              projects.find((p) => p.id === d.project_id)?.name || "—"
+            } · ${accountName(snapshot, d.account_id)} · ${
+              rows(d.images).length
+            } 张图`,
+          },
+          pill(
+            REVIEW_LABELS[draftStatus(snapshot, d)] === "待审核"
+              ? "草稿"
+              : REVIEW_LABELS[draftStatus(snapshot, d)],
           ),
-        h(
-          "label",
-          { className: "xhs-field" },
-          h(
-            "div",
-            { className: "xhs-label" },
-            `图片（${form.images.length}/9）`,
-          ),
-          h("input", {
-            type: "file",
-            accept: "image/png,image/jpeg,image/webp",
-            multiple: true,
-            disabled: readOnly,
-            onChange: async (e) => {
-              const added = await readImageFiles([...e.target.files]);
-              setForm({
-                ...form,
-                images: [...form.images, ...added].slice(0, 9),
-              });
-            },
-          }),
-        ),
-        h(
-          "div",
-          { className: "xhs-actions" },
-          h(
-            Button,
-            {
-              primary: true,
-              disabled: readOnly || (!form.text.trim() && !form.images.length),
-              onClick: save,
-            },
-            "保存素材",
-          ),
+          h(Button, { onClick: () => open(d), disabled: readOnly }, "编辑"),
         ),
       ),
+      !drafts.length && h("div", { className: "xhs-empty" }, "还没有草稿"),
       h(
-        Card,
-        { title: "使用边界" },
+        "div",
+        { className: "xhs-actions" },
         h(
-          "div",
-          { className: "xhs-row" },
-          h(
-            "b",
-            null,
-            "真实个人经历、人物照片只能用于授权人对应的账号，不能改写成其他账号的亲身经历",
-          ),
-          h(Lock, { children: "固定" }),
+          Button,
+          { primary: true, disabled: readOnly, onClick: () => open({}) },
+          "新建草稿",
         ),
         h(
-          "div",
-          { className: "xhs-row" },
-          h("b", null, "AI 重现的图片保留来源标记，不当作现场实拍"),
-          h(Lock, { children: "固定" }),
-        ),
-        h(
-          "div",
-          { className: "xhs-row" },
-          h("b", null, "第三方内容只作参考，提炼结构，不复制原文和原图"),
-          h(Lock, { children: "固定" }),
+          Button,
+          { disabled: readOnly, onClick: () => go("content", "templates") },
+          "提交为内容母版",
         ),
       ),
     ),
-    h(
-      Card,
-      {
-        title: "素材资产库",
-        right: h(
-          "select",
-          {
-            className: "xhs-select",
-            style: { width: 180, marginTop: 0 },
-            value: kind,
-            onChange: (e) => setKind(e.target.value),
-          },
-          h("option", { value: "" }, "全部类型"),
-          Object.entries(KINDS).map(([k, l]) =>
-            h("option", { key: k, value: k }, l),
-          ),
-        ),
-      },
-      h(Table, {
-        head: [
-          "素材",
-          "类型",
-          "归属",
-          "来源",
-          "状态",
-          "已使用",
-          "系统整理",
-          "",
-        ],
-        body: shown.map((m) => [
+    draft &&
+      h(
+        "div",
+        { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+        h(
+          Card,
+          { title: "编辑内容" },
           h(
             "div",
-            null,
-            h("b", null, m.title || (m.text || "").slice(0, 20) || "图片素材"),
-            h("div", { className: "xhs-meta" }, (m.text || "").slice(0, 60)),
+            { className: "xhs-2" },
+            h(Select, {
+              label: "发布账号",
+              value: form.account_id,
+              disabled: readOnly,
+              onChange: (v) => set({ account_id: v }),
+              options: [
+                ...accounts.map((a) => [a.id, a.name || a.id]),
+                ["", "暂不指定"],
+              ],
+            }),
+            h(Select, {
+              label: "内容母版（自动匹配，可切换）",
+              value: form.template_id,
+              disabled: readOnly,
+              onChange: (v) => set({ template_id: v }),
+              options: [
+                ...templates.map((t) => [t.id, t.name]),
+                ["", "不使用母版"],
+              ],
+            }),
           ),
-          KINDS[m.kind],
-          m.owner === "public"
-            ? "公共素材库"
-            : rows(m.account_ids)
-                .map((id) => accountName(snapshot, id))
-                .join("、"),
-          ORIGINS[m.origin] || m.origin,
-          pill(
-            m.status === "frozen" ? "已冻结（授权撤回）" : "可用",
-            m.status === "frozen" ? "bad" : "ok",
-          ),
-          `${m.used || 0} 次`,
-          m.analysis
-            ? h(
-                "span",
-                { className: "xhs-meta" },
-                [
-                  rows(m.analysis.formats).join("、"),
-                  m.analysis.missing?.length
-                    ? `缺：${m.analysis.missing.join("、")}`
-                    : "",
-                  m.analysis.boundary,
-                ]
-                  .filter(Boolean)
-                  .join(" · "),
-              )
-            : "—",
+          !form.account_id &&
+            projects.length > 1 &&
+            h(Select, {
+              label: "项目",
+              value: form.project_id,
+              disabled: readOnly,
+              onChange: (v) => set({ project_id: v }),
+              options: projects.map((p) => [p.id, p.name]),
+            }),
+          h(Field, {
+            label: "内容主题与文案要求",
+            value: theme,
+            disabled: readOnly,
+            onChange: setTheme,
+            placeholder:
+              "写下主题和要求，AI 按人设、母版和业务资料起草；也可以直接在下面写",
+          }),
+          h(Field, {
+            label: `标题（${form.title.length}/20）`,
+            value: form.title,
+            disabled: readOnly,
+            onChange: (v) => set({ title: v.slice(0, 20) }),
+          }),
+          h(Field, {
+            label: `正文（${form.content.length}/1800）`,
+            multiline: true,
+            value: form.content,
+            disabled: readOnly,
+            onChange: (v) => set({ content: v.slice(0, 1800) }),
+          }),
           h(
-            "span",
-            { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+            "div",
+            { className: "xhs-actions", style: { marginTop: 4 } },
             h(
               Button,
               {
-                disabled: readOnly || m.status === "frozen",
+                disabled:
+                  readOnly ||
+                  !(account?.project_id || form.project_id) ||
+                  !(theme.trim() || form.title.trim()),
+                onClick: generate,
+              },
+              "生成内容",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly || !form.title || !form.content,
+                onClick: () => rewrite("polish"),
+              },
+              "AI 润色",
+            ),
+            h(
+              Button,
+              {
+                disabled:
+                  readOnly || !form.title || !form.content || !form.template_id,
+                onClick: () => rewrite("template"),
+              },
+              "按母版重写",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly || !form.title || !form.content,
+                onClick: () => rewrite("angle"),
+              },
+              "换一个角度",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly || !form.title || !form.content,
+                onClick: () => setImitate(""),
+              },
+              "上传参考并仿写",
+            ),
+          ),
+          h(Field, {
+            label: "话题标签",
+            value: form.hashtags,
+            disabled: readOnly,
+            onChange: (v) => set({ hashtags: v }),
+          }),
+          h(
+            "div",
+            { className: "xhs-label" },
+            `图片（${images.length}/9，拖动调整顺序）`,
+          ),
+          h(
+            "div",
+            null,
+            images.map((image, i) =>
+              h(
+                "span",
+                {
+                  key: image.asset_id || image.filename + i,
+                  className: `xhs-thumb${picked === i ? " is-active" : ""}`,
+                  draggable: !readOnly,
+                  onClick: () => setPicked(i),
+                  onDragStart: () => setDrag(i),
+                  onDragOver: (e) => e.preventDefault(),
+                  onDrop: () => {
+                    if (drag == null || drag === i) return;
+                    setImages((list) => {
+                      const next = [...list];
+                      const [moved] = next.splice(drag, 1);
+                      next.splice(i, 0, moved);
+                      return next;
+                    });
+                    setDrag(null);
+                  },
+                },
+                h(PrivateImage, {
+                  host,
+                  image,
+                  alt: image.display_name || image.filename || `图片 ${i + 1}`,
+                  className: "xhs-preview",
+                }),
+                ["ai", "ai_reconstruct"].includes(image.origin) &&
+                  h(
+                    "span",
+                    { className: "xhs-mark" },
+                    image.origin === "ai" ? "AI 生成" : "AI 重现",
+                  ),
+                !readOnly &&
+                  i > 0 &&
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "xhs-x",
+                      style: { right: 22 },
+                      "aria-label": `上移第${i + 1}张`,
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setImages((list) => {
+                          const next = [...list];
+                          [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                          return next;
+                        });
+                      },
+                    },
+                    "←",
+                  ),
+                !readOnly &&
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "xhs-x",
+                      "aria-label": `移除第${i + 1}张`,
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        setImages((list) => list.filter((_, n) => n !== i));
+                        setPicked(0);
+                      },
+                    },
+                    "×",
+                  ),
+              ),
+            ),
+          ),
+          images.length > 0 &&
+            h(
+              "div",
+              { className: "xhs-actions", style: { marginTop: 4 } },
+              h(Button, { disabled: readOnly, onClick: crop }, "裁切"),
+              h(
+                "label",
+                { className: "xhs-btn" },
+                ic("替换"),
+                "替换",
+                h("input", {
+                  type: "file",
+                  accept: "image/png,image/jpeg,image/webp",
+                  style: { display: "none" },
+                  disabled: readOnly,
+                  onChange: (e) => {
+                    const files = [...e.target.files];
+                    e.target.value = "";
+                    if (files.length)
+                      addFiles(files.slice(0, 1), picked).catch((error) =>
+                        window.dispatchEvent(
+                          new CustomEvent("octop:xhs-error", { detail: error }),
+                        ),
+                      );
+                  },
+                }),
+              ),
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: () => {
+                    setImages(images.filter((_, i) => i !== picked));
+                    setPicked(0);
+                  },
+                },
+                "移除",
+              ),
+            ),
+          h(
+            "div",
+            { style: { marginTop: 10 } },
+            h(
+              "div",
+              { style: { display: "flex", gap: 6, marginBottom: 8 } },
+              [
+                ["upload", "上传图片"],
+                ["ai", "AI 生图"],
+                ["library", "素材库"],
+              ].map(([k, l]) =>
+                h(
+                  "button",
+                  {
+                    key: k,
+                    type: "button",
+                    className: `xhs-btn${source === k ? " is-active" : ""}`,
+                    onClick: () => setSource(k),
+                  },
+                  l,
+                ),
+              ),
+            ),
+            source === "upload" &&
+              h(
+                "label",
+                {
+                  className: "xhs-empty",
+                  style: {
+                    display: "block",
+                    border: `1px dashed ${C.line}`,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  },
+                  onDragOver: (e) => e.preventDefault(),
+                  onDrop: (e) => {
+                    e.preventDefault();
+                    addFiles([...e.dataTransfer.files]).catch((error) =>
+                      window.dispatchEvent(
+                        new CustomEvent("octop:xhs-error", { detail: error }),
+                      ),
+                    );
+                  },
+                },
+                "拖入图片，或点击选择 · 每篇最多 9 张",
+                h("input", {
+                  type: "file",
+                  accept: "image/png,image/jpeg,image/webp",
+                  multiple: true,
+                  style: { display: "none" },
+                  disabled: readOnly || images.length >= 9,
+                  "aria-label": "上传图片",
+                  onChange: (e) => {
+                    const files = [...e.target.files];
+                    e.target.value = "";
+                    addFiles(files).catch((error) =>
+                      window.dispatchEvent(
+                        new CustomEvent("octop:xhs-error", { detail: error }),
+                      ),
+                    );
+                  },
+                }),
+              ),
+            source === "ai" &&
+              h(
+                "div",
+                null,
+                h(
+                  "div",
+                  { className: "xhs-2" },
+                  h(Field, {
+                    label: "图片描述",
+                    multiline: true,
+                    value: ai.prompt,
+                    onChange: (v) => setAi({ ...ai, prompt: v }),
+                  }),
+                  h(
+                    "div",
+                    null,
+                    h(Select, {
+                      label: "人物参考",
+                      value: ai.persona,
+                      onChange: (v) => setAi({ ...ai, persona: v }),
+                      options: [
+                        ...(account
+                          ? [["account", `${account.name} · 虚拟形象`]]
+                          : []),
+                        ["none", "不使用人物参考"],
+                      ],
+                    }),
+                    h(Select, {
+                      label: "风格",
+                      value: ai.style,
+                      onChange: (v) => setAi({ ...ai, style: v }),
+                      options: IMAGE_STYLES.map((s) => [s, s]),
+                    }),
+                  ),
+                ),
+                h(
+                  "div",
+                  { className: "xhs-2" },
+                  h(Select, {
+                    label: "配图预设（来自内容母版）",
+                    value: ai.preset,
+                    onChange: (v) => setAi({ ...ai, preset: v }),
+                    options: [
+                      ...presets.map((p) => [p, p]),
+                      ["", "不使用预设"],
+                    ],
+                  }),
+                  imageModels.length > 0
+                    ? h(Select, {
+                        label: "生图模型",
+                        value: ai.model || "",
+                        onChange: (v) => setAi({ ...ai, model: v }),
+                        options: [
+                          ["", "默认模型"],
+                          ...imageModels.map((m) => [m.id, m.name]),
+                        ],
+                      })
+                    : h(Select, {
+                        label: "参考图",
+                        value: ai.ref,
+                        onChange: (v) => setAi({ ...ai, ref: v }),
+                        options: [["none", "不使用参考图"]],
+                      }),
+                ),
+                h(
+                  "div",
+                  { className: "xhs-actions" },
+                  h(
+                    Button,
+                    {
+                      disabled: !form.title,
+                      onClick: () =>
+                        setAi({
+                          ...ai,
+                          prompt: `${form.title}。${
+                            form.content.split(/[。\n]/)[0] || ""
+                          }`.slice(0, 200),
+                        }),
+                    },
+                    "参考正文自动写描述",
+                  ),
+                  h(
+                    Button,
+                    {
+                      primary: true,
+                      disabled:
+                        readOnly ||
+                        !ai.prompt.trim() ||
+                        images.length >= 9 ||
+                        !form.title ||
+                        !form.content,
+                      onClick: generateImage,
+                    },
+                    "生成并插入",
+                  ),
+                ),
+                h(
+                  "div",
+                  { className: "xhs-meta", style: { marginTop: 6 } },
+                  "AI 生成的图片带“AI 生成”标记。效果类图片只能用已授权的本人照片，不生成虚构的前后对比。",
+                ),
+              ),
+            source === "library" &&
+              h(
+                "div",
+                null,
+                usable.flatMap((m) =>
+                  rows(m.images).map((image, i) =>
+                    h(
+                      "span",
+                      {
+                        key: m.id + i,
+                        className: "xhs-thumb",
+                        title: m.title || m.text,
+                        onClick: () =>
+                          images.length < 9 &&
+                          setImages([
+                            ...images,
+                            { ...image, origin: image.origin || "material" },
+                          ]),
+                      },
+                      h(PrivateImage, {
+                        host,
+                        image,
+                        alt: m.title || "素材",
+                        className: "xhs-preview",
+                      }),
+                    ),
+                  ),
+                ),
+                !usable.length &&
+                  h("div", { className: "xhs-empty" }, "没有可用的图片素材"),
+                h(
+                  "div",
+                  { className: "xhs-meta" },
+                  "只显示这个账号可用的素材：绑定本账号、多账号共用或公共素材。",
+                ),
+              ),
+          ),
+          h(
+            "div",
+            { className: "xhs-2", style: { marginTop: 6 } },
+            h(Field, {
+              label: "发布时间",
+              type: "datetime-local",
+              value: form.scheduled_at,
+              disabled: readOnly,
+              onChange: (v) => set({ scheduled_at: v }),
+            }),
+            h(Select, {
+              label: "内容性质",
+              value: form.nature,
+              disabled: readOnly,
+              onChange: (v) => set({ nature: v }),
+              options: [
+                ["", "请选择"],
+                ["marketing", "营销内容 · 需披露"],
+                ["life", "生活内容"],
+                ["knowledge", "知识内容"],
+              ],
+            }),
+          ),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                disabled: readOnly || !form.title || !form.content,
                 onClick: async () => {
-                  await send(host, "material.organize", { id: m.id });
+                  await save();
+                  toast("已保存");
+                },
+              },
+              "保存草稿",
+            ),
+            h(
+              Button,
+              {
+                disabled:
+                  readOnly ||
+                  !form.scheduled_at ||
+                  !form.account_id ||
+                  !form.title ||
+                  !form.content,
+                onClick: async () => {
+                  const saved = await save();
+                  await send(host, "plan.update", {
+                    action: "schedule",
+                    ids: [saved.id],
+                    scheduled_at: new Date(form.scheduled_at).toISOString(),
+                  });
+                  toast("已设置发布时间");
                   await refresh();
                 },
               },
-              "AI 整理",
+              "设置发布时间",
             ),
             h(
               Button,
               {
                 primary: true,
-                disabled: readOnly || m.status === "frozen",
+                disabled: readOnly || !form.title || !form.content,
                 onClick: async () => {
-                  await send(host, "task.add", {
-                    title: (m.title || m.text || "素材选题").slice(0, 40),
-                    account_id:
-                      rows(m.account_ids)[0] ||
-                      rows(m.analysis?.suggested_account_ids)[0] ||
-                      "",
-                    nature: "life",
-                    material_ids: [m.id],
-                    source: "material",
-                  });
+                  const saved = await save();
+                  await send(host, "content.precheck", { id: saved.id });
+                  toast("已提交审核");
                   await refresh();
-                  go("content", "plan");
                 },
               },
-              "用它生成内容",
+              "提交审核",
             ),
+            h(
+              Button,
+              {
+                disabled:
+                  readOnly || !form.title || !form.content || !form.account_id,
+                onClick: async () => {
+                  const saved = await save();
+                  await send(host, "plan.update", {
+                    action: "approve",
+                    ids: [saved.id],
+                  });
+                  await refresh();
+                  go("publish", "batches");
+                },
+              },
+              "提交发布",
+            ),
+          ),
+        ),
+        h(
+          "div",
+          { className: "xhs-stack" },
+          h(
+            Card,
+            { title: "笔记预览" },
+            h(
+              "div",
+              {
+                role: "article",
+                "aria-label": "图文预览",
+                style: {
+                  border: `1px solid ${C.line}`,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  maxWidth: 260,
+                },
+              },
+              h(
+                "div",
+                {
+                  style: {
+                    aspectRatio: "3 / 4",
+                    background: C.soft,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: C.muted,
+                    position: "relative",
+                  },
+                },
+                images[picked]
+                  ? h(PrivateImage, {
+                      host,
+                      image: images[picked],
+                      alt: `预览第${picked + 1}张`,
+                      style: {
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      },
+                    })
+                  : "还没有图片",
+                h(
+                  "span",
+                  {
+                    className: "xhs-mark",
+                    style: {
+                      position: "absolute",
+                      right: 6,
+                      top: 6,
+                      background: "rgba(0,0,0,.55)",
+                      color: "#fff",
+                      borderRadius: 8,
+                      padding: "0 6px",
+                      fontSize: 11,
+                    },
+                  },
+                  `${images.length ? picked + 1 : 0} / ${images.length}`,
+                ),
+              ),
+              h(
+                "div",
+                { style: { padding: 10 } },
+                h("b", null, form.title || "标题"),
+                h(
+                  "div",
+                  {
+                    className: "xhs-meta",
+                    style: { margin: "5px 0", whiteSpace: "pre-wrap" },
+                  },
+                  (form.content || "正文").slice(0, 120),
+                ),
+                h(
+                  "div",
+                  { style: { color: "#2f5bd7", fontSize: 12 } },
+                  hashtags.map((t) => "#" + t).join(" "),
+                ),
+              ),
+            ),
+          ),
+          h(
+            Card,
+            { title: "发布前检查" },
+            rows(checks?.items).map((i) =>
+              h(
+                Row,
+                { key: i.key, sub: i.label },
+                pill(
+                  (i.level === "ok" ? "✓ " : i.level === "bad" ? "✕ " : "! ") +
+                    i.detail,
+                  i.level === "ok" ? "ok" : i.level === "bad" ? "bad" : "warn",
+                ),
+              ),
+            ),
+            !checks &&
+              h(
+                "div",
+                { className: "xhs-empty" },
+                "保存后提交审核，系统会检查重复度、素材来源、业务信息、敏感词、AI 标识和商业披露。",
+              ),
+            checks?.stale &&
+              h("div", { className: "xhs-meta" }, "内容已修改，需要重新检查。"),
+            draft.id &&
+              h(
+                "div",
+                { className: "xhs-actions" },
+                h(
+                  Button,
+                  {
+                    primary: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "content.meta", {
+                        id: draft.id,
+                        meta: {},
+                        fix_labels: true,
+                      });
+                      await refresh();
+                    },
+                  },
+                  "一键补上标识与披露",
+                ),
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "content.precheck", { id: draft.id });
+                      await refresh();
+                    },
+                  },
+                  "重新检查",
+                ),
+              ),
+          ),
+          h(
+            Card,
+            { title: "审核记录" },
+            rows(current?.review_log).map((x, i) =>
+              h(
+                Row,
+                { key: i, title: x.event, sub: fmt(x.at, zone) },
+                pill(`v${i + 1}`),
+              ),
+            ),
+            !rows(current?.review_log).length &&
+              h("div", { className: "xhs-empty" }, "还没有记录"),
+          ),
+        ),
+      ),
+    imitate !== null &&
+      h(
+        Dialog,
+        {
+          title: "上传参考并仿写",
+          desc: "粘贴参考内容。只学习结构和节奏，不复制它的句子、数据和图片。",
+          onClose: () => setImitate(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setImitate(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !imitate.trim(),
+                onClick: async () => {
+                  const reference = imitate;
+                  setImitate(null);
+                  await rewrite("imitate", reference);
+                },
+              },
+              "仿写",
+            ),
+          ],
+        },
+        h(Field, {
+          label: "参考内容",
+          multiline: true,
+          value: imitate,
+          onChange: setImitate,
+        }),
+        h(
+          "label",
+          { className: "xhs-btn" },
+          "上传文本文件",
+          h("input", {
+            type: "file",
+            accept: ".txt,.md,text/plain",
+            style: { display: "none" },
+            onChange: async (e) => {
+              const file = e.target.files[0];
+              if (file) setImitate((await file.text()).slice(0, 4000));
+            },
+          }),
+        ),
+      ),
+  );
+}
+
+// ---- 素材库 ----
+function MaterialsPanel({ snapshot, host, readOnly, refresh, go }) {
+  const data = snapshot.data;
+  const materials = rows(data.materials);
+  const accounts = rows(data.accounts);
+  const consents = rows(data.authorizations).filter(
+    (c) => c.status === "active",
+  );
+  const [textValue, setTextValue] = useState("");
+  const [images, setImages] = useState([]);
+  const [file, setFile] = useState(null);
+  const [currentId, setCurrentId] = useState("");
+  const [scene, setScene] = useState("");
+  const [filters, setFilters] = useState({ kind: "", owner: "", origin: "" });
+  const [consentId, setConsentId] = useState("");
+  const current = materials.find((m) => m.id === currentId);
+  const saveNew = async (thenGenerate) => {
+    const id = crypto.randomUUID();
+    await send(host, "material.save", {
+      id,
+      version: null,
+      kind:
+        images.length && !textValue.trim()
+          ? "image"
+          : file
+          ? "file"
+          : "experience",
+      title: file?.name?.slice(0, 60) || "",
+      text: textValue,
+      owner: "public",
+      account_ids: [],
+      origin: file || images.length ? "upload" : "spoken",
+      consent_id: "",
+      images,
+      file_name: file?.name || "",
+      file_size: file?.size || 0,
+    });
+    setTextValue("");
+    setImages([]);
+    setFile(null);
+    setCurrentId(id);
+    if (textValue.trim())
+      await send(host, "material.organize", { id }).catch(() => undefined);
+    if (thenGenerate) {
+      await send(host, "task.add", {
+        title: (textValue || file?.name || "素材选题").slice(0, 40),
+        account_id: "",
+        nature: "life",
+        material_ids: [id],
+        source: "material",
+      });
+      await refresh();
+      go("content", "plan");
+      return;
+    }
+    toast("已保存");
+    await refresh();
+  };
+  const pickFile = (accept, onFile) =>
+    h("input", {
+      type: "file",
+      accept,
+      style: { display: "none" },
+      disabled: readOnly,
+      onChange: async (e) => {
+        const f = e.target.files[0];
+        e.target.value = "";
+        if (f) await onFile(f);
+      },
+    });
+  const update = async (m, patch) => {
+    await send(host, "material.save", {
+      id: m.id,
+      version: m.version,
+      kind: m.kind,
+      title: m.title || "",
+      text: m.text || "",
+      owner: m.owner,
+      account_ids: rows(m.account_ids),
+      origin: m.origin,
+      consent_id: m.consent_id || "",
+      images: rows(m.images),
+      file_name: m.file_name || "",
+      file_size: m.file_size || 0,
+      confirmed: !!m.confirmed,
+      ...patch,
+    });
+    await refresh();
+  };
+  const ownerText = (m) =>
+    m.owner === "public"
+      ? "公共素材库"
+      : m.owner === "shared"
+      ? `多账号共用（${rows(m.account_ids).length}）`
+      : rows(m.account_ids)
+          .map((id) => accountName(snapshot, id))
+          .join("、") || "—";
+  const boundary = (m) => {
+    if (m.status === "frozen") return pill("已冻结（授权撤回）", "bad", true);
+    if (["ai", "ai_reconstruct"].includes(m.origin))
+      return pill("需加标识", "warn", true);
+    if (m.kind === "reference") return pill("只作参考，不复制", "warn", true);
+    if (m.kind === "experience") return pill("仅本人账号", "ok", true);
+    return pill(m.owner === "public" ? "品牌自有" : "内部资料", "ok", true);
+  };
+  const shown = materials.filter(
+    (m) =>
+      (!filters.kind || m.kind === filters.kind) &&
+      (!filters.owner || m.owner === filters.owner) &&
+      (!filters.origin || m.origin === filters.origin),
+  );
+  const a = current?.analysis;
+  const suggested = rows(a?.suggested_account_ids);
+  return h(
+    "div",
+    { className: "xhs-stack" },
+    h(
+      "div",
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          {
+            title: "添加素材",
+            tip: "文字、图片、语音、文件都可以。不用马上做成笔记，系统会先整理保存，之后做内容计划时自动匹配。",
+          },
+          h("textarea", {
+            className: "xhs-textarea",
+            value: textValue,
+            disabled: readOnly,
+            "aria-label": "素材内容",
+            placeholder:
+              "例如：小王周末去了天坛，下午阳光很好，想分享一下秋天的景色，但是没有拍照。",
+            onChange: (e) => setTextValue(e.target.value),
+          }),
+          (images.length > 0 || file) &&
+            h(
+              "div",
+              { className: "xhs-meta" },
+              [
+                images.length ? `图片 ${images.length} 张` : "",
+                file ? `文件 ${file.name}` : "",
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            ),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              "label",
+              { className: "xhs-btn" },
+              ic("上传图片"),
+              "上传图片",
+              h("input", {
+                type: "file",
+                accept: "image/png,image/jpeg,image/webp",
+                multiple: true,
+                style: { display: "none" },
+                disabled: readOnly,
+                onChange: async (e) => {
+                  const added = await readImageFiles([...e.target.files]);
+                  e.target.value = "";
+                  setImages([...images, ...added].slice(0, 9));
+                },
+              }),
+            ),
+            h(
+              "label",
+              { className: "xhs-btn" },
+              ic("上传语音"),
+              "上传语音",
+              pickFile("audio/*", async (f) =>
+                setFile({ name: f.name, size: f.size }),
+              ),
+            ),
+            h(
+              "label",
+              { className: "xhs-btn" },
+              ic("上传文件"),
+              "上传文件",
+              pickFile(".txt,.md,.csv,.xlsx,.docx,.pdf", async (f) => {
+                setFile({ name: f.name, size: f.size });
+                if (/\.(txt|md|csv)$/i.test(f.name))
+                  setTextValue((await f.text()).slice(0, 4000));
+              }),
+            ),
+            h(
+              Button,
+              {
+                primary: true,
+                disabled:
+                  readOnly || (!textValue.trim() && !images.length && !file),
+                onClick: () => saveNew(false),
+              },
+              "保存素材",
+            ),
+            h(
+              Button,
+              {
+                disabled:
+                  readOnly || (!textValue.trim() && !images.length && !file),
+                onClick: () => saveNew(true),
+              },
+              "立即用它生成内容",
+            ),
+          ),
+        ),
+        h(
+          Card,
+          { title: "生活场景 AI 补图" },
+          h(Field, {
+            label: "场景描述",
+            multiline: true,
+            value: scene,
+            onChange: setScene,
+            disabled: readOnly,
+            placeholder:
+              "今天吃了一碗牛肉面，汤很浓，面是宽面，店里是老式木桌，可惜忘了拍照。",
+          }),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            "生成的图片保留“AI 重现”来源标记，不会当作现场实拍使用。",
+          ),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly || !scene.trim(),
+                onClick: async () => {
+                  await send(host, "material.reconstruct", {
+                    text: scene,
+                    count: 3,
+                    account_id: suggested[0] || "",
+                  });
+                  setScene("");
+                  await refresh();
+                },
+              },
+              "生成 3 张",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly || !scene.trim() || !accounts.length,
+                onClick: async () => {
+                  await send(host, "material.reconstruct", {
+                    text: scene,
+                    count: 3,
+                    account_id: suggested[0] || accounts[0].id,
+                    with_persona: true,
+                  });
+                  setScene("");
+                  await refresh();
+                },
+              },
+              "带人物参考生成",
+            ),
+          ),
+        ),
+      ),
+      h(
+        Card,
+        { title: "系统整理结果" },
+        current
+          ? [
+              h(Table, {
+                key: "t",
+                head: ["项目", "内容"],
+                body: [
+                  [
+                    "素材类型",
+                    `${MATERIAL_KINDS[current.kind]} · ${
+                      rows(current.images).length
+                        ? "图片"
+                        : current.file_name
+                        ? "文件"
+                        : "文字"
+                    }`,
+                  ],
+                  ["归属", a?.owner_hint || ownerText(current)],
+                  [
+                    "建议关联账号",
+                    suggested
+                      .map((id) => accountName(snapshot, id))
+                      .join("、") || "—",
+                  ],
+                  ["可以做成", rows(a?.formats).join(" · ") || "—"],
+                  ["缺少", rows(a?.missing).join("；") || "—"],
+                  [
+                    "使用边界",
+                    a?.boundary ||
+                      (current.kind === "experience"
+                        ? "只能用于本人账号，不能改写成其他账号的亲身经历"
+                        : "—"),
+                  ],
+                ],
+              }),
+              current.kind === "experience" &&
+                h(Select, {
+                  key: "c",
+                  label: "授权（真实人物或经历时必选）",
+                  value: consentId || current.consent_id || "",
+                  onChange: setConsentId,
+                  options: [
+                    ["", "不涉及个人授权"],
+                    ...consents.map((c) => [
+                      c.id,
+                      `${c.person} · 至 ${c.valid_to}`,
+                    ]),
+                  ],
+                }),
+              h(
+                "div",
+                { key: "a", className: "xhs-actions" },
+                h(
+                  Button,
+                  {
+                    primary: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await update(current, {
+                        owner: suggested.length
+                          ? suggested.length > 1
+                            ? "shared"
+                            : "account"
+                          : current.owner,
+                        account_ids: suggested.length
+                          ? suggested
+                          : rows(current.account_ids),
+                        consent_id: consentId || current.consent_id || "",
+                        confirmed: true,
+                      });
+                      toast("已确认");
+                    },
+                  },
+                  "确认归属与边界",
+                ),
+                h(
+                  Button,
+                  {
+                    disabled: readOnly || current.kind === "experience",
+                    onClick: () =>
+                      update(current, {
+                        owner: "public",
+                        account_ids: [],
+                        consent_id: "",
+                      }),
+                  },
+                  "改为公共素材",
+                ),
+                h(
+                  Button,
+                  {
+                    disabled: readOnly || !current.text,
+                    onClick: () => setScene(current.text.slice(0, 500)),
+                  },
+                  "AI 补图",
+                ),
+                !a &&
+                  h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "material.organize", {
+                          id: current.id,
+                        });
+                        await refresh();
+                      },
+                    },
+                    "重新整理",
+                  ),
+              ),
+            ]
+          : h(
+              "div",
+              { className: "xhs-empty" },
+              "保存素材后，这里显示系统整理出的类型、归属、可以做成什么和使用边界。也可以在下面的资产库里点一条素材查看。",
+            ),
+      ),
+    ),
+    h(
+      Card,
+      { title: "素材资产库" },
+      h(
+        "div",
+        { style: { display: "flex", gap: 8, marginBottom: 8 } },
+        h(Select, {
+          label: "",
+          style: { width: 170, marginTop: 0 },
+          value: filters.kind,
+          onChange: (v) => setFilters({ ...filters, kind: v }),
+          options: [["", "全部类型"], ...Object.entries(MATERIAL_KINDS)],
+        }),
+        h(Select, {
+          label: "",
+          style: { width: 150, marginTop: 0 },
+          value: filters.owner,
+          onChange: (v) => setFilters({ ...filters, owner: v }),
+          options: [
+            ["", "全部归属"],
+            ["account", "绑定账号"],
+            ["shared", "多账号共用"],
+            ["public", "公共素材库"],
+          ],
+        }),
+        h(Select, {
+          label: "",
+          style: { width: 150, marginTop: 0 },
+          value: filters.origin,
+          onChange: (v) => setFilters({ ...filters, origin: v }),
+          options: [
+            ["", "全部来源"],
+            ["real", "真实拍摄"],
+            ["ai", "AI 生成"],
+            ["ai_reconstruct", "AI 重现"],
+          ],
+        }),
+      ),
+      h(Table, {
+        head: ["素材", "类型", "归属", "来源", "授权与边界", "已使用", ""],
+        body: shown.map((m) => [
+          h(
+            "button",
+            { className: "xhs-link", onClick: () => setCurrentId(m.id) },
+            m.title || (m.text || "").slice(0, 20) || m.file_name || "图片素材",
+          ),
+          MATERIAL_KINDS[m.kind],
+          ownerText(m),
+          ["ai", "ai_reconstruct"].includes(m.origin)
+            ? pill(ORIGINS[m.origin], "warn", true)
+            : ORIGINS[m.origin] || m.origin,
+          boundary(m),
+          m.kind === "reference" ? "—" : `${m.used || 0} 次`,
+          h(
+            "span",
+            { style: { display: "flex", gap: 6 } },
+            m.kind === "reference"
+              ? h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: () => go("content", "templates"),
+                  },
+                  "提交提炼母版",
+                )
+              : h(
+                  Button,
+                  {
+                    disabled: readOnly || m.status === "frozen",
+                    onClick: async () => {
+                      await send(host, "task.add", {
+                        title: (m.title || m.text || "素材选题").slice(0, 40),
+                        account_id:
+                          rows(m.account_ids)[0] ||
+                          rows(m.analysis?.suggested_account_ids)[0] ||
+                          "",
+                        nature: "life",
+                        material_ids: [m.id],
+                        source: "material",
+                      });
+                      await refresh();
+                      go("content", "plan");
+                    },
+                  },
+                  "生成内容",
+                ),
             h(
               Button,
               {
@@ -7936,17 +10336,60 @@ function MaterialsPanel({ snapshot, host, readOnly, refresh, go }) {
 }
 
 // ---- 内容母版 ----
-function TemplatesPanel({ snapshot, host, readOnly, refresh }) {
-  const cache = snapshot.data.catalog_cache || {};
+const TEMPLATE_KINDS = ["人设类", "功课类", "体验类", "效果展示类"];
+const VISUALS = [
+  "双栏对比",
+  "清单",
+  "信息图",
+  "时间轴",
+  "生活摄影",
+  "日记拼贴",
+];
+function TemplatesPanel({ snapshot, host, readOnly, refresh, go }) {
+  const data = snapshot.data;
+  const zone = tz(snapshot);
+  const cache = data.catalog_cache || {};
   const templates = rows(cache.templates);
-  const subs = rows(snapshot.data.template_submissions);
-  const drafts = rows(snapshot.data.drafts).filter(
-    (d) =>
-      d.review_status === "published" ||
-      d.review_status === "approved" ||
-      d.review_status === "scheduled",
+  const subs = rows(data.template_submissions);
+  const drafts = rows(data.drafts);
+  const caps = snapshot.license?.policy?.caps || {};
+  const [filters, setFilters] = useState({ kind: "", scope: "", visual: "" });
+  const [goal, setGoal] = useState("");
+  const [example, setExample] = useState(null);
+  const [submit, setSubmit] = useState(null);
+  const [suggest, setSuggest] = useState(null);
+  const scopes = [...new Set(templates.map((t) => t.scope).filter(Boolean))];
+  const shown = templates.filter(
+    (t) =>
+      (!filters.kind || t.kind === filters.kind) &&
+      (!filters.scope || t.scope === filters.scope) &&
+      (!filters.visual || String(t.visual || "").includes(filters.visual)),
   );
-  const [submit, setSubmit] = useState({ id: "", structure: "", metrics: "" });
+  const usage = (t) => {
+    const used = drafts.filter((d) => d.template_id === t.id);
+    const passed = used.filter((d) =>
+      ["approved", "scheduled", "published"].includes(d.review_status),
+    ).length;
+    return used.length
+      ? `已使用 ${used.length} 次 · 过审 ${Math.round(
+          (passed * 100) / used.length,
+        )}%`
+      : "已使用 0 次";
+  };
+  const hasCase = rows(data.authorizations).some(
+    (c) => c.status === "active" && rows(c.covers).includes("case"),
+  );
+  const words = goal.trim();
+  const recommended = words
+    ? templates
+        .filter((t) => t.available !== false && t.kind === "功课类")
+        .slice(0, 3)
+    : [];
+  const caseTemplate = templates.find((t) => t.kind === "效果展示类");
+  const presets = templates.filter((t) => t.image_preset);
+  const published = drafts.filter((d) =>
+    ["approved", "scheduled", "published"].includes(d.review_status),
+  );
   return h(
     "div",
     { className: "xhs-stack" },
@@ -7954,95 +10397,337 @@ function TemplatesPanel({ snapshot, host, readOnly, refresh }) {
       Card,
       {
         title: "内容母版库",
-        hint: "母版 = 运营经验 + 文案结构 + 图片形式 + 适用条件。系统按运营目标、账号人设和现有素材自动匹配，你也可以手动切换。",
+        tip: "母版 = 运营经验 + 文案结构 + 图片形式 + 适用条件。系统按运营目标、账号人设和现有素材自动匹配，你也可以手动切换。",
         right: h(
-          "span",
-          { style: { display: "flex", gap: 6, alignItems: "center" } },
-          cache.fetched_at &&
-            h(
-              "span",
-              { className: "xhs-meta" },
-              `同步于 ${fmt(cache.fetched_at, tz(snapshot))}`,
-            ),
-          h(
-            Button,
-            {
-              disabled: readOnly,
-              onClick: async () => {
-                await send(host, "catalog.refresh", {});
-                await refresh();
-              },
+          Button,
+          {
+            disabled: readOnly,
+            onClick: async () => {
+              await send(host, "catalog.refresh", {});
+              toast("已同步");
+              await refresh();
             },
-            "从企业同步",
-          ),
+          },
+          "从企业同步",
         ),
       },
-      !templates.length &&
-        h(
-          "div",
-          { className: "xhs-empty" },
-          "还没有同步母版。点“从企业同步”获取平台为企业开通的母版和词库。",
-        ),
       h(
         "div",
-        { className: "xhs-grid" },
-        templates.map((t) =>
+        { className: "xhs-3" },
+        h(Select, {
+          label: "类型",
+          value: filters.kind,
+          onChange: (v) => setFilters({ ...filters, kind: v }),
+          options: [["", "全部类型"], ...TEMPLATE_KINDS.map((k) => [k, k])],
+        }),
+        h(Select, {
+          label: "行业与适用场景",
+          value: filters.scope,
+          onChange: (v) => setFilters({ ...filters, scope: v }),
+          options: [["", "全部"], ...scopes.map((s) => [s, s])],
+        }),
+        h(Select, {
+          label: "配图形式",
+          value: filters.visual,
+          onChange: (v) => setFilters({ ...filters, visual: v }),
+          options: [["", "全部"], ...VISUALS.map((v) => [v, v])],
+        }),
+      ),
+    ),
+    h(
+      "div",
+      {
+        style: {
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          alignItems: "center",
+        },
+      },
+      h(Lock, {
+        children: `企业母版范围：${
+          rows(caps.template_scope).join(" + ") || "通用"
+        }`,
+      }),
+      pill(`平台母版 ${templates.length} 个`),
+      pill(`我提交的候选 ${subs.length} 个`),
+      templates.some((t) => t.available === false) &&
+        h(
+          "span",
+          { className: "xhs-meta" },
+          "未开通的母版类别需要平台为企业开通",
+        ),
+      cache.fetched_at &&
+        h(
+          "span",
+          { className: "xhs-meta" },
+          `同步于 ${fmt(cache.fetched_at, zone)}`,
+        ),
+    ),
+    !templates.length &&
+      h(
+        "div",
+        { className: "xhs-card xhs-empty" },
+        "还没有同步母版。点“从企业同步”获取平台为企业开通的母版和词库。",
+      ),
+    h(
+      "div",
+      { className: "xhs-grid" },
+      shown.map((t) =>
+        h(
+          "section",
+          {
+            key: t.id,
+            className: "xhs-card",
+            style: t.available === false ? { opacity: 0.6 } : undefined,
+          },
+          h("h3", null, t.name),
           h(
             "div",
             {
-              key: t.id,
-              className: "xhs-card",
-              style: t.available === false ? { opacity: 0.55 } : undefined,
-            },
-            h("h3", null, t.name),
-            h(
-              "div",
-              {
-                style: {
-                  display: "flex",
-                  gap: 5,
-                  flexWrap: "wrap",
-                  marginBottom: 6,
-                },
+              style: {
+                display: "flex",
+                gap: 5,
+                flexWrap: "wrap",
+                marginBottom: 6,
               },
-              pill(t.kind),
-              t.compliance !== "通用" && pill(t.compliance, "warn"),
-              t.available === false && h(Lock, { children: "企业未开通" }),
-            ),
-            h("div", { className: "xhs-meta" }, "结构：", t.structure),
-            h(
-              "div",
-              { className: "xhs-meta", style: { marginTop: 4 } },
-              "配图：",
-              t.visual || "—",
-            ),
-            h(
-              "div",
-              { className: "xhs-meta", style: { marginTop: 4 } },
-              "需要素材：",
-              t.required_material || "—",
-            ),
+            },
+            pill(t.kind),
+            t.compliance &&
+              t.compliance !== "通用" &&
+              pill(t.compliance, "warn", true),
+          ),
+          h("div", { className: "xhs-meta" }, "结构：", t.structure),
+          h("div", { className: "xhs-meta" }, "配图：", t.visual || "—"),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            "需要素材：",
+            t.required_material || "—",
+          ),
+          h("div", { className: "xhs-meta" }, usage(t)),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            t.available === false
+              ? h(Button, { disabled: true }, "企业未开通此类母版")
+              : h(
+                  Button,
+                  {
+                    primary: true,
+                    disabled: readOnly,
+                    onClick: () => go("content", "editor", "new"),
+                  },
+                  "用它创作",
+                ),
+            h(Button, { onClick: () => setExample(t) }, "查看示例"),
           ),
         ),
       ),
     ),
     h(
       "div",
-      { className: "xhs-two even" },
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         Card,
+        { title: "智能匹配示例" },
+        h(Field, {
+          label: "运营目标",
+          value: goal,
+          onChange: setGoal,
+          placeholder: "例如：疤痕修复，手术与非手术怎么选",
+        }),
+        h(
+          Row,
+          { title: "推荐母版" },
+          recommended.length
+            ? recommended.map((t) =>
+                h(
+                  "span",
+                  { key: t.id, className: "xhs-pill ok" },
+                  h("i", { className: "xhs-dot" }),
+                  t.name,
+                ),
+              )
+            : h("span", { className: "xhs-meta" }, "输入运营目标后显示"),
+        ),
+        caseTemplate &&
+          h(
+            Row,
+            {
+              title: caseTemplate.name,
+              sub: "只有在已有真实、授权的病例资料时才会推荐",
+            },
+            pill(
+              hasCase && caseTemplate.available !== false
+                ? "可推荐"
+                : "暂不推荐",
+              hasCase && caseTemplate.available !== false ? "ok" : "warn",
+              true,
+            ),
+          ),
+        h(
+          "div",
+          { className: "xhs-meta" },
+          "医疗、医美内容不会生成未经证实的疗效、患者评价或虚构的治疗前后对比；高风险内容保留人工审核。",
+        ),
+      ),
+      h(
+        Card,
+        { title: "配图指令预设" },
+        h(Table, {
+          head: ["预设", "用于母版", "指令摘要"],
+          body: presets.map((t) => [
+            String(t.visual || "").split(/[、，]/)[0] || "预设",
+            t.name,
+            t.image_preset,
+          ]),
+          empty: "母版里还没有配图预设",
+        }),
+        h(
+          "div",
+          { className: "xhs-actions" },
+          h(
+            Button,
+            {
+              disabled: readOnly || !published.length,
+              onClick: () =>
+                setSubmit({
+                  id: published[0]?.id || "",
+                  structure: "",
+                  metrics: "",
+                }),
+            },
+            "提交优质内容为母版",
+          ),
+          h(
+            Button,
+            {
+              disabled: readOnly,
+              onClick: () => setSuggest({ name: "", structure: "" }),
+            },
+            "建议新母版",
+          ),
+        ),
+      ),
+    ),
+    h(
+      Card,
+      {
+        title: "我提交的母版候选",
+        tip: "提交的是结构和做法，平台审核时会去掉账号信息；被采纳后，范围内的企业都能用。",
+      },
+      h(Table, {
+        head: ["内容", "提交时间", "表现", "平台审核", ""],
+        body: subs.map((s) => [
+          s.title,
+          fmt(s.created_at, zone, { month: "2-digit", day: "2-digit" }),
+          s.metrics || "—",
+          pill(
+            s.status === "adopted"
+              ? "已采纳"
+              : s.status === "rejected"
+              ? "未采纳"
+              : "平台审核中",
+            s.status === "adopted"
+              ? "ok"
+              : s.status === "pending"
+              ? "warn"
+              : "",
+            true,
+          ),
+          s.status === "pending"
+            ? h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "template.candidate", {
+                      action: "withdraw",
+                      id: s.id,
+                    });
+                    await refresh();
+                  },
+                },
+                "撤回提交",
+              )
+            : h(
+                Button,
+                {
+                  onClick: () =>
+                    setExample({
+                      name: s.title,
+                      structure: s.structure,
+                      visual: "",
+                      required_material: "",
+                      review_note: s.review_note,
+                    }),
+                },
+                "查看",
+              ),
+        ]),
+        empty: "还没有提交",
+      }),
+    ),
+    example &&
+      h(
+        Dialog,
         {
-          title: "提交优质内容为母版候选",
-          hint: "提交的是结构和做法，平台审核时会去掉账号信息；被采纳后，范围内的企业都能用。",
+          title: example.name,
+          onClose: () => setExample(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setExample(null) }, "关闭"),
+          ],
+        },
+        String(example.structure || "")
+          .split(/\s*→\s*/)
+          .map((step, i) => h(Row, { key: i, title: `${i + 1}. ${step}` })),
+        example.visual &&
+          h("div", { className: "xhs-meta" }, `配图：${example.visual}`),
+        example.image_preset &&
+          h(
+            "div",
+            { className: "xhs-meta" },
+            `配图指令：${example.image_preset}`,
+          ),
+        example.review_note &&
+          h(
+            "div",
+            { className: "xhs-meta" },
+            `平台意见：${example.review_note}`,
+          ),
+      ),
+    submit &&
+      h(
+        Dialog,
+        {
+          title: "提交优质内容为母版",
+          desc: "提交的是结构和做法，不包含账号信息。",
+          onClose: () => setSubmit(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setSubmit(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !submit.id,
+                onClick: async () => {
+                  await send(host, "template.submit", submit);
+                  setSubmit(null);
+                  toast("已提交");
+                  await refresh();
+                },
+              },
+              "提交",
+            ),
+          ],
         },
         h(Select, {
           label: "内容",
           value: submit.id,
           onChange: (v) => setSubmit({ ...submit, id: v }),
-          options: [
-            ["", "选择一篇已通过或已发布的内容"],
-            ...drafts.map((d) => [d.id, d.title]),
-          ],
+          options: published.map((d) => [d.id, d.title]),
         }),
         h(Field, {
           label: "结构",
@@ -8056,153 +10741,382 @@ function TemplatesPanel({ snapshot, host, readOnly, refresh }) {
           onChange: (v) => setSubmit({ ...submit, metrics: v }),
           placeholder: "例如：阅读 1.2 万 · 互动率约 7%",
         }),
-        h(
-          "div",
-          { className: "xhs-actions" },
-          h(
-            Button,
-            {
-              primary: true,
-              disabled: readOnly || !submit.id,
-              onClick: async () => {
-                await send(host, "template.submit", submit);
-                setSubmit({ id: "", structure: "", metrics: "" });
-                await refresh();
-              },
-            },
-            "提交",
-          ),
-        ),
       ),
+    suggest &&
       h(
-        Card,
-        { title: "我提交的母版候选" },
-        h(Table, {
-          head: ["内容", "提交时间", "平台审核"],
-          body: subs.map((s) => [
-            s.title,
-            fmt(s.created_at, tz(snapshot)),
-            pill(
-              s.status === "adopted"
-                ? "已采纳"
-                : s.status === "rejected"
-                ? "未采纳"
-                : "平台审核中",
-              s.status === "adopted"
-                ? "ok"
-                : s.status === "pending"
-                ? "warn"
-                : "",
+        Dialog,
+        {
+          title: "建议新母版",
+          onClose: () => setSuggest(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setSuggest(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !suggest.name.trim() || !suggest.structure.trim(),
+                onClick: async () => {
+                  await send(host, "template.candidate", suggest);
+                  setSuggest(null);
+                  toast("已提交");
+                  await refresh();
+                },
+              },
+              "提交",
             ),
-          ]),
-          empty: "还没有提交",
+          ],
+        },
+        h(Field, {
+          label: "母版名称",
+          value: suggest.name,
+          onChange: (v) => setSuggest({ ...suggest, name: v }),
+        }),
+        h(Field, {
+          label: "结构",
+          multiline: true,
+          value: suggest.structure,
+          onChange: (v) => setSuggest({ ...suggest, structure: v }),
+          placeholder: "例如：场景 → 3–5 条要点 → 收尾提醒",
         }),
       ),
-    ),
   );
 }
 
 // ---- 业务资料 ----
+const BIZ_FIELDS = {
+  org: ["主营业务", "机构介绍", "门店与服务地区", "资质文件"],
+  project: ["核心卖点", "价格", "适用条件", "注意事项"],
+  person: ["身份", "可公开信息", "资质", "授权"],
+};
 function BizDocsPanel({ snapshot, host, readOnly, refresh }) {
   const docs = rows(snapshot.data.biz_docs);
   const [kind, setKind] = useState("org");
-  const TEMPLATES = {
-    org: ["主营业务", "机构介绍", "门店与服务地区", "资质文件"],
-    project: ["核心卖点", "价格", "适用条件", "注意事项"],
-    person: ["身份", "可公开信息", "资质", "授权"],
-  };
-  const blank = (k) => ({
+  const blank = (k, from) => ({
+    id: from?.id || "",
+    version: from?.version ?? null,
     kind: k,
-    name: "",
-    fields: Object.fromEntries(TEMPLATES[k].map((f) => [f, ""])),
-    source: "",
+    name: from?.name || "",
+    fields: {
+      ...Object.fromEntries(BIZ_FIELDS[k].map((f) => [f, ""])),
+      ...(from?.fields || {}),
+    },
+    source: from?.source || "",
   });
-  const [form, setForm] = useState(blank("org"));
+  const org = docs.find((d) => d.kind === "org");
+  const [orgForm, setOrgForm] = useState(blank("org", org));
+  useEffect(() => setOrgForm(blank("org", org)), [org?.version]);
+  const [form, setForm] = useState(null);
+  const save = async (f) => {
+    await send(host, "bizdoc.save", {
+      id: f.id || "",
+      version: f.version ?? null,
+      kind: f.kind,
+      name: f.name,
+      fields: f.fields,
+      source: f.source || "",
+    });
+    toast("已保存");
+    await refresh();
+  };
+  const importFile = async (file) => {
+    const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+    const head = lines[0]
+      .split(/[,\t]/)
+      .map((c) => c.trim().replace(/^"|"$/g, ""));
+    for (const line of lines.slice(1, 51)) {
+      const cells = line
+        .split(/[,\t]/)
+        .map((c) => c.trim().replace(/^"|"$/g, ""));
+      const record = Object.fromEntries(
+        head.map((k, i) => [k, cells[i] || ""]),
+      );
+      if (!record["项目"]) continue;
+      await send(host, "bizdoc.save", {
+        id: "",
+        version: null,
+        kind: "project",
+        name: record["项目"],
+        fields: Object.fromEntries(
+          BIZ_FIELDS.project.map((f) => [f, record[f] || ""]),
+        ),
+        source: record["资料来源"] || file.name,
+      });
+    }
+    await refresh();
+  };
+  const orgField = (f, multiline) =>
+    h(Field, {
+      key: f,
+      label: f,
+      multiline,
+      value: orgForm.fields[f],
+      disabled: readOnly,
+      onChange: (v) =>
+        setOrgForm({ ...orgForm, fields: { ...orgForm.fields, [f]: v } }),
+    });
+  const list = docs.filter((d) => d.kind === kind);
   return h(
-    "div",
-    { className: "xhs-stack" },
+    Card,
+    {
+      title: "业务资料",
+      tip: "生成内容时，价格、功效、适用条件等信息只从这里取，取不到就不写。发布前检查也会用它核对价格。",
+    },
     h(
-      Card,
-      {
-        title: "业务资料",
-        hint: "生成内容时，价格、功效、适用条件等信息只从这里取，取不到就不写。发布前检查也会用它核对价格。",
-      },
+      "div",
+      { className: "xhs-tabs", role: "tablist" },
+      [
+        ["org", "机构资料"],
+        ["project", "项目资料"],
+        ["person", "医生与人员资料"],
+      ].map(([k, l]) =>
+        h(
+          "button",
+          {
+            key: k,
+            role: "tab",
+            className: `xhs-tab${kind === k ? " is-active" : ""}`,
+            onClick: () => {
+              setKind(k);
+              setForm(null);
+            },
+          },
+          l,
+        ),
+      ),
+    ),
+    kind === "org" && [
       h(
         "div",
-        { className: "xhs-tabs", style: { marginBottom: 10 } },
-        [
-          ["org", "机构资料"],
-          ["project", "项目资料"],
-          ["person", "医生与人员资料"],
-        ].map(([k, l]) =>
+        { key: "a", className: "xhs-2" },
+        h(Field, {
+          label: "机构名称",
+          value: orgForm.name,
+          disabled: readOnly,
+          onChange: (v) => setOrgForm({ ...orgForm, name: v }),
+        }),
+        orgField("主营业务"),
+      ),
+      orgField("机构介绍", true),
+      h(
+        "div",
+        { key: "b", className: "xhs-2" },
+        orgField("门店与服务地区"),
+        h(
+          "label",
+          { className: "xhs-field" },
+          h("span", { className: "xhs-label" }, "资质文件"),
           h(
-            "button",
+            "div",
             {
-              key: k,
-              className: `xhs-tab${kind === k ? " active" : ""}`,
-              onClick: () => {
-                setKind(k);
-                setForm(blank(k));
+              style: {
+                display: "flex",
+                gap: 6,
+                alignItems: "center",
+                marginTop: 5,
               },
             },
-            l,
+            h(
+              "span",
+              { className: "xhs-input", style: { marginTop: 0, flex: 1 } },
+              orgForm.fields["资质文件"]
+                ? `${orgForm.fields["资质文件"]} · 已登记`
+                : "未登记",
+            ),
+            h(
+              "label",
+              { className: "xhs-btn" },
+              "上传…",
+              h("input", {
+                type: "file",
+                style: { display: "none" },
+                disabled: readOnly,
+                onChange: (e) => {
+                  const f = e.target.files[0];
+                  if (f)
+                    setOrgForm({
+                      ...orgForm,
+                      fields: { ...orgForm.fields, 资质文件: f.name },
+                    });
+                },
+              }),
+            ),
           ),
         ),
       ),
+      h(
+        "div",
+        { key: "c", className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly || !orgForm.name.trim(),
+            onClick: () => save(orgForm),
+          },
+          "保存",
+        ),
+      ),
+    ],
+    kind === "project" && [
       h(Table, {
-        head: ["名称", ...TEMPLATES[kind], "资料来源", ""],
-        body: docs
-          .filter((d) => d.kind === kind)
-          .map((d) => [
-            h("b", null, d.name),
-            ...TEMPLATES[kind].map((f) => (d.fields || {})[f] || "—"),
-            d.source || "—",
+        key: "t",
+        head: ["项目", ...BIZ_FIELDS.project, "资料来源", ""],
+        body: list.map((d) => [
+          d.name,
+          ...BIZ_FIELDS.project.map((f) => (d.fields || {})[f] || "—"),
+          d.source || "—",
+          h(
+            "span",
+            { style: { display: "flex", gap: 6 } },
             h(
-              "span",
-              { style: { display: "flex", gap: 6 } },
-              h(
-                Button,
-                {
-                  disabled: readOnly,
-                  onClick: () =>
-                    setForm({
-                      ...d,
-                      fields: {
-                        ...Object.fromEntries(
-                          TEMPLATES[kind].map((f) => [f, ""]),
-                        ),
-                        ...d.fields,
-                      },
-                    }),
-                },
-                "编辑",
-              ),
-              h(
-                Button,
-                {
-                  danger: true,
-                  disabled: readOnly,
-                  onClick: async () => {
-                    await send(host, "bizdoc.delete", { id: d.id });
-                    await refresh();
-                  },
-                },
-                "删除",
-              ),
+              Button,
+              {
+                disabled: readOnly,
+                onClick: () => setForm(blank("project", d)),
+              },
+              "编辑",
             ),
-          ]),
-        empty: "还没有资料",
-      }),
-      h("h4", null, form.id ? `编辑 · ${form.name}` : "添加"),
-      h(Field, {
-        label: "名称",
-        value: form.name,
-        onChange: (v) => setForm({ ...form, name: v }),
+            h(
+              Button,
+              {
+                danger: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "bizdoc.delete", { id: d.id });
+                  await refresh();
+                },
+              },
+              "删除",
+            ),
+          ),
+        ]),
+        empty: "还没有项目资料",
       }),
       h(
         "div",
-        { className: "xhs-two even" },
-        Object.keys(form.fields).map((f) =>
+        { key: "a", className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly,
+            onClick: () => setForm(blank("project")),
+          },
+          "添加项目",
+        ),
+        h(
+          "label",
+          { className: "xhs-btn" },
+          "从文件导入",
+          h("input", {
+            type: "file",
+            accept: ".csv,.tsv,.txt",
+            style: { display: "none" },
+            disabled: readOnly,
+            onChange: (e) => {
+              const f = e.target.files[0];
+              e.target.value = "";
+              if (f)
+                importFile(f).catch((error) =>
+                  window.dispatchEvent(
+                    new CustomEvent("octop:xhs-error", { detail: error }),
+                  ),
+                );
+            },
+          }),
+        ),
+      ),
+    ],
+    kind === "person" && [
+      h(Table, {
+        key: "t",
+        head: ["姓名", "身份", "可公开信息", "资质", "授权", ""],
+        body: list.map((d) => [
+          d.name,
+          (d.fields || {})["身份"] || "—",
+          (d.fields || {})["可公开信息"] || "—",
+          (d.fields || {})["资质"] || "—",
+          (d.fields || {})["授权"] ? pill(d.fields["授权"], "ok", true) : "—",
+          h(
+            "span",
+            { style: { display: "flex", gap: 6 } },
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: () => setForm(blank("person", d)),
+              },
+              "编辑",
+            ),
+            h(
+              Button,
+              {
+                danger: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "bizdoc.delete", { id: d.id });
+                  await refresh();
+                },
+              },
+              "删除",
+            ),
+          ),
+        ]),
+        empty: "还没有人员资料",
+      }),
+      h(
+        "div",
+        { key: "m", className: "xhs-meta", style: { marginTop: 8 } },
+        "医疗、医美机构在这里录入医生资料与执业资质；内容里出现的专业信息必须能在这里找到来源。",
+      ),
+      h(
+        "div",
+        { key: "a", className: "xhs-actions" },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly,
+            onClick: () => setForm(blank("person")),
+          },
+          "添加人员",
+        ),
+      ),
+    ],
+    form &&
+      h(
+        Dialog,
+        {
+          title: form.id
+            ? `编辑 · ${form.name}`
+            : form.kind === "project"
+            ? "添加项目"
+            : "添加人员",
+          onClose: () => setForm(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setForm(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !form.name.trim(),
+                onClick: async () => {
+                  await save(form);
+                  setForm(null);
+                },
+              },
+              "保存",
+            ),
+          ],
+        },
+        h(Field, {
+          label: form.kind === "project" ? "项目" : "姓名",
+          value: form.name,
+          onChange: (v) => setForm({ ...form, name: v }),
+        }),
+        BIZ_FIELDS[form.kind].map((f) =>
           h(Field, {
             key: f,
             label: f,
@@ -8211,527 +11125,1203 @@ function BizDocsPanel({ snapshot, host, readOnly, refresh }) {
               setForm({ ...form, fields: { ...form.fields, [f]: v } }),
           }),
         ),
+        h(Field, {
+          label: "资料来源",
+          value: form.source,
+          onChange: (v) => setForm({ ...form, source: v }),
+          placeholder: "例如：产品部 · 10-20",
+        }),
       ),
-      h(Field, {
-        label: "资料来源",
-        value: form.source,
-        onChange: (v) => setForm({ ...form, source: v }),
-        placeholder: "例如：产品部 · 10-20",
-      }),
-      kind === "person" &&
-        h(
-          "div",
-          { className: "xhs-meta" },
-          "医疗、医美机构在这里录入医生资料与执业资质；内容里出现的专业信息必须能在这里找到来源。",
-        ),
-      h(
-        "div",
-        { className: "xhs-actions" },
-        h(
-          Button,
-          {
-            primary: true,
-            disabled: readOnly || !form.name.trim(),
-            onClick: async () => {
-              await send(host, "bizdoc.save", {
-                id: form.id || "",
-                version: form.version ?? null,
-                kind: form.kind,
-                name: form.name,
-                fields: form.fields,
-                source: form.source || "",
-              });
-              setForm(blank(kind));
-              await refresh();
-            },
-          },
-          "保存",
-        ),
-        form.id &&
-          h(Button, { onClick: () => setForm(blank(kind)) }, "取消编辑"),
-      ),
-    ),
   );
 }
 
 // ---- 排期日历 ----
-function CalendarPanel({ snapshot }) {
+const WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+function CalendarPanel({ snapshot, host, readOnly, refresh, go }) {
+  const data = snapshot.data;
   const zone = tz(snapshot);
+  const eff = data.effective_policy || {};
+  const accounts = rows(data.accounts);
   const [offset, setOffset] = useState(0);
-  const start = new Date();
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) + offset * 7);
-  const days = [...Array(7)].map((_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return fmt(d.toISOString(), zone, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
+  const [drag, setDrag] = useState(null);
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) + offset * 7);
+  const days = WEEKDAYS.map(
+    (_, i) => new Date(monday.getTime() + i * 86400000),
+  );
+  const md = (d) =>
+    `${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  const sameDay = (iso, d) => {
+    const x = new Date(iso);
+    return (
+      x.getFullYear() === d.getFullYear() &&
+      x.getMonth() === d.getMonth() &&
+      x.getDate() === d.getDate()
+    );
+  };
+  const scheduled = rows(data.drafts).filter(
+    (d) =>
+      d.scheduled_at &&
+      d.account_id &&
+      ["approved", "scheduled", "published", "pending_review"].includes(
+        d.review_status,
+      ),
+  );
+  const inWeek = scheduled.filter((d) =>
+    days.some((day) => sameDay(d.scheduled_at, day)),
+  );
+  const move = async (draft, day) => {
+    const at = new Date(draft.scheduled_at);
+    const next = new Date(day);
+    next.setHours(at.getHours(), at.getMinutes(), 0, 0);
+    await send(host, "plan.update", {
+      action: "schedule",
+      ids: [draft.id],
+      scheduled_at: next.toISOString(),
     });
-  });
-  const key = (iso) =>
-    fmt(iso, zone, { year: "numeric", month: "2-digit", day: "2-digit" });
-  const drafts = rows(snapshot.data.drafts).filter((d) => d.scheduled_at);
-  const eff = snapshot.data.effective_policy || {};
-  const warnings = [];
-  rows(snapshot.data.accounts).forEach((a) => {
-    const mine = drafts
+    await refresh();
+  };
+  const dismissed = new Set(rows(data.dismissed_alerts));
+  const notes = [];
+  for (const a of accounts) {
+    const mine = inWeek
+      .filter((d) => d.account_id === a.id && d.review_status !== "published")
+      .sort((x, y) => new Date(x.scheduled_at) - new Date(y.scheduled_at));
+    const all = scheduled
       .filter((d) => d.account_id === a.id)
-      .sort((x, y) => (x.scheduled_at < y.scheduled_at ? -1 : 1));
-    mine.forEach((d, i) => {
+      .sort((x, y) => new Date(x.scheduled_at) - new Date(y.scheduled_at));
+    for (const d of mine) {
+      const prev = all[all.findIndex((x) => x.id === d.id) - 1];
+      const gap = prev
+        ? Math.round(
+            (new Date(d.scheduled_at) - new Date(prev.scheduled_at)) / 3600000,
+          )
+        : null;
+      const id = `gap:${d.id}:${d.scheduled_at}`;
       if (
-        i > 0 &&
-        (new Date(d.scheduled_at) - new Date(mine[i - 1].scheduled_at)) /
-          3600000 <
-          eff.min_interval_hours
-      )
-        warnings.push(
-          `${a.name}：「${d.title}」与上一篇间隔不足 ${eff.min_interval_hours} 小时`,
+        gap != null &&
+        gap < (eff.min_interval_hours || 0) &&
+        !dismissed.has(id)
+      ) {
+        const target = new Date(
+          new Date(prev.scheduled_at).getTime() +
+            (eff.min_interval_hours || 0) * 3600000,
         );
-    });
-    if (!a.device_id && mine.length)
-      warnings.push(`${a.name}：未绑定手机，排期的发布无法执行`);
-  });
+        const at = new Date(d.scheduled_at);
+        if (
+          target.getHours() * 60 + target.getMinutes() >
+          at.getHours() * 60 + at.getMinutes()
+        )
+          target.setDate(target.getDate() + 1);
+        target.setHours(at.getHours(), at.getMinutes(), 0, 0);
+        notes.push({
+          key: id,
+          account: a,
+          text: `${md(at)} 与上一篇间隔 ${gap} 小时，低于设置的最小间隔 ${
+            eff.min_interval_hours
+          } 小时`,
+          fix: { draft: d, target, id },
+        });
+      }
+    }
+    if (mine.length && !a.device_id)
+      notes.push({
+        key: "dev:" + a.id,
+        account: a,
+        text: `未绑定手机，${md(
+          new Date(mine[0].scheduled_at),
+        )} 的发布无法执行`,
+        bind: true,
+      });
+    const week = inWeek.filter((d) => d.account_id === a.id);
+    if (week.length && !notes.some((n) => n.account.id === a.id)) {
+      const n = (k) => week.filter((d) => d.nature === k).length;
+      const ratio = (n("marketing") * 100) / week.length;
+      const over = week.length >= 3 && ratio > (eff.marketing_ratio_max ?? 100);
+      notes.push({
+        key: "mix:" + a.id,
+        account: a,
+        text: `本周营销 ${n("marketing")} · 生活 ${n("life")} · 知识 ${n(
+          "knowledge",
+        )}，${over ? "营销占比偏高" : "结构均衡"}`,
+        ok: !over,
+      });
+    }
+  }
   return h(
     "div",
     { className: "xhs-stack" },
     h(
       Card,
-      {
-        title: "排期日历",
-        right: h(
-          "span",
-          { style: { display: "flex", gap: 6, alignItems: "center" } },
-          h(Button, { onClick: () => setOffset(offset - 1) }, "上一周"),
-          h("span", { className: "xhs-meta" }, `${days[0]} 至 ${days[6]}`),
-          h(Button, { onClick: () => setOffset(offset + 1) }, "下一周"),
-        ),
-      },
+      { title: "排期日历" },
       h(
         "div",
-        { className: "xhs-cal", style: { overflowX: "auto" } },
-        h(Table, {
-          head: ["账号", ...days.map((d) => d.slice(5))],
-          body: rows(snapshot.data.accounts).map((a) => [
-            h("b", null, a.name),
-            ...days.map((day) =>
-              h(
-                "div",
-                { key: day },
-                drafts
-                  .filter(
-                    (d) => d.account_id === a.id && key(d.scheduled_at) === day,
-                  )
-                  .map((d) =>
-                    h(
-                      "span",
-                      {
-                        key: d.id,
-                        className: `xhs-chip ${d.nature || ""}`,
-                        title: d.title,
-                      },
-                      `${NATURE_LABELS[d.nature] || ""} ${fmt(
-                        d.scheduled_at,
-                        zone,
-                        { hour: "2-digit", minute: "2-digit" },
-                      )} ${d.title}`,
-                    ),
-                  ),
-              ),
-            ),
-          ]),
-        }),
+        {
+          style: {
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            marginBottom: 10,
+            flexWrap: "wrap",
+          },
+        },
+        h(Button, { onClick: () => setOffset(offset - 1) }, "上一周"),
+        h("b", null, `${md(days[0])} 至 ${md(days[6])}`),
+        h(Button, { onClick: () => setOffset(offset + 1) }, "下一周"),
+        h("span", { style: { flex: 1 } }),
+        ["marketing", "life", "knowledge"].map((k) =>
+          h(
+            "span",
+            { key: k, className: `xhs-pill nat-${k}` },
+            `${NATURE_MARK[k]} ${NATURE_LABELS[k]}`,
+          ),
+        ),
+        h(
+          Button,
+          {
+            disabled: readOnly,
+            onClick: async () => {
+              const result = await send(host, "plan.reschedule", {});
+              const last = result.data?.last_reschedule;
+              toast(
+                last
+                  ? `已排好 ${last.scheduled} 篇${
+                      last.unplaced
+                        ? `，${last.unplaced} 篇在 14 天内排不进`
+                        : ""
+                    }`
+                  : "已重新排期",
+              );
+              await refresh();
+            },
+          },
+          "AI 重新排期",
+        ),
       ),
+      h(Table, {
+        head: ["账号", ...days.map((d, i) => `${WEEKDAYS[i]} ${md(d)}`)],
+        body: accounts.map((a) => [
+          h("b", null, a.name || a.id),
+          ...days.map((day) =>
+            h(
+              "div",
+              {
+                style: { minHeight: 34, minWidth: 90 },
+                onDragOver: (e) => e.preventDefault(),
+                onDrop: () => {
+                  if (
+                    drag &&
+                    drag.account_id === a.id &&
+                    !sameDay(drag.scheduled_at, day)
+                  )
+                    move(drag, day).catch((error) =>
+                      window.dispatchEvent(
+                        new CustomEvent("octop:xhs-error", { detail: error }),
+                      ),
+                    );
+                  setDrag(null);
+                },
+              },
+              inWeek
+                .filter(
+                  (d) => d.account_id === a.id && sameDay(d.scheduled_at, day),
+                )
+                .map((d) =>
+                  h(
+                    "div",
+                    {
+                      key: d.id,
+                      className: `xhs-chip nat-${d.nature || "none"}`,
+                      draggable: !readOnly && d.review_status !== "published",
+                      onDragStart: () => setDrag(d),
+                      onClick: () => go("content", "editor", d.id),
+                      title: d.title,
+                    },
+                    h("b", null, NATURE_MARK[d.nature] || "·"),
+                    ` ${hm(d.scheduled_at, zone)} ${String(d.title || "").slice(
+                      0,
+                      10,
+                    )}`,
+                  ),
+                ),
+            ),
+          ),
+        ]),
+        empty: "还没有账号",
+      }),
       h(
         "div",
         { className: "xhs-meta", style: { marginTop: 8 } },
-        `不要求每个账号每天发帖。排期必须在 ${
-          eff.publish_window || "08:00-22:30"
-        } 之内，同一账号间隔至少 ${
-          eff.min_interval_hours || 48
-        } 小时，每周最多 ${
-          eff.weekly_max_posts ?? 4
-        } 篇；到点的发布需要你确认后执行。`,
+        "不要求每个账号每天发帖。拖动卡片可以改时间；同一手机上的发布按顺序执行。",
       ),
     ),
     h(
       Card,
       { title: "排期提醒" },
-      warnings.length
-        ? warnings.map((w) =>
+      notes.map((n) =>
+        h(
+          Row,
+          { key: n.key, title: n.account.name || n.account.id, sub: n.text },
+          n.fix &&
             h(
-              "div",
-              { key: w, className: "xhs-row" },
-              w,
-              pill("需要调整", "warn"),
+              Button,
+              {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "plan.update", {
+                    action: "schedule",
+                    ids: [n.fix.draft.id],
+                    scheduled_at: n.fix.target.toISOString(),
+                  });
+                  await refresh();
+                },
+              },
+              `改到 ${md(n.fix.target)}`,
             ),
-          )
-        : h("div", { className: "xhs-empty" }, "本周排期没有冲突"),
+          n.fix &&
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "alert.dismiss", { id: n.fix.id });
+                  await refresh();
+                },
+              },
+              "保持",
+            ),
+          n.bind &&
+            h(Button, { onClick: () => go("build", "accounts") }, "去绑定"),
+          n.ok != null &&
+            pill(n.ok ? "正常" : "注意", n.ok ? "ok" : "warn", true),
+        ),
+      ),
+      !notes.length &&
+        h("div", { className: "xhs-empty" }, "这一周没有需要注意的排期"),
     ),
   );
 }
 
 // ---- 笔记维护 ----
-function UpkeepPanel({ snapshot, host, readOnly, refresh }) {
+const CONTACT_RE = /(微信|vx|v信|加我|私信|电话|手机号|\d{7,})/i;
+const PROMISE_RE = /(\d+\s*元|¥|保证|包邮|最低价|一定)/;
+function UpkeepPanel({ snapshot, host, readOnly, refresh, go }) {
+  const data = snapshot.data;
   const zone = tz(snapshot);
-  const items = rows(snapshot.data.reply_items);
-  const leads = rows(snapshot.data.leads);
-  const eff = snapshot.data.effective_policy || {};
-  const pending = items.filter(
-    (i) => i.status === "new" || i.status === "failed",
+  const items = rows(data.reply_items);
+  const leads = rows(data.leads);
+  const eff = data.effective_policy || {};
+  const mine = data.member_settings || {};
+  const accounts = rows(data.accounts);
+  const [filters, setFilters] = useState({
+    account: "",
+    kind: "ask",
+    status: "pending",
+  });
+  const [selected, setSelected] = useState([]);
+  const [edits, setEdits] = useState({});
+  const [lead, setLead] = useState(null);
+  const [phrases, setPhrases] = useState(null);
+  const dayAgo = Date.now() - 86400000;
+  const recent = items.filter(
+    (i) => new Date(i.created_at).getTime() >= dayAgo,
   );
-  const autoSent = items.filter(
+  const isPending = (i) => i.status === "new" || i.status === "failed";
+  const autoToday = items.filter(
     (i) =>
       i.auto &&
-      ["sent", "sending", "auto_queued", "unknown"].includes(i.status),
+      ["sent", "sending", "auto_queued", "unknown", "held"].includes(i.status),
   );
-  const [edits, setEdits] = useState({});
-  const accounts = rows(snapshot.data.accounts).filter((a) => a.device_id);
+  const pendingAll = items.filter(isPending);
+  const statusOf = (i) =>
+    isPending(i)
+      ? "pending"
+      : i.status === "ignored"
+      ? "ignored"
+      : i.auto
+      ? "auto"
+      : "replied";
+  const shown = items.filter(
+    (i) =>
+      (!filters.account || i.account_id === filters.account) &&
+      (filters.kind === "all" ||
+        (filters.kind === "ask"
+          ? ["question", "intent", "unclear"].includes(i.kind)
+          : i.kind === filters.kind)) &&
+      (filters.status === "all" || statusOf(i) === filters.status),
+  );
+  const blocked = (i) => {
+    const a = accounts.find((x) => x.id === i.account_id);
+    if (!a) return "";
+    if (
+      a.health === "login_required" ||
+      rows(data.alerts).some(
+        (x) => x.account_id === a.id && x.code === "login_required",
+      )
+    )
+      return "账号登录失效，暂时发不出去";
+    if (a.health === "restricted" || a.paused)
+      return "账号已暂停，暂时发不出去";
+    return "";
+  };
+  const approve = async (i) => {
+    let current = i;
+    if (edits[i.id] !== undefined && edits[i.id] !== (i.draft || "")) {
+      const result = await send(host, "reply.save", {
+        id: i.id,
+        version: i.version,
+        draft: edits[i.id],
+      });
+      current = rows(result.data?.reply_items).find((x) => x.id === i.id) || i;
+    }
+    await send(host, "reply.approve", {
+      id: i.id,
+      version: current.version,
+      handwritten: i.kind === "negative",
+    });
+  };
+  const checkAll = async () => {
+    for (const a of accounts.filter((x) => x.device_id))
+      await send(host, "inbox.collect", { account_id: a.id });
+    toast("已安排读取新评论");
+    await refresh();
+  };
+  const set = (patch) => saveSettings(host, snapshot, refresh, patch);
+  const kinds = (list, ks) =>
+    ks
+      .map(([k, l]) => `${l} ${list.filter((i) => i.kind === k).length}`)
+      .join(" · ");
+  const leadStatus = (l) =>
+    pill(
+      {
+        new: "新",
+        transferred: `已转交${l.assignee ? " · " + l.assignee : ""}`,
+        contacted: "已联系",
+        closed: "已关闭",
+      }[l.status],
+      l.status === "new" ? "warn" : "ok",
+      true,
+    );
+  const when = (iso) => {
+    const d = new Date(iso);
+    const today = new Date();
+    const y = new Date(Date.now() - 86400000);
+    const same = (a, b) => a.toDateString() === b.toDateString();
+    return same(d, today)
+      ? `今天 ${hm(iso, zone)}`
+      : same(d, y)
+      ? `昨天 ${hm(iso, zone)}`
+      : fmt(iso, zone, { month: "2-digit", day: "2-digit" });
+  };
   return h(
     "div",
     { className: "xhs-stack" },
-    h(
-      "div",
-      { className: "xhs-stats" },
-      h(Stat, {
-        label: "新评论",
-        value: items.filter((i) => i.status !== "ignored").length,
-      }),
-      h(Stat, {
-        label: "已自动回复",
-        value: autoSent.filter((i) => i.status === "sent").length,
-        sub: eff.auto_reply
-          ? `闲聊类 · 每账号每天 ≤ ${eff.auto_reply_daily} 条`
-          : "未开启",
-      }),
-      h(Stat, { label: "待你审核", value: pending.length }),
-      h(Stat, {
-        label: "意向线索",
-        value: leads.filter((l) => l.status === "new").length,
-      }),
-    ),
-    h(
-      Card,
-      {
-        title: "读取新评论",
-        hint: "在手机上只读打开本人作品页，读取近 3 天的新评论；不点赞、不回复、不删除。",
-      },
-      accounts.map((a) =>
-        h(
-          "div",
-          { key: a.id, className: "xhs-row" },
-          h(
-            "div",
-            null,
-            h("b", null, a.name),
-            h(
-              "div",
-              { className: "xhs-meta" },
-              a.inbox_checked_at
-                ? `上次读取 ${fmt(a.inbox_checked_at, zone)}`
-                : "还没有读取过",
-            ),
-          ),
-          h(
-            Button,
-            {
-              disabled: readOnly,
-              onClick: async () => {
-                await send(host, "inbox.collect", { account_id: a.id });
-                await refresh();
-              },
-            },
-            "读取新评论",
-          ),
-        ),
-      ),
-      !accounts.length &&
-        h("div", { className: "xhs-empty" }, "没有绑定手机的账号"),
-    ),
+    h(Stats, {
+      items: [
+        {
+          label: "新评论",
+          value: recent.length,
+          sub: `近 24 小时 · ${
+            new Set(recent.map((i) => i.note_title)).size
+          } 篇笔记`,
+        },
+        {
+          label: "已自动回复",
+          value: autoToday.filter((i) => i.status === "sent").length,
+          sub: eff.auto_reply
+            ? `闲聊类${
+                autoToday.some((i) => i.status !== "sent")
+                  ? ` · 另 ${
+                      autoToday.filter((i) => i.status !== "sent").length
+                    } 条等账号恢复`
+                  : ""
+              }`
+            : "未开启",
+        },
+        {
+          label: "待你审核",
+          value: pendingAll.filter((i) => i.kind !== "negative").length,
+          sub: kinds(pendingAll, [
+            ["question", "咨询"],
+            ["intent", "意向"],
+          ]),
+        },
+        {
+          label: "需要注意",
+          value: pendingAll.filter((i) => i.kind === "negative").length,
+          sub: "负面评价，不自动起草",
+        },
+      ],
+    }),
     h(
       Card,
       {
         title: "待你审核",
-        hint: eff.auto_reply
+        tip: eff.auto_reply
           ? "闲聊类已按规则自动回复，不在这里。咨询和意向起草后等你通过；负面评价不起草。"
           : "所有回复都要你通过后才发送。",
+        right: h(
+          Button,
+          {
+            disabled: readOnly || !accounts.some((a) => a.device_id),
+            onClick: checkAll,
+          },
+          "检查新评论",
+        ),
       },
-      pending.map((i) => {
+      h(
+        "div",
+        { className: "xhs-4", style: { alignItems: "end", marginBottom: 6 } },
+        h(Select, {
+          label: "账号",
+          value: filters.account,
+          onChange: (v) => setFilters({ ...filters, account: v }),
+          options: [
+            ["", "全部账号"],
+            ...accounts.map((a) => [a.id, a.name || a.id]),
+          ],
+        }),
+        h(Select, {
+          label: "类型",
+          value: filters.kind,
+          onChange: (v) => setFilters({ ...filters, kind: v }),
+          options: [
+            ["ask", "咨询与意向"],
+            ["question", "咨询"],
+            ["intent", "意向"],
+            ["negative", "负面"],
+            ["all", "全部类型"],
+          ],
+        }),
+        h(Select, {
+          label: "状态",
+          value: filters.status,
+          onChange: (v) => setFilters({ ...filters, status: v }),
+          options: [
+            ["pending", "待你审核"],
+            ["replied", "已回复"],
+            ["auto", "已自动回复"],
+            ["ignored", "已忽略"],
+            ["all", "全部"],
+          ],
+        }),
+        h(
+          "div",
+          null,
+          h(
+            Button,
+            {
+              primary: true,
+              disabled: readOnly || !selected.length,
+              onClick: async () => {
+                for (const id of selected) {
+                  const i = items.find((x) => x.id === id);
+                  if (
+                    i &&
+                    isPending(i) &&
+                    i.kind !== "negative" &&
+                    (edits[id] ?? i.draft)
+                  )
+                    await approve(i);
+                }
+                setSelected([]);
+                await refresh();
+              },
+            },
+            "批量通过所选",
+          ),
+        ),
+      ),
+      shown.map((i) => {
         const draft = edits[i.id] ?? i.draft ?? "";
+        const pending = isPending(i);
+        const block = blocked(i);
+        const writing = i.kind !== "negative" || edits[i.id] !== undefined;
         return h(
           "div",
-          { key: i.id, className: "xhs-row", style: { display: "block" } },
-          h("div", null, h("b", null, `“${i.text}”`)),
+          {
+            key: i.id,
+            className: "xhs-row",
+            style: { alignItems: "flex-start" },
+          },
           h(
             "div",
-            { className: "xhs-meta" },
-            `${i.author} · 笔记「${i.note_title}」· ${accountName(
-              snapshot,
-              i.account_id,
-            )}`,
-          ),
-          h(
-            "div",
-            { style: { display: "flex", gap: 6, margin: "5px 0" } },
-            pill(
-              KIND_LABELS[i.kind] || i.kind,
-              i.kind === "negative" ? "bad" : i.kind === "intent" ? "ok" : "",
-            ),
-            i.error && pill(i.error, "bad"),
-          ),
-          i.kind !== "negative" || edits[i.id] !== undefined
-            ? h("input", {
-                className: "xhs-input",
-                value: draft,
-                maxLength: 30,
-                disabled: readOnly,
-                placeholder: "回复草稿（30 字以内，不留联系方式，不承诺效果）",
-                onChange: (e) => setEdits({ ...edits, [i.id]: e.target.value }),
-              })
-            : h("div", { className: "xhs-meta" }, "负面与投诉不自动起草"),
-          h(
-            "div",
-            { className: "xhs-actions" },
-            i.kind !== "negative" &&
-              !draft &&
-              h(
-                Button,
-                {
-                  disabled: readOnly,
-                  onClick: async () => {
-                    await send(host, "reply.draft", { id: i.id });
-                    await refresh();
-                  },
-                },
-                "AI 起草",
-              ),
+            { style: { flex: 1, minWidth: 0 } },
             h(
-              Button,
+              "label",
+              { className: "xhs-check" },
+              h("input", {
+                type: "checkbox",
+                disabled: !pending || i.kind === "negative",
+                checked: selected.includes(i.id),
+                onChange: (e) =>
+                  setSelected(
+                    e.target.checked
+                      ? [...selected, i.id]
+                      : selected.filter((x) => x !== i.id),
+                  ),
+              }),
+              h("span", null, h("b", null, `“${i.text}”`)),
+            ),
+            h(
+              "div",
+              { className: "xhs-meta" },
+              `${i.author} · 笔记「${i.note_title}」· ${accountName(
+                snapshot,
+                i.account_id,
+              )}`,
+            ),
+            h(
+              "div",
               {
-                primary: true,
-                disabled: readOnly || !draft.trim(),
-                onClick: async () => {
-                  let current = i;
-                  if (edits[i.id] !== undefined && edits[i.id] !== i.draft) {
-                    const result = await send(host, "reply.save", {
-                      id: i.id,
-                      version: i.version,
-                      draft: edits[i.id],
-                    });
-                    current =
-                      rows(result.data?.reply_items).find(
-                        (x) => x.id === i.id,
-                      ) || i;
-                  }
-                  await send(host, "reply.approve", {
-                    id: i.id,
-                    version: current.version,
-                    handwritten: i.kind === "negative",
-                  });
-                  setEdits({ ...edits, [i.id]: undefined });
-                  await refresh();
+                style: {
+                  display: "flex",
+                  gap: 6,
+                  margin: "5px 0",
+                  flexWrap: "wrap",
+                  alignItems: "center",
                 },
               },
-              "通过并发送",
+              pill(
+                KIND_LABELS[i.kind] || i.kind,
+                i.kind === "negative" ? "bad" : i.kind === "intent" ? "ok" : "",
+                i.kind !== "question",
+              ),
+              i.kind === "negative" &&
+                !writing &&
+                h("span", { className: "xhs-meta" }, "负面与投诉不自动起草"),
+              writing &&
+                draft &&
+                pill(
+                  rows(eff.banned_words).some((w) => draft.includes(w))
+                    ? "! 命中敏感词"
+                    : "✓ 未命中敏感词",
+                  rows(eff.banned_words).some((w) => draft.includes(w))
+                    ? "warn"
+                    : "ok",
+                ),
+              writing &&
+                draft &&
+                pill(
+                  CONTACT_RE.test(draft) ? "! 含联系方式" : "✓ 无联系方式",
+                  CONTACT_RE.test(draft) ? "warn" : "ok",
+                ),
+              writing &&
+                draft &&
+                i.kind === "intent" &&
+                pill(
+                  PROMISE_RE.test(draft) ? "! 可能承诺了价格" : "✓ 未承诺价格",
+                  PROMISE_RE.test(draft) ? "warn" : "ok",
+                ),
+              pending && block && pill("! " + block, "warn"),
+              i.error && pill(i.error, "bad"),
+              !pending &&
+                pill(
+                  {
+                    pending: "",
+                    replied:
+                      i.status === "sent" ? "已回复" : statusLabel(i.status),
+                    auto: "已自动回复",
+                    ignored: "已忽略",
+                  }[statusOf(i)],
+                ),
             ),
-            i.kind === "negative" &&
-              edits[i.id] === undefined &&
+            writing &&
               h(
-                Button,
-                { onClick: () => setEdits({ ...edits, [i.id]: "" }) },
-                "手写回复",
+                "label",
+                { className: "xhs-field" },
+                h("span", { className: "xhs-label" }, "回复草稿"),
+                h("input", {
+                  className: "xhs-input",
+                  value: pending ? draft : i.sent_text || draft,
+                  maxLength: 30,
+                  disabled: readOnly || !pending,
+                  placeholder: "30 字以内，不留联系方式，不承诺效果",
+                  onChange: (e) =>
+                    setEdits({ ...edits, [i.id]: e.target.value }),
+                }),
               ),
-            (i.kind === "intent" || i.kind === "question") &&
-              !i.lead &&
-              h(
-                Button,
-                {
-                  disabled: readOnly,
-                  onClick: async () => {
-                    await send(host, "reply.lead", { id: i.id });
-                    await refresh();
-                  },
-                },
-                "记为线索",
-              ),
+          ),
+          pending &&
             h(
-              Button,
+              "div",
               {
-                disabled: readOnly,
-                onClick: async () => {
-                  await send(host, "reply.ignore", { id: i.id });
-                  await refresh();
+                style: {
+                  display: "flex",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
                 },
               },
-              "忽略",
-            ),
-          ),
-        );
-      }),
-      !pending.length &&
-        h("div", { className: "xhs-empty" }, "没有待审核的评论"),
-    ),
-    h(
-      "div",
-      { className: "xhs-two even" },
-      h(
-        Card,
-        {
-          title: "已自动回复",
-          hint: "闲聊类按规则直接发送，这里是事后清单。发得不合适可以删除回复，或在自动化与风控里改回“等我通过”。",
-        },
-        h(Table, {
-          head: ["评论", "自动回复", "账号", "时间", "状态", ""],
-          body: autoSent.map((i) => [
-            `“${i.text}”`,
-            i.sent_text || i.draft,
-            accountName(snapshot, i.account_id),
-            fmt(i.sent_at || i.created_at, zone, {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            pill(
-              i.status === "sent"
-                ? "已发送"
-                : i.status === "auto_queued"
-                ? "排队中"
-                : statusLabel(i.status),
-              i.status === "sent" ? "ok" : i.status === "unknown" ? "bad" : "",
-            ),
-            i.status === "sent"
-              ? h(
+              i.kind !== "negative" &&
+                !draft &&
+                h(
                   Button,
                   {
-                    danger: true,
                     disabled: readOnly,
                     onClick: async () => {
-                      await send(host, "reply.delete", { id: i.id });
+                      await send(host, "reply.draft", { id: i.id });
                       await refresh();
                     },
                   },
-                  "删除回复",
-                )
-              : null,
-          ]),
-          empty: eff.auto_reply ? "今天还没有自动回复" : "闲聊类自动回复未开启",
-        }),
+                  "AI 起草",
+                ),
+              i.kind === "intent" &&
+                !i.lead &&
+                h(
+                  Button,
+                  {
+                    primary: true,
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "reply.lead", { id: i.id });
+                      toast("已记为线索");
+                      await refresh();
+                    },
+                  },
+                  "记为线索",
+                ),
+              i.kind === "negative" &&
+                !i.lead &&
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "reply.lead", { id: i.id });
+                      toast("已放入线索，可转交同事");
+                      await refresh();
+                    },
+                  },
+                  "转给同事",
+                ),
+              i.kind === "negative" &&
+                edits[i.id] === undefined &&
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: () => setEdits({ ...edits, [i.id]: "" }),
+                  },
+                  "手写回复",
+                ),
+              writing &&
+                h(
+                  Button,
+                  {
+                    primary: !(i.kind === "intent" && !i.lead),
+                    disabled: readOnly || !draft.trim(),
+                    onClick: async () => {
+                      await approve(i);
+                      setEdits({ ...edits, [i.id]: undefined });
+                      await refresh();
+                    },
+                  },
+                  block ? "通过，登录后发送" : "通过并发送",
+                ),
+              i.kind !== "negative" &&
+                h(
+                  Button,
+                  {
+                    disabled: readOnly,
+                    onClick: async () => {
+                      await send(host, "reply.ignore", { id: i.id });
+                      await refresh();
+                    },
+                  },
+                  "忽略",
+                ),
+            ),
+        );
+      }),
+      !shown.length &&
+        h("div", { className: "xhs-empty" }, "没有符合条件的评论"),
+    ),
+    h(
+      "div",
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          {
+            title: "已自动回复 · 今天",
+            tip: "闲聊类按规则直接发送，这里是事后清单。发得不合适可以删除回复，或改回“等我通过”。",
+          },
+          h(Table, {
+            head: ["评论", "自动回复", "账号", "时间", "状态", ""],
+            body: autoToday.map((i) => [
+              `“${i.text}”`,
+              i.sent_text || i.draft,
+              accountName(snapshot, i.account_id),
+              i.sent_at ? hm(i.sent_at, zone) : "—",
+              pill(
+                i.status === "sent"
+                  ? "已发送"
+                  : i.status === "auto_queued" || i.status === "sending"
+                  ? "排队中"
+                  : i.status === "unknown"
+                  ? "结果待确认"
+                  : "未发送 · 账号已暂停",
+                i.status === "sent" ? "ok" : "warn",
+                true,
+              ),
+              i.status === "sent"
+                ? h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "reply.delete", { id: i.id });
+                        await refresh();
+                      },
+                    },
+                    "删除回复",
+                  )
+                : h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "reply.ignore", { id: i.id });
+                        await refresh();
+                      },
+                    },
+                    "忽略",
+                  ),
+            ]),
+            empty: eff.auto_reply
+              ? "今天还没有自动回复"
+              : "闲聊类自动回复未开启",
+          }),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                disabled: readOnly || mine.small_talk !== "auto",
+                onClick: () =>
+                  set({ auto_reply_paused: !mine.auto_reply_paused }),
+              },
+              mine.auto_reply_paused ? "恢复自动回复" : "暂停自动回复",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly || mine.small_talk !== "auto",
+                onClick: () =>
+                  set({ small_talk: "review", auto_reply_paused: false }),
+              },
+              "改回等我通过",
+            ),
+          ),
+        ),
+        h(
+          Card,
+          {
+            title: "意向线索",
+            tip: "只记录公开评论内容和昵称，不采集个人信息；跟进由同事在平台内完成。",
+          },
+          h(Table, {
+            head: ["评论", "来源笔记", "账号", "时间", "状态", ""],
+            body: leads.map((l) => [
+              `“${l.comment}”`,
+              l.note_title,
+              accountName(snapshot, l.account_id),
+              when(l.created_at),
+              leadStatus(l),
+              l.status === "new"
+                ? h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: () =>
+                        setLead({ ...l, status: "transferred", assignee: "" }),
+                    },
+                    "转交同事",
+                  )
+                : h(Button, { onClick: () => setLead({ ...l }) }, "查看"),
+            ]),
+            empty: "还没有线索",
+          }),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                disabled: !leads.length,
+                onClick: () =>
+                  download(
+                    "意向线索.csv",
+                    csv([
+                      [
+                        "评论",
+                        "昵称",
+                        "来源笔记",
+                        "账号",
+                        "时间",
+                        "状态",
+                        "跟进人",
+                      ],
+                      ...leads.map((l) => [
+                        l.comment,
+                        l.author,
+                        l.note_title,
+                        accountName(snapshot, l.account_id),
+                        fmt(l.created_at, zone),
+                        {
+                          new: "新",
+                          transferred: "已转交",
+                          contacted: "已联系",
+                          closed: "已关闭",
+                        }[l.status],
+                        l.assignee || "",
+                      ]),
+                    ]),
+                  ),
+              },
+              "导出线索表",
+            ),
+          ),
+        ),
       ),
       h(
         Card,
         {
-          title: "意向线索",
-          hint: "只记录公开评论内容和昵称，不采集个人信息；跟进由同事在平台内完成。",
+          title: "回复规则",
+          tip: "只有闲聊类可以自动发送，并且需要平台许可、企业规则和你的设置都允许。",
         },
-        h(Table, {
-          head: ["评论", "来源笔记", "账号", "状态", ""],
-          body: leads.map((l) => [
-            `“${l.comment}”`,
-            l.note_title,
-            accountName(snapshot, l.account_id),
-            pill(
-              {
-                new: "新",
-                transferred: `已转交${l.assignee ? " · " + l.assignee : ""}`,
-                contacted: "已联系",
-                closed: "已关闭",
-              }[l.status],
-              l.status === "new" ? "warn" : "ok",
-            ),
+        h(
+          "div",
+          { className: "xhs-2" },
+          h(Select, {
+            label: "闲聊类回复",
+            value: mine.small_talk || "review",
+            disabled: readOnly,
+            onChange: (v) => set({ small_talk: v }),
+            options: [
+              ...(eff.auto_reply_enterprise
+                ? [["auto", "自动发送，事后通知我"]]
+                : []),
+              ["review", "起草后等我通过"],
+            ],
+          }),
+          h(Select, {
+            label: "自动回复用语",
+            value: mine.reply_wording || "phrases",
+            disabled: readOnly,
+            onChange: (v) => set({ reply_wording: v }),
+            options: [
+              [
+                "phrases",
+                `只用我审核过的短句（${rows(mine.reply_phrases).length} 条）`,
+              ],
+              ["ai", "AI 自拟，15 字以内"],
+            ],
+          }),
+        ),
+        h(
+          "div",
+          { className: "xhs-2" },
+          h(Blur, {
+            label: "每个账号每小时最多自动回复",
+            type: "number",
+            suffix: "条",
+            value: mine.auto_reply_hourly ?? 5,
+            disabled: readOnly,
+            onCommit: (v) => set({ auto_reply_hourly: Number(v) }),
+          }),
+          h(Blur, {
+            label: `每个账号每天最多自动回复${
+              eff.caps &&
+              snapshot.license?.policy?.rules?.auto_reply_daily_cap != null
+                ? `（企业上限 ${snapshot.license.policy.rules.auto_reply_daily_cap} 条）`
+                : ""
+            }`,
+            type: "number",
+            suffix: "条",
+            value: mine.auto_reply_daily ?? 20,
+            disabled: readOnly,
+            onCommit: (v) => set({ auto_reply_daily: Number(v) }),
+          }),
+        ),
+        h(
+          "div",
+          { className: "xhs-2" },
+          h(Select, {
+            label: "事后通知",
+            value: mine.notify || "card",
+            disabled: readOnly,
+            onChange: (v) => set({ notify: v }),
+            options: [
+              ["card", "每次检查后在对话里发一张卡片"],
+              ["daily", "每天汇总一次"],
+            ],
+          }),
+          h(Select, {
+            label: "回复口吻",
+            value: mine.reply_tone || "persona",
+            disabled: readOnly,
+            onChange: (v) => set({ reply_tone: v }),
+            options: [
+              ["persona", "跟随账号人设"],
+              ["service", "统一客服口吻"],
+            ],
+          }),
+        ),
+        h(Select, {
+          label: "检查新评论（维护计划）",
+          value: mine.inbox_cadence || "after_publish",
+          disabled: readOnly,
+          onChange: (v) => set({ inbox_cadence: v }),
+          options: [
+            ["after_publish", "发布后 24 小时内每 2 小时一次，之后每天一次"],
+            ["daily", "每天一次"],
+            ["manual", "只在我打开时"],
+          ],
+        }),
+        h(
+          Row,
+          {
+            title: "什么算闲聊",
+            sub: "没有提问，不涉及价格、购买、效果和联系方式，也不是负面情绪",
+          },
+          h(
+            Button,
+            {
+              disabled: readOnly,
+              onClick: () => setPhrases(rows(mine.reply_phrases).join("\n")),
+            },
+            "管理短句",
+          ),
+        ),
+        h(Row, { title: "咨询、意向", sub: "起草后等你通过" }, h(Lock)),
+        h(Row, { title: "负面与投诉", sub: "不起草，转人工" }, h(Lock)),
+        h(
+          Row,
+          { title: "分类拿不准或命中敏感词", sub: "不自动发，转为待你审核" },
+          h(Lock),
+        ),
+        h(Row, { title: "账号有异常或已暂停", sub: "停止自动回复" }, h(Lock)),
+        h(
+          Row,
+          {
+            title: "不留联系方式，不承诺效果",
+            sub: "AI 人设账号不以亲身体验的口吻回答效果类问题",
+          },
+          h(Lock),
+        ),
+      ),
+    ),
+    lead &&
+      h(
+        Dialog,
+        {
+          title:
+            lead.status === "transferred" &&
+            !leads.find((l) => l.id === lead.id)?.assignee
+              ? "转交同事"
+              : "线索",
+          desc: `“${lead.comment}” · ${lead.author} · 笔记「${lead.note_title}」`,
+          onClose: () => setLead(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setLead(null) }, "取消"),
             h(
-              "select",
+              Button,
               {
-                className: "xhs-select",
-                style: { marginTop: 0, width: 110 },
-                value: l.status,
-                disabled: readOnly,
-                onChange: async (e) => {
+                key: "ok",
+                primary: true,
+                disabled:
+                  readOnly ||
+                  (lead.status === "transferred" &&
+                    !String(lead.assignee || "").trim()),
+                onClick: async () => {
                   await send(host, "lead.update", {
-                    id: l.id,
-                    status: e.target.value,
-                    assignee: l.assignee || "",
+                    id: lead.id,
+                    status: lead.status,
+                    assignee: lead.assignee || "",
                   });
+                  setLead(null);
                   await refresh();
                 },
               },
-              [
-                ["new", "新"],
-                ["transferred", "已转交"],
-                ["contacted", "已联系"],
-                ["closed", "已关闭"],
-              ].map(([v, t]) => h("option", { key: v, value: v }, t)),
+              "保存",
             ),
-          ]),
-          empty: "还没有线索",
+          ],
+        },
+        h(Select, {
+          label: "状态",
+          value: lead.status,
+          onChange: (v) => setLead({ ...lead, status: v }),
+          options: [
+            ["new", "新"],
+            ["transferred", "已转交"],
+            ["contacted", "已联系"],
+            ["closed", "已关闭"],
+          ],
+        }),
+        h(Field, {
+          label: "跟进同事",
+          value: lead.assignee || "",
+          onChange: (v) => setLead({ ...lead, assignee: v }),
         }),
       ),
-    ),
+    phrases !== null &&
+      h(
+        Dialog,
+        {
+          title: "管理短句",
+          desc: "自动回复只从这些短句里选。每行一条，30 字以内，最多 40 条。",
+          onClose: () => setPhrases(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setPhrases(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                onClick: async () => {
+                  const list = phrases
+                    .split(/\n+/)
+                    .map((x) => x.trim())
+                    .filter(Boolean)
+                    .slice(0, 40);
+                  setPhrases(null);
+                  await set({ reply_phrases: list });
+                },
+              },
+              "保存",
+            ),
+          ],
+        },
+        h(Field, {
+          label: "短句",
+          multiline: true,
+          value: phrases,
+          onChange: setPhrases,
+        }),
+      ),
   );
 }
 
 // ---- 自动化与风控 ----
+const LEVEL_INFO = [
+  [
+    "manual",
+    "手动",
+    "你来写、你来排",
+    [
+      "任务：手动指定账号和时间",
+      "文案：自己写",
+      "配图：自己上传",
+      "维护：自己处理",
+    ],
+  ],
+  [
+    "semi",
+    "半自动",
+    "AI 帮你写和配图，你来安排",
+    [
+      "任务：手动指定账号和时间",
+      "文案：套母版或仿写参考",
+      "配图：平台 AI 生图，可带参考图",
+      "维护：自己处理",
+    ],
+  ],
+  [
+    "full",
+    "全自动",
+    "AI 主动准备，你只审核",
+    [
+      "任务：自动匹配账号、类型、时间",
+      "文案与配图：自动生成",
+      "素材和任务生成后需你审核",
+      "维护：闲聊回复自动发，其余等你通过",
+    ],
+  ],
+];
+const PRECHECKS = [
+  "重复度：与本账号和同项目其他账号的内容比较",
+  "素材来源：每张图片都有来源记录",
+  "业务信息准确性：价格、适用条件与业务资料一致",
+  "行业敏感内容：命中敏感词时拦截",
+  "AI 生成标识：AI 生成或 AI 重现的图片必须加标识",
+  "商业推广披露：营销内容必须披露",
+];
 function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
-  const eff = snapshot.data.effective_policy || {};
-  const saved = snapshot.data.member_settings || {};
-  const [form, setForm] = useState(saved);
-  useEffect(
-    () => setForm(snapshot.data.member_settings || {}),
-    [saved.version],
-  );
-  const set = (k, v) => setForm({ ...form, [k]: v });
-  const capRank = ["manual", "semi", "full"].indexOf(
-    eff.automation_cap || "full",
-  );
-  const payload = Object.fromEntries(
-    Object.entries(form).filter(
-      ([k]) =>
-        ![
-          "paused",
-          "paused_at",
-          "paused_scope",
-          "cold_start",
-          "updated_at",
-        ].includes(k),
-    ),
-  );
-  const save = async () => {
-    await send(host, "settings.save", payload);
-    await refresh();
+  const data = snapshot.data;
+  const mine = data.member_settings || {};
+  const eff = data.effective_policy || {};
+  const rules = snapshot.license?.policy?.rules || {};
+  const caps = eff.caps || {};
+  const usage = eff.usage || {};
+  const quota = eff.member_quota || {};
+  const order = ["manual", "semi", "full"];
+  const cap = order.indexOf(eff.automation_cap || "full");
+  const [pace, setPace] = useState(null);
+  const [words, setWords] = useState(null);
+  const [test, setTest] = useState(null);
+  const p = pace || {
+    min_interval_hours: mine.min_interval_hours ?? 48,
+    weekly_max_posts: mine.weekly_max_posts ?? 4,
+    marketing_ratio_max: mine.marketing_ratio_max ?? 40,
+    publish_window: mine.publish_window || "08:00-22:30",
+    profile_change_day: mine.profile_change_day || "hold",
+    on_publish_failure: mine.on_publish_failure || "stop",
   };
-  const level = (key, name, hint, items) =>
-    h(
-      "button",
-      {
-        key,
-        className: `xhs-level${form.automation_level === key ? " active" : ""}`,
-        disabled: readOnly || ["manual", "semi", "full"].indexOf(key) > capRank,
-        onClick: () => set("automation_level", key),
-      },
-      h("b", null, name),
-      h("div", { className: "xhs-meta", style: { margin: "6px 0" } }, hint),
-      items.map((x) => h("div", { key: x, style: { fontSize: 12 } }, x)),
-    );
+  const w = words ?? rows(mine.my_words).join("\n");
+  const set = (patch) => saveSettings(host, snapshot, refresh, patch);
+  const num = (label, key, suffix) =>
+    h(Field, {
+      label,
+      type: "number",
+      value: String(p[key]),
+      disabled: readOnly,
+      onChange: (v) => setPace({ ...p, [key]: v }),
+    });
+  const libraries = rows(eff.libraries);
+  const hits =
+    test != null
+      ? [
+          ...new Set([
+            ...rows(eff.banned_words),
+            ...libraries.flatMap((l) => rows(l.words)),
+          ]),
+        ].filter((x) => x && test.includes(x))
+      : [];
+  const completion = rows(data.accounts).filter(
+    (a) => a.low_completion_days >= 2,
+  );
   return h(
     "div",
     { className: "xhs-stack" },
     h(
       "section",
       {
-        className: `xhs-card xhs-banner${
-          eff.enterprise_paused ? " paused" : ""
-        }`,
+        className: "xhs-card",
+        style: {
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+        },
       },
       h(Lock, {
         children: eff.enterprise_paused
-          ? "企业已暂停全部自动任务"
+          ? "企业已暂停全部任务"
           : "企业规则生效中",
       }),
       h(
         "span",
         { style: { flex: 1 } },
-        eff.enterprise_paused
-          ? eff.enterprise_paused_reason ||
-              "管理员暂停了全企业的养号、发布和回复。"
-          : "自动化上限、发布节奏、禁用词和高风险复核人由管理员在后台设定，这里只能设得更严。",
+        "自动化上限、发布节奏、禁用词和高风险复核人由管理员在后台设定，这里只能设得更严。",
       ),
       h(
         Button,
@@ -8741,54 +12331,81 @@ function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
     ),
     h(
       Card,
-      {
-        title: "自动化程度",
-        hint: "三档共用同一个工作台、草稿库和审核发布流程，区别只在系统替你做多少。发布、改资料和养号评论都要你确认。",
-      },
+      { title: "自动化程度", tip: "企业设了上限时，高于上限的档位不可选。" },
       h(
         "div",
-        {
-          style: {
-            display: "grid",
-            gridTemplateColumns: "repeat(3,minmax(0,1fr))",
-            gap: 10,
-          },
-        },
-        level("manual", "手动", "你来写、你来排", [
-          "任务：手动指定账号和时间",
-          "文案：自己写",
-          "配图：自己上传",
-        ]),
-        level("semi", "半自动", "AI 帮你写和配图，你来安排", [
-          "任务：手动指定账号和时间",
-          "文案：套母版或仿写参考",
-          "配图：平台 AI 生图，可带参考图",
-        ]),
-        level("full", "全自动", "AI 主动准备，你只审核", [
-          "任务：自动匹配账号、类型、时间",
-          "文案与配图：自动生成",
-          "维护：闲聊回复可自动发，其余等你通过",
-        ]),
+        { className: "xhs-grid" },
+        LEVEL_INFO.map(([key, label, sub, lines], i) =>
+          h(
+            "label",
+            {
+              key,
+              className: "xhs-card",
+              style: i > cap ? { opacity: 0.55 } : { cursor: "pointer" },
+            },
+            h(
+              "div",
+              { style: { display: "flex", gap: 6, alignItems: "center" } },
+              h("input", {
+                type: "radio",
+                name: "xhs-auto",
+                checked: (mine.automation_level || "semi") === key,
+                disabled: readOnly || i > cap,
+                onChange: () =>
+                  set({
+                    automation_level: key,
+                    ...(key !== "full" ? { small_talk: "review" } : {}),
+                  }),
+              }),
+              h("b", null, label),
+              i > cap && h(Lock, { children: "企业未允许" }),
+            ),
+            h("div", { className: "xhs-meta" }, sub),
+            lines.map((line) =>
+              h(
+                "div",
+                { key: line, style: { fontSize: 12, marginTop: 3 } },
+                line,
+              ),
+            ),
+          ),
+        ),
       ),
       h(
         "div",
-        { className: "xhs-two even" },
+        { className: "xhs-3" },
         h(Select, {
           label: "AI 主动准备内容",
-          value: form.ai_proactive,
-          onChange: (v) => set("ai_proactive", v),
-          options: Object.entries(FREQ_LABELS),
+          value: mine.ai_proactive || "weekly",
+          disabled: readOnly,
+          onChange: (v) => set({ ai_proactive: v }),
+          options: [
+            ["weekly", "每周一次"],
+            ["daily", "每天一次"],
+            ["off", "关闭"],
+          ],
         }),
-        h(NumberField, {
-          label: "每次最多准备（篇）",
-          value: form.max_per_run,
-          onChange: (v) => set("max_per_run", v),
+        h(Blur, {
+          label: "每次最多准备",
+          type: "number",
+          suffix: "篇",
+          value: mine.max_per_run ?? 12,
+          disabled: readOnly,
+          onCommit: (v) => set({ max_per_run: Number(v) }),
+        }),
+        h(Field, {
+          label: "本月内容（我 · 企业）",
+          value: `${usage.member?.posts ?? 0} 篇 · 企业 ${
+            usage.tenant?.posts ?? 0
+          } / ${caps.monthly_posts ?? "—"}`,
+          disabled: true,
+          onChange: () => undefined,
         }),
       ),
     ),
     h(
       "div",
-      { className: "xhs-two even" },
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         "div",
         { className: "xhs-stack" },
@@ -8797,34 +12414,50 @@ function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
           { title: "发布节奏" },
           h(
             "div",
-            { className: "xhs-two even" },
-            h(NumberField, {
-              label: "同一账号发布最小间隔（小时）",
-              value: form.min_interval_hours,
-              onChange: (v) => set("min_interval_hours", v),
-              hint: `生效：${eff.min_interval_hours} 小时`,
-            }),
-            h(NumberField, {
-              label: "每账号每周最多发布（篇）",
-              value: form.weekly_max_posts,
-              onChange: (v) => set("weekly_max_posts", v),
-              hint: `生效：${eff.weekly_max_posts} 篇`,
-            }),
-            h(NumberField, {
-              label: "营销内容占比上限（%）",
-              value: form.marketing_ratio_max,
-              onChange: (v) => set("marketing_ratio_max", v),
-              hint: `生效：${eff.marketing_ratio_max}%`,
-            }),
+            { className: "xhs-3" },
+            num(
+              `同一账号发布最小间隔（小时${
+                rules.min_interval_hours != null
+                  ? `，企业下限 ${rules.min_interval_hours}`
+                  : ""
+              }）`,
+              "min_interval_hours",
+            ),
+            num(
+              `每账号每周最多发布（篇${
+                rules.weekly_max_posts != null
+                  ? `，企业上限 ${rules.weekly_max_posts}`
+                  : ""
+              }）`,
+              "weekly_max_posts",
+            ),
+            num(
+              `营销内容占比上限（%${
+                rules.marketing_ratio_max != null
+                  ? `，企业上限 ${rules.marketing_ratio_max}`
+                  : ""
+              }）`,
+              "marketing_ratio_max",
+            ),
+          ),
+          h(
+            "div",
+            { className: "xhs-3" },
             h(Field, {
               label: "允许发布的时段",
-              value: form.publish_window,
-              onChange: (v) => set("publish_window", v),
+              value: p.publish_window.replace("-", "–"),
+              disabled: readOnly,
+              onChange: (v) =>
+                setPace({
+                  ...p,
+                  publish_window: v.replace(/[–—~]/, "-").replace(/\s/g, ""),
+                }),
             }),
             h(Select, {
               label: "资料变更当天",
-              value: form.profile_change_day,
-              onChange: (v) => set("profile_change_day", v),
+              value: p.profile_change_day,
+              disabled: readOnly,
+              onChange: (v) => setPace({ ...p, profile_change_day: v }),
               options: [
                 ["hold", "不发布、不养号"],
                 ["publish_only", "只发布"],
@@ -8832,41 +12465,107 @@ function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
             }),
             h(Select, {
               label: "发布失败后",
-              value: form.on_publish_failure,
-              onChange: (v) => set("on_publish_failure", v),
+              value: p.on_publish_failure,
+              disabled: readOnly,
+              onChange: (v) => setPace({ ...p, on_publish_failure: v }),
               options: [
                 ["stop", "停下，等人工处理"],
                 ["retry_once", "下个时段重试一次"],
               ],
             }),
           ),
+          (eff.min_interval_hours !== Number(p.min_interval_hours) ||
+            eff.weekly_max_posts !== Number(p.weekly_max_posts)) &&
+            h(
+              "div",
+              { className: "xhs-meta" },
+              `实际生效：间隔 ≥ ${eff.min_interval_hours} 小时 · 每周 ≤ ${eff.weekly_max_posts} 篇 · 营销 ≤ ${eff.marketing_ratio_max}% · ${eff.publish_window}`,
+            ),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await set({
+                    ...p,
+                    min_interval_hours: Number(p.min_interval_hours),
+                    weekly_max_posts: Number(p.weekly_max_posts),
+                    marketing_ratio_max: Number(p.marketing_ratio_max),
+                  });
+                  setPace(null);
+                },
+              },
+              "保存",
+            ),
+          ),
         ),
         h(
           Card,
           { title: "敏感词" },
           h(
-            "div",
-            { className: "xhs-row" },
-            h(
-              "div",
-              null,
-              h("b", null, "企业禁用词与行业词库"),
-              h(
-                "div",
-                { className: "xhs-meta" },
-                `${rows(eff.banned_words).length} 个企业词 · 词库：${
-                  rows(eff.libraries).join("、") || "未同步"
-                }`,
-              ),
-            ),
+            Row,
+            {
+              title: "企业禁用词",
+              sub: `${rows(rules.banned_words).length} 个 · 由管理员在后台维护`,
+            },
             h(Lock, { children: "只读" }),
           ),
           h(Field, {
             label: "我补充的敏感词（每行一个）",
             multiline: true,
-            value: rows(form.my_words).join("\n"),
-            onChange: (v) => set("my_words", v.split("\n")),
+            value: w,
+            disabled: readOnly,
+            onChange: setWords,
           }),
+          libraries.map((l) =>
+            h(
+              Row,
+              {
+                key: l.id || l.name,
+                title: l.name,
+                sub:
+                  l.description ||
+                  `${rows(l.words).length} 个词 · 平台内置，由平台运营维护`,
+              },
+              pill(
+                l.enabled === false ? "企业未开通" : "已启用",
+                l.enabled === false ? "" : "ok",
+                l.enabled !== false,
+              ),
+            ),
+          ),
+          !libraries.length &&
+            h(
+              Row,
+              { title: "行业词库", sub: "平台内置，由平台运营维护" },
+              pill("未同步"),
+            ),
+          h(
+            "div",
+            { className: "xhs-actions" },
+            h(
+              Button,
+              {
+                primary: true,
+                disabled: readOnly,
+                onClick: async () => {
+                  await set({
+                    my_words: w
+                      .split(/\n+/)
+                      .map((x) => x.trim())
+                      .filter(Boolean),
+                  });
+                  setWords(null);
+                },
+              },
+              "保存",
+            ),
+            h(Button, { onClick: () => setTest("") }, "测试一段文案"),
+          ),
         ),
       ),
       h(
@@ -8874,109 +12573,84 @@ function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
         { className: "xhs-stack" },
         h(
           Card,
-          {
-            title: "回复规则",
-            hint: "闲聊类可以自动发送，事后在清单和对话卡片里通知你；其余类型起草后等你通过。",
-          },
-          h(Select, {
-            label: "闲聊类回复",
-            value: form.small_talk,
-            disabled: !eff.auto_reply_enterprise && form.small_talk !== "auto",
-            onChange: (v) => set("small_talk", v),
-            options: [
-              ["review", "起草后等我通过"],
-              [
-                "auto",
-                eff.auto_reply_enterprise
-                  ? "自动发送，事后通知我"
-                  : "自动发送（企业未开启）",
-              ],
-            ],
-          }),
-          h(Select, {
-            label: "自动回复用语",
-            value: form.reply_wording,
-            onChange: (v) => set("reply_wording", v),
-            options: [
-              ["phrases", "只用我审核过的短句"],
-              ["ai", "AI 自拟，15 字以内"],
-            ],
-          }),
-          h(Field, {
-            label: "审核过的短句（每行一个）",
-            multiline: true,
-            value: rows(form.reply_phrases).join("\n"),
-            onChange: (v) => set("reply_phrases", v.split("\n")),
-          }),
-          h(
-            "div",
-            { className: "xhs-two even" },
-            h(NumberField, {
-              label: "每个账号每小时最多自动回复",
-              value: form.auto_reply_hourly,
-              onChange: (v) => set("auto_reply_hourly", v),
-            }),
-            h(NumberField, {
-              label: "每个账号每天最多自动回复",
-              value: form.auto_reply_daily,
-              onChange: (v) => set("auto_reply_daily", v),
-              hint: `生效：${eff.auto_reply_daily} 条`,
+          { title: "发布前检查" },
+          PRECHECKS.map((line) =>
+            h(Check, {
+              key: line,
+              label: line,
+              checked: true,
+              disabled: true,
+              onChange: () => undefined,
             }),
           ),
-          h(Select, {
-            label: "回复口吻",
-            value: form.reply_tone,
-            onChange: (v) => set("reply_tone", v),
-            options: [
-              ["persona", "跟随账号人设"],
-              ["service", "统一客服口吻"],
-            ],
-          }),
-          [
-            "咨询、意向：起草后等你通过",
-            "负面与投诉：不起草，转人工",
-            "分类拿不准或命中敏感词：不自动发",
-            "账号有异常或已暂停：停止自动回复",
-            "不留联系方式，不承诺效果",
-          ].map((x) =>
-            h(
-              "div",
-              { key: x, className: "xhs-row" },
-              x,
-              h(Lock, { children: "固定" }),
-            ),
+          h(
+            Row,
+            {
+              title: "高风险内容",
+              sub: `一律人工审核${
+                eff.reviewer_name
+                  ? `，并由合规复核人${eff.reviewer_name}复核`
+                  : ""
+              }`,
+            },
+            h(Lock, { children: "企业规则" }),
+          ),
+          h(
+            "div",
+            { className: "xhs-meta" },
+            "不生成未经证实的疗效、虚假的用户评价或虚构的前后对比。",
           ),
         ),
         h(
           Card,
           {
             title: "账号保护",
-            hint: "出现平台提示、验证码或登录失效时，系统只会停下来等你处理，不会重试、换设备或换账号继续。",
+            tip: "这些是停止规则：遇到异常就停下，不做任何规避平台检测的动作。",
           },
           h(
-            "div",
-            { className: "xhs-row" },
-            "账号受限或平台提示违规：暂停该账号至少 72 小时",
-            h(Lock, { children: "固定" }),
+            Row,
+            {
+              title: "账号受限或平台提示违规",
+              sub: "暂停该账号的养号、发布和评论至少 72 小时",
+            },
+            h(Lock),
+          ),
+          h(
+            Row,
+            {
+              title: "登录失效或要求验证码",
+              sub: "暂停这台手机的队列，处理后重新核对身份",
+            },
+            h(Lock),
+          ),
+          h(
+            Row,
+            {
+              title: "连续 2 天养号完成率低于 60%",
+              sub: "提醒检查手机和关键词，不自动加量补刷",
+            },
+            pill(
+              completion.length ? `提醒 · ${completion.length} 个账号` : "提醒",
+              "warn",
+              true,
+            ),
           ),
           h(
             "div",
-            { className: "xhs-row" },
-            "登录失效或要求验证码：暂停这台手机的队列",
-            h(Lock, { children: "固定" }),
-          ),
-          h(
-            "div",
-            { className: "xhs-two even" },
-            h(NumberField, {
-              label: "每个账号每天自动操作时长上限（分钟）",
-              value: form.daily_minutes_cap,
-              onChange: (v) => set("daily_minutes_cap", v),
+            { className: "xhs-2" },
+            h(Blur, {
+              label: "每个账号每天自动操作时长上限",
+              type: "number",
+              suffix: "分钟",
+              value: mine.daily_minutes_cap ?? 60,
+              disabled: readOnly,
+              onCommit: (v) => set({ daily_minutes_cap: Number(v) }),
             }),
             h(Select, {
               label: "恢复后的前 3 天",
-              value: form.resume_mode,
-              onChange: (v) => set("resume_mode", v),
+              value: mine.resume_mode || "start_stage",
+              disabled: readOnly,
+              onChange: (v) => set({ resume_mode: v }),
               options: [
                 ["start_stage", "按“起步”档执行"],
                 ["keep", "按原预算执行"],
@@ -8986,83 +12660,173 @@ function SettingsPanel({ snapshot, host, readOnly, refresh, go }) {
         ),
       ),
     ),
-    h(
-      "div",
-      { className: "xhs-actions" },
+    test !== null &&
       h(
-        Button,
-        { primary: true, disabled: readOnly, onClick: save },
-        "保存设置",
+        Dialog,
+        {
+          title: "测试一段文案",
+          desc: "只在本机比对企业禁用词、我补充的词和已启用的行业词库，不保存。",
+          onClose: () => setTest(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setTest(null) }, "关闭"),
+          ],
+        },
+        h(Field, {
+          label: "文案",
+          multiline: true,
+          value: test,
+          onChange: setTest,
+        }),
+        test.trim() &&
+          h(
+            "div",
+            { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+            hits.length
+              ? hits.map((x) =>
+                  h("span", { key: x, className: "xhs-pill bad" }, "✕ " + x),
+                )
+              : pill("✓ 未命中敏感词", "ok"),
+          ),
       ),
-    ),
   );
 }
 
 // ---- 授权台账 ----
-function ConsentPanel({ snapshot, host, readOnly, refresh }) {
-  const list = rows(snapshot.data.authorizations);
-  const accounts = rows(snapshot.data.accounts);
+const COVERS = {
+  portrait: "肖像",
+  experience: "真实经历",
+  account: "账号使用",
+  case: "案例或病例资料",
+};
+const ROLES = {
+  employee: "员工",
+  customer: "顾客",
+  partner: "合作方",
+  organization: "机构",
+};
+const USAGES = {
+  own_account_no_rewrite: "图文，不可改写成他人经历",
+  image_and_reference: "图文与生图参考",
+};
+function ConsentPanel({ snapshot, host, readOnly, refresh, go }) {
+  const data = snapshot.data;
+  const zone = tz(snapshot);
+  const list = rows(data.authorizations);
+  const accounts = rows(data.accounts);
+  const caps = snapshot.license?.policy?.caps || {};
   const today = new Date().toISOString().slice(0, 10);
   const blank = {
     person: "",
     role: "employee",
     covers: ["portrait", "experience"],
     account_ids: [],
+    scope: "own",
     usage: "own_account_no_rewrite",
     valid_from: today,
     valid_to: "",
     proof_asset: "",
   };
   const [form, setForm] = useState(blank);
-  const COVERS = {
-    portrait: "肖像",
-    experience: "真实经历",
-    account: "账号使用",
-    case: "案例或病例资料",
-  };
-  const ROLES = {
-    employee: "员工",
-    customer: "顾客",
-    partner: "合作方",
-    organization: "机构",
-  };
+  const [view, setView] = useState(null);
   const days = (d) => Math.round((new Date(d) - new Date()) / 86400000);
+  const active = list.filter((c) => c.status === "active");
+  const expiring = active
+    .filter((c) => days(c.valid_to) <= 30)
+    .sort((a, b) => days(a.valid_to) - days(b.valid_to));
+  const withdrawn = list.filter((c) => c.status === "withdrawn");
+  const missing = list.filter((c) => c.status === "proof_missing");
+  const linked = (c) =>
+    rows(data.materials).filter((m) => m.consent_id === c.id);
+  const edit = (c) =>
+    setForm({
+      ...blank,
+      ...c,
+      scope: rows(c.account_ids).length
+        ? rows(c.account_ids).length === 1
+          ? "own"
+          : "pick"
+        : "all",
+    });
+  const save = async (f) => {
+    const body = Object.fromEntries(
+      [
+        "person",
+        "role",
+        "covers",
+        "usage",
+        "valid_from",
+        "valid_to",
+        "proof_asset",
+      ].map((k) => [k, f[k]]),
+    );
+    await send(host, "consent.save", {
+      ...body,
+      account_ids: f.scope === "all" ? [] : f.account_ids,
+      id: f.id || "",
+      version: f.version ?? null,
+    });
+    toast("已保存");
+    await refresh();
+  };
+  const proofInput = (onName) =>
+    h("input", {
+      type: "file",
+      accept: ".pdf,.png,.jpg,.jpeg",
+      style: { display: "none" },
+      disabled: readOnly,
+      onChange: (e) => {
+        const f = e.target.files[0];
+        e.target.value = "";
+        if (f) onName(f.name.slice(0, 200));
+      },
+    });
+  const publishedOf = (c) =>
+    rows(c.published_drafts)
+      .map((id) => rows(data.drafts).find((d) => d.id === id))
+      .filter(Boolean);
+  const pending = withdrawn.filter((c) => !c.published_handled);
   return h(
     "div",
     { className: "xhs-stack" },
-    h(
-      "div",
-      { className: "xhs-stats" },
-      h(Stat, {
-        label: "有效授权",
-        value: list.filter((c) => c.status === "active").length,
-      }),
-      h(Stat, {
-        label: "30 天内到期",
-        value: list.filter(
-          (c) => c.status === "active" && days(c.valid_to) <= 30,
-        ).length,
-      }),
-      h(Stat, {
-        label: "已撤回",
-        value: list.filter((c) => c.status === "withdrawn").length,
-      }),
-      h(Stat, {
-        label: "待补授权书",
-        value: list.filter((c) => c.status === "proof_missing").length,
-      }),
-    ),
+    h(Stats, {
+      items: [
+        { label: "有效授权", value: active.length, sub: "我登记的" },
+        {
+          label: "30 天内到期",
+          value: expiring.length,
+          sub: expiring[0]
+            ? `${expiring[0].person} · ${Math.max(
+                0,
+                days(expiring[0].valid_to),
+              )} 天后`
+            : "—",
+        },
+        {
+          label: "已撤回",
+          value: withdrawn.length,
+          sub: `${withdrawn.reduce(
+            (n, c) => n + linked(c).length,
+            0,
+          )} 个素材已冻结`,
+        },
+        {
+          label: "待补授权书",
+          value: missing.length,
+          sub: missing.length ? "关联素材暂不可用" : "—",
+        },
+      ],
+    }),
     h(
       Card,
       {
         title: "授权台账",
-        hint: "人物形象、真实经历、托管账号和案例资料的授权都登记在这里。撤回后，关联的素材冻结，未发布的草稿退回待制作，已发布的列出来由你处理。",
+        tip: "人物形象、真实经历、托管账号和案例资料的授权都登记在这里。撤回后，关联的素材冻结，未发布的草稿退回待制作，已发布的列出来由你处理。",
       },
       h(Table, {
         head: [
           "授权人",
           "授权内容",
-          "可用账号",
+          "可用范围",
           "有效期",
           "证明文件",
           "关联",
@@ -9078,16 +12842,30 @@ function ConsentPanel({ snapshot, host, readOnly, refresh }) {
           ),
           rows(c.covers)
             .map((x) => COVERS[x])
-            .join("、"),
-          rows(c.account_ids)
-            .map((id) => accountName(snapshot, id))
-            .join("、") || "—",
-          `${c.valid_from} 至 ${c.valid_to}`,
-          c.proof_asset || pill("待上传", "warn"),
-          `素材 ${
-            rows(snapshot.data.materials).filter((m) => m.consent_id === c.id)
-              .length
-          }`,
+            .join(" · "),
+          c.status === "withdrawn"
+            ? "—"
+            : rows(c.account_ids).length
+            ? `仅「${rows(c.account_ids)
+                .map((id) => accountName(snapshot, id))
+                .join("、")}」`
+            : "全部账号",
+          c.status === "withdrawn"
+            ? `${String(c.withdrawn_at || c.updated_at || "").slice(
+                0,
+                10,
+              )} 撤回`
+            : `${c.valid_from} 至 ${c.valid_to}`,
+          c.status === "withdrawn"
+            ? "撤回记录"
+            : c.proof_asset || pill("待上传", "warn", true),
+          c.status === "withdrawn"
+            ? `素材 ${linked(c).length} 已冻结 · 已发布 ${
+                rows(c.published_drafts).length
+              } 篇`
+            : `素材 ${linked(c).length}${
+                c.status === "proof_missing" ? " · 暂不可用" : ""
+              }`,
           pill(
             c.status === "withdrawn"
               ? "已撤回"
@@ -9101,9 +12879,302 @@ function ConsentPanel({ snapshot, host, readOnly, refresh }) {
               : c.status === "active" && days(c.valid_to) > 30
               ? "ok"
               : "warn",
+            true,
           ),
-          c.status === "withdrawn"
-            ? !c.published_handled &&
+          h(
+            "span",
+            { style: { display: "flex", gap: 6 } },
+            c.status === "withdrawn"
+              ? h(Button, { onClick: () => setView(c) }, "查看已发布内容")
+              : c.status === "proof_missing"
+              ? h(
+                  "label",
+                  { className: "xhs-btn" },
+                  ic("上传授权书"),
+                  "上传授权书",
+                  proofInput((name) =>
+                    save({
+                      ...blank,
+                      ...c,
+                      scope: rows(c.account_ids).length ? "pick" : "all",
+                      proof_asset: name,
+                    }),
+                  ),
+                )
+              : [
+                  days(c.valid_to) <= 30
+                    ? h(
+                        Button,
+                        {
+                          key: "r",
+                          disabled: readOnly,
+                          onClick: () => edit(c),
+                        },
+                        "续期",
+                      )
+                    : h(
+                        Button,
+                        {
+                          key: "v",
+                          disabled: readOnly,
+                          onClick: () => edit(c),
+                        },
+                        "查看",
+                      ),
+                  h(
+                    Button,
+                    {
+                      key: "x",
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "consent.revoke", {
+                          id: c.id,
+                          reason: "授权人撤回",
+                        });
+                        await refresh();
+                      },
+                    },
+                    "撤回",
+                  ),
+                ],
+          ),
+        ]),
+        empty: "还没有登记授权",
+      }),
+    ),
+    h(
+      "div",
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+      h(
+        Card,
+        {
+          title: form.id ? `修改授权 · ${form.person}` : "登记新授权",
+          icon: "登记新授权",
+        },
+        h(
+          "div",
+          { className: "xhs-3" },
+          h(Field, {
+            label: "授权人",
+            value: form.person,
+            disabled: readOnly,
+            onChange: (v) => setForm({ ...form, person: v }),
+          }),
+          h(Select, {
+            label: "身份",
+            value: form.role,
+            disabled: readOnly,
+            onChange: (v) => setForm({ ...form, role: v }),
+            options: Object.entries(ROLES),
+          }),
+          h(
+            "label",
+            { className: "xhs-field" },
+            h("span", { className: "xhs-label" }, "有效期"),
+            h(
+              "span",
+              {
+                style: {
+                  display: "flex",
+                  gap: 4,
+                  alignItems: "center",
+                  marginTop: 5,
+                },
+              },
+              h("input", {
+                className: "xhs-input",
+                style: { marginTop: 0 },
+                type: "date",
+                "aria-label": "生效日期",
+                value: form.valid_from,
+                disabled: readOnly,
+                onChange: (e) =>
+                  setForm({ ...form, valid_from: e.target.value }),
+              }),
+              "至",
+              h("input", {
+                className: "xhs-input",
+                style: { marginTop: 0 },
+                type: "date",
+                "aria-label": "到期日期",
+                value: form.valid_to,
+                disabled: readOnly,
+                onChange: (e) => setForm({ ...form, valid_to: e.target.value }),
+              }),
+            ),
+          ),
+        ),
+        h("div", { className: "xhs-label" }, "授权内容"),
+        h(
+          "div",
+          { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+          Object.entries(COVERS).map(([k, l]) =>
+            h(Check, {
+              key: k,
+              label: l,
+              checked: form.covers.includes(k),
+              disabled: readOnly,
+              onChange: (on) =>
+                setForm({
+                  ...form,
+                  covers: on
+                    ? [...form.covers, k]
+                    : form.covers.filter((x) => x !== k),
+                }),
+            }),
+          ),
+        ),
+        h(
+          "div",
+          { className: "xhs-2" },
+          h(Select, {
+            label: "可用账号",
+            value: form.scope,
+            disabled: readOnly,
+            onChange: (v) =>
+              setForm({
+                ...form,
+                scope: v,
+                account_ids:
+                  v === "all"
+                    ? []
+                    : form.account_ids.slice(0, v === "own" ? 1 : 40),
+              }),
+            options: [
+              ["own", "仅本人对应的账号"],
+              ["pick", "指定账号"],
+              ["all", "全部账号"],
+            ],
+          }),
+          h(Select, {
+            label: "可用内容",
+            value: form.usage,
+            disabled: readOnly,
+            onChange: (v) => setForm({ ...form, usage: v }),
+            options: Object.entries(USAGES),
+          }),
+        ),
+        form.scope === "own" &&
+          h(Select, {
+            label: "本人对应的账号",
+            value: form.account_ids[0] || "",
+            disabled: readOnly,
+            onChange: (v) => setForm({ ...form, account_ids: v ? [v] : [] }),
+            options: [
+              ["", "请选择"],
+              ...accounts.map((a) => [a.id, a.name || a.id]),
+            ],
+          }),
+        form.scope === "pick" &&
+          h(
+            "div",
+            {
+              style: {
+                display: "flex",
+                gap: 14,
+                flexWrap: "wrap",
+                marginTop: 6,
+              },
+            },
+            accounts.map((a) =>
+              h(Check, {
+                key: a.id,
+                label: a.name || a.id,
+                checked: form.account_ids.includes(a.id),
+                onChange: (on) =>
+                  setForm({
+                    ...form,
+                    account_ids: on
+                      ? [...form.account_ids, a.id]
+                      : form.account_ids.filter((x) => x !== a.id),
+                  }),
+              }),
+            ),
+          ),
+        form.proof_asset
+          ? h(
+              "div",
+              { className: "xhs-meta", style: { marginTop: 6 } },
+              `授权书：${form.proof_asset}`,
+            )
+          : h(
+              "div",
+              { className: "xhs-meta", style: { marginTop: 6 } },
+              "没有授权书时状态为“待补授权书”，关联素材暂不可用。这里登记文件名，原件由你存档。",
+            ),
+        h(
+          "div",
+          { className: "xhs-actions" },
+          h(
+            "label",
+            { className: "xhs-btn" },
+            ic("上传授权书"),
+            "上传授权书",
+            proofInput((name) => setForm({ ...form, proof_asset: name })),
+          ),
+          h(
+            Button,
+            {
+              primary: true,
+              disabled:
+                readOnly ||
+                !form.person.trim() ||
+                !form.valid_to ||
+                !form.covers.length ||
+                (form.scope !== "all" && !form.account_ids.length),
+              onClick: async () => {
+                await save(form);
+                setForm(blank);
+              },
+            },
+            "保存",
+          ),
+          form.id && h(Button, { onClick: () => setForm(blank) }, "取消"),
+        ),
+      ),
+      h(
+        "div",
+        { className: "xhs-stack" },
+        h(
+          Card,
+          { title: "撤回或到期后" },
+          h(
+            "div",
+            { className: "xhs-steps" },
+            [
+              ["✓", "冻结素材", "关联素材不可再用"],
+              ["✓", "退回草稿", "未发布的退回待制作"],
+              ["3", "列出已发布", "由你决定是否删除"],
+              ["4", "写入审计", "同步到企业后台"],
+            ].map(([n, t, s]) =>
+              h(
+                "div",
+                { key: t, className: "xhs-step" },
+                h("span", { className: "xhs-step-n" }, n),
+                h(
+                  "div",
+                  null,
+                  h("div", null, t),
+                  h("div", { className: "xhs-meta" }, s),
+                ),
+              ),
+            ),
+          ),
+          pending.map((c) =>
+            h(
+              Row,
+              {
+                key: c.id,
+                title: `${c.person} ${fmt(
+                  c.withdrawn_at || c.updated_at,
+                  zone,
+                  { month: "2-digit", day: "2-digit" },
+                )} 撤回授权`,
+                sub: `${linked(c).length} 个素材已冻结 · ${
+                  rows(c.published_drafts).length
+                } 篇已发布笔记待你处理`,
+              },
+              h(Button, { onClick: () => setView(c) }, "查看已发布内容"),
               h(
                 Button,
                 {
@@ -9113,163 +13184,71 @@ function ConsentPanel({ snapshot, host, readOnly, refresh }) {
                     await refresh();
                   },
                 },
-                `已处理 ${rows(c.published_drafts).length} 篇已发布内容`,
-              )
-            : h(
-                "span",
-                { style: { display: "flex", gap: 6 } },
-                h(
-                  Button,
-                  { disabled: readOnly, onClick: () => setForm({ ...c }) },
-                  c.status === "proof_missing" ? "补授权书" : "续期或修改",
-                ),
-                h(
-                  Button,
-                  {
-                    danger: true,
-                    disabled: readOnly,
-                    onClick: async () => {
-                      await send(host, "consent.revoke", {
-                        id: c.id,
-                        reason: "授权人撤回",
-                      });
-                      await refresh();
-                    },
-                  },
-                  "撤回",
-                ),
+                "我已处理",
               ),
-        ]),
-        empty: "还没有登记授权",
-      }),
-    ),
-    h(
-      Card,
-      { title: form.id ? `修改授权 · ${form.person}` : "登记新授权" },
-      h(
-        "div",
-        { className: "xhs-two even" },
-        h(Field, {
-          label: "授权人",
-          value: form.person,
-          onChange: (v) => setForm({ ...form, person: v }),
-        }),
-        h(Select, {
-          label: "身份",
-          value: form.role,
-          onChange: (v) => setForm({ ...form, role: v }),
-          options: Object.entries(ROLES),
-        }),
-        h(Field, {
-          label: "生效日期",
-          type: "date",
-          value: form.valid_from,
-          onChange: (v) => setForm({ ...form, valid_from: v }),
-        }),
-        h(Field, {
-          label: "到期日期",
-          type: "date",
-          value: form.valid_to,
-          onChange: (v) => setForm({ ...form, valid_to: v }),
-        }),
-      ),
-      h("div", { className: "xhs-label" }, "授权内容"),
-      h(
-        "div",
-        { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
-        Object.entries(COVERS).map(([k, l]) =>
-          h(Check, {
-            key: k,
-            label: l,
-            checked: form.covers.includes(k),
-            onChange: (on) =>
-              setForm({
-                ...form,
-                covers: on
-                  ? [...form.covers, k]
-                  : form.covers.filter((x) => x !== k),
-              }),
-          }),
+            ),
+          ),
         ),
-      ),
-      h("div", { className: "xhs-label" }, "可用账号（不选表示不限定）"),
-      h(
-        "div",
-        { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
-        accounts.map((a) =>
-          h(Check, {
-            key: a.id,
-            label: a.name || a.id,
-            checked: form.account_ids.includes(a.id),
-            onChange: (on) =>
-              setForm({
-                ...form,
-                account_ids: on
-                  ? [...form.account_ids, a.id]
-                  : form.account_ids.filter((x) => x !== a.id),
-              }),
-          }),
-        ),
-      ),
-      h(Select, {
-        label: "可用内容",
-        value: form.usage,
-        onChange: (v) => setForm({ ...form, usage: v }),
-        options: [
-          ["own_account_no_rewrite", "图文，不可改写成他人经历"],
-          ["image_and_reference", "图文与生图参考"],
-        ],
-      }),
-      h(Field, {
-        label: "授权书（文件名或存档编号）",
-        value: form.proof_asset,
-        onChange: (v) => setForm({ ...form, proof_asset: v }),
-        placeholder: "没有授权书时状态为“待补授权书”，关联素材暂不可用",
-      }),
-      h(
-        "div",
-        { className: "xhs-actions" },
         h(
-          Button,
-          {
-            primary: true,
-            disabled:
-              readOnly ||
-              !form.person.trim() ||
-              !form.valid_to ||
-              !form.covers.length,
-            onClick: async () => {
-              const body = Object.fromEntries(
-                [
-                  "person",
-                  "role",
-                  "covers",
-                  "account_ids",
-                  "usage",
-                  "valid_from",
-                  "valid_to",
-                  "proof_asset",
-                ].map((k) => [k, form[k]]),
-              );
-              await send(host, "consent.save", {
-                ...body,
-                id: form.id || "",
-                version: form.version ?? null,
-              });
-              setForm(blank);
-              await refresh();
+          Card,
+          { title: "使用边界" },
+          h(Row, {
+            title: "AI 虚拟角色",
+            sub: "不需要个人授权；图片带“虚拟人物”标记，不能写成真实消费体验或效果证明",
+          }),
+          h(Row, {
+            title: "真实经历",
+            sub: "只能用于授权人对应的账号，不能改写成其他账号的亲身经历",
+          }),
+          h(
+            Row,
+            {
+              title: "案例与病例资料",
+              sub: "需要当事人书面授权；医疗美容内容还需医疗广告审查",
             },
-          },
-          "保存",
+            !rows(caps.template_scope).some((s) => /医/.test(s)) &&
+              pill("企业未开通"),
+          ),
         ),
-        form.id && h(Button, { onClick: () => setForm(blank) }, "取消"),
-      ),
-      h(
-        "div",
-        { className: "xhs-meta", style: { marginTop: 8 } },
-        "AI 虚拟角色不需要个人授权；图片带“虚拟人物”标记，不能写成真实消费体验或效果证明。案例与病例资料需要当事人书面授权，医疗美容内容还需医疗广告审查。",
       ),
     ),
+    view &&
+      h(
+        Dialog,
+        {
+          title: `${view.person} · 已发布内容`,
+          desc: "授权撤回后，是否删除已发布的笔记由你决定；删除需要你在手机上确认。",
+          onClose: () => setView(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setView(null) }, "关闭"),
+          ],
+        },
+        publishedOf(view).map((d) =>
+          h(
+            Row,
+            {
+              key: d.id,
+              title: d.title,
+              sub: `${accountName(snapshot, d.account_id)} · ${fmt(
+                d.published_at || d.scheduled_at,
+                zone,
+              )}`,
+            },
+            h(
+              Button,
+              {
+                onClick: () => {
+                  setView(null);
+                  go("publish", "runs");
+                },
+              },
+              "去发布与历史",
+            ),
+          ),
+        ),
+        !publishedOf(view).length &&
+          h("div", { className: "xhs-empty" }, "没有已发布的内容"),
+      ),
   );
 }
 
@@ -9278,18 +13257,37 @@ const FEATURE_INFO = [
   [
     "xhs.content",
     "内容创作",
-    "内容计划 · 创作编辑器 · 素材库 · 内容母版 · 业务资料 · AI 生图",
+    ["内容计划", "创作编辑器", "素材库", "内容母版", "业务资料", "AI 生图"],
   ],
-  ["xhs.publish", "内容发布", "排期日历 · 批量发布 · 发布与历史 · 执行队列"],
+  [
+    "xhs.publish",
+    "内容发布",
+    ["排期日历", "批量发布", "发布与历史", "执行队列"],
+  ],
   [
     "xhs.ops",
     "运营管理",
-    "项目与画像 · 人设规划 · 账号与设备 · 新号资料 · 日常运营 · 冷启动方案 · 异常与告警",
+    [
+      "项目与画像",
+      "人设规划",
+      "账号与设备",
+      "账号档案",
+      "新号资料",
+      "日常运营（养号）· 冷启动方案",
+      "异常与告警",
+    ],
   ],
-  ["xhs.comment", "评论互动", "评论审核 · 笔记维护（回复评论）· 意向线索"],
-  ["xhs.takeover", "账号托管", "老号接管 · 账号审计 · 诊断 · 资料变更单"],
-  ["xhs.analytics", "数据分析", "复盘报表 · 数据同步"],
+  ["xhs.comment", "评论互动", ["评论审核", "笔记维护（回复评论）· 意向线索"]],
+  ["xhs.takeover", "账号托管", ["老号接管", "账号审计", "诊断", "资料变更单"]],
+  ["xhs.analytics", "数据分析", ["复盘报表", "内容表现", "数据回收"]],
 ];
+const REQUEST_KINDS = {
+  posts: "更多内容额度",
+  images: "更多生图额度",
+  accounts: "更多账号",
+  feature: "未分配的能力",
+  templates: "更多母版范围",
+};
 function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
   const license = snapshot.license || {};
   const policy = license.policy || {};
@@ -9298,17 +13296,22 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
   const usage = policy.usage || {};
   const quota = policy.member_quota || {};
   const requests = rows(snapshot.data.member_requests);
-  const [req, setReq] = useState({ kinds: ["posts"], amount: "", note: "" });
+  const [asking, setAsking] = useState(false);
+  const accounts = rows(snapshot.data.accounts);
+  const devices = new Set(accounts.map((a) => a.device_id).filter(Boolean))
+    .size;
+  const ask = h(
+    Button,
+    { disabled: readOnly, onClick: () => setAsking(true) },
+    "向管理员申请",
+  );
   const q = (label, mine, mineCap, ent, entCap, unit) =>
     h(
       "div",
-      {
-        key: label,
-        style: { padding: "9px 0", borderBottom: `1px solid ${C.line}` },
-      },
+      { key: label, style: { padding: "9px 0" } },
       h(
         "div",
-        { style: { display: "flex", justifyContent: "space-between" } },
+        { style: { display: "flex", justifyContent: "space-between", gap: 8 } },
         h("b", null, label),
         h(
           "span",
@@ -9321,6 +13324,13 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
       mineCap != null && h(Bar, { ratio: (mine || 0) / (mineCap || 1) }),
       h(Bar, { ratio: (ent || 0) / (entCap || 1), ent: true }),
     );
+  const statusText =
+    {
+      active: "",
+      expired: " · 已过期",
+      revoked: " · 已撤销",
+      read_only: " · 只读",
+    }[license.status] ?? "";
   return h(
     "div",
     { className: "xhs-stack" },
@@ -9335,33 +13345,48 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
           flexWrap: "wrap",
         },
       },
-      h("b", null, "小红薯运营许可"),
+      h("img", {
+        src: XHS_LOGO,
+        alt: "小红薯",
+        style: { width: 36, height: 36, borderRadius: 9 },
+      }),
       h(
-        "span",
-        { className: "xhs-meta" },
-        `状态 ${
-          {
-            active: "有效",
-            expired: "已过期",
-            revoked: "已撤销",
-            read_only: "只读",
-          }[license.status] || statusLabel(license.status)
-        } · ${
-          license.expires_at
-            ? "至 " + String(license.expires_at).slice(0, 10)
-            : "不限期"
-        } · 平台授予，企业管理员分配`,
+        "div",
+        null,
+        h(
+          "b",
+          null,
+          `${
+            license.tenant_name ? license.tenant_name + " · " : ""
+          }小红薯运营许可`,
+        ),
+        h(
+          "div",
+          { className: "xhs-meta" },
+          `${
+            license.plugin_version ? `插件 ${license.plugin_version} · ` : ""
+          }${
+            license.expires_at
+              ? "许可至 " + String(license.expires_at).slice(0, 10)
+              : "不限期"
+          }${statusText} · 平台授予，企业管理员分配`,
+        ),
       ),
       h("span", { style: { flex: 1 } }),
-      pill(`自动化上限 ${LEVEL_LABELS[caps.automation_cap] || "—"}`, "ok"),
+      pill(
+        `自动化上限 ${LEVEL_LABELS[caps.automation_cap] || "—"}`,
+        "ok",
+        true,
+      ),
       pill(`母版范围 ${rows(caps.template_scope).join(" + ") || "—"}`),
+      ask,
     ),
     h(
       "div",
       { className: "xhs-grid" },
       FEATURE_INFO.map(([key, label, unlocks]) =>
         h(
-          "div",
+          "section",
           {
             key,
             className: "xhs-card",
@@ -9369,13 +13394,25 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
           },
           h(
             "div",
-            { style: { display: "flex", gap: 8, alignItems: "center" } },
+            {
+              style: {
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                marginBottom: 8,
+              },
+            },
+            ic("h:" + label),
             h("b", { style: { flex: 1 } }, label),
             hasFeature(license, key)
-              ? pill("已分配给我", "ok")
+              ? pill("已分配给我", "ok", true)
               : h(Lock, { children: "未分配" }),
           ),
-          h("div", { className: "xhs-meta", style: { marginTop: 6 } }, unlocks),
+          h(
+            "div",
+            { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
+            unlocks.map((u) => h("span", { key: u, className: "xhs-pill" }, u)),
+          ),
         ),
       ),
     ),
@@ -9386,12 +13423,12 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
     ),
     h(
       "div",
-      { className: "xhs-two even" },
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         Card,
         {
           title: "我的用量与企业额度",
-          hint: "红色是我的用量，紫色是企业合计。",
+          tip: "红色是我的用量，紫色是企业合计。",
         },
         q(
           "本月内容",
@@ -9409,20 +13446,23 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
           caps.monthly_images,
           "张",
         ),
-        h(
-          "div",
-          { style: { padding: "9px 0" } },
-          h("b", null, "账号与手机"),
-          h(
-            "span",
-            { className: "xhs-meta" },
-            ` 企业上限 ${license.limits?.accounts ?? 0} 个账号 · ${
-              license.limits?.devices ?? 0
-            } 台手机${
-              quota.accounts != null ? ` · 我最多 ${quota.accounts} 个账号` : ""
-            }`,
-          ),
+        q(
+          "账号",
+          accounts.length,
+          quota.accounts,
+          usage.tenant?.accounts ?? accounts.length,
+          license.limits?.accounts,
+          "个",
         ),
+        q(
+          "手机",
+          devices,
+          null,
+          usage.tenant?.devices ?? devices,
+          license.limits?.devices,
+          "台",
+        ),
+        h("div", { className: "xhs-actions" }, ask),
       ),
       h(
         Card,
@@ -9464,74 +13504,49 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
             ],
             [
               "闲聊类回复自动发送",
-              rules.auto_reply_enabled
+              rules.auto_reply_enabled && caps.auto_reply_allowed
                 ? `允许 · 每账号每天 ≤ ${rules.auto_reply_daily_cap} 条`
                 : "不允许",
-              rules.auto_reply_enabled ? "关闭，或设得更少" : "—",
+              rules.auto_reply_enabled && caps.auto_reply_allowed
+                ? "关闭，或设得更少"
+                : "—",
             ],
-            ["紧急暂停", rules.paused ? "已暂停" : "未暂停", "暂停自己的任务"],
+            ["AI 标识与商业披露", "强制检查", "—"],
+            [
+              "紧急暂停",
+              rules.paused
+                ? "管理员已暂停全企业任务"
+                : "管理员可远程暂停全企业任务",
+              "暂停自己的任务",
+            ],
           ],
         }),
       ),
     ),
     h(
       "div",
-      { className: "xhs-two even" },
+      { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
       h(
         Card,
-        { title: "向管理员申请" },
+        { title: "没有分配到的能力会这样显示" },
         h(
           "div",
-          { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
-          [
-            ["posts", "更多内容额度"],
-            ["images", "更多生图额度"],
-            ["accounts", "更多账号"],
-            ["feature", "未分配的能力"],
-            ["templates", "更多母版范围"],
-          ].map(([k, l]) =>
-            h(Check, {
-              key: k,
-              label: l,
-              checked: req.kinds.includes(k),
-              onChange: (on) =>
-                setReq({
-                  ...req,
-                  kinds: on
-                    ? [...req.kinds, k]
-                    : req.kinds.filter((x) => x !== k),
-                }),
-            }),
+          { className: "xhs-empty" },
+          ic("p:固定", 22),
+          h(
+            "div",
+            { style: { fontWeight: 700, margin: "6px 0" } },
+            "需要企业授权",
           ),
+          "企业已购买这项能力，但还没有分配给你。",
+          h("div", { style: { marginTop: 10 } }, ask),
         ),
-        h(Field, {
-          label: "期望数量",
-          value: req.amount,
-          onChange: (v) => setReq({ ...req, amount: v }),
-          placeholder: "例如：每月内容 80 篇",
-        }),
-        h(Field, {
-          label: "说明",
-          value: req.note,
-          onChange: (v) => setReq({ ...req, note: v }),
-        }),
-        h(
-          "div",
-          { className: "xhs-actions" },
-          h(
-            Button,
-            {
-              primary: true,
-              disabled: readOnly || !req.kinds.length,
-              onClick: async () => {
-                await send(host, "request.create", req);
-                setReq({ kinds: ["posts"], amount: "", note: "" });
-                await refresh();
-              },
-            },
-            "提交申请",
-          ),
-          h(
+      ),
+      h(
+        Card,
+        {
+          title: "我的申请",
+          right: h(
             Button,
             {
               onClick: async () => {
@@ -9539,181 +13554,624 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
                 await refresh();
               },
             },
-            "刷新申请状态",
+            "刷新",
           ),
-        ),
-      ),
-      h(
-        Card,
-        { title: "我的申请" },
+        },
         h(Table, {
           head: ["申请", "时间", "状态"],
           body: requests.map((r) => [
-            `${rows(r.kinds).join("、")} ${r.amount || ""}`,
-            fmt(r.created_at, tz(snapshot)),
+            `${rows(r.kinds)
+              .map((k) => REQUEST_KINDS[k] || k)
+              .join("、")}${r.amount ? " · " + r.amount : ""}`,
+            fmt(r.created_at, tz(snapshot), {
+              month: "2-digit",
+              day: "2-digit",
+            }),
             pill(
               r.status === "pending"
                 ? "管理员处理中"
                 : r.status === "approved"
                 ? "已通过"
-                : "已拒绝",
+                : "未通过",
               r.status === "approved"
                 ? "ok"
                 : r.status === "pending"
                 ? "warn"
                 : "",
+              true,
             ),
           ]),
           empty: "还没有申请",
         }),
       ),
     ),
+    asking &&
+      h(RequestDialog, { host, refresh, onClose: () => setAsking(false) }),
   );
 }
 
-// ---- 创作编辑器补充：性质、母版、披露、检查 ----
-function DraftMeta({ snapshot, host, readOnly, refresh, draftId }) {
-  const draft = rows(snapshot.data.drafts).find((d) => d.id === draftId);
-  if (!draft) return null;
-  const templates = rows(snapshot.data.catalog_cache?.templates).filter(
-    (t) => t.available !== false,
+// ---- 账号档案：号设档案库、人设与兴趣池、形象素材、来源与授权；以及转交给同事 ----
+const SOURCE_KIND = {
+  authorized: ["本人授权", "ok"],
+  existing: ["已有账号", ""],
+  ai: ["AI 生成", ""],
+};
+const IMAGE_GROUPS = {
+  portrait: "本人授权的形象照",
+  reference: "服装、发型等形象参考",
+  virtual: "虚拟人物素材",
+  scene: "场景图",
+};
+function AccountProfilePanel({ snapshot, host, readOnly, refresh, go, focus }) {
+  const data = snapshot.data;
+  const accounts = rows(data.accounts);
+  const sources = data.persona_sources || {};
+  const [id, setId] = useState(
+    focus && accounts.some((a) => a.id === focus)
+      ? focus
+      : accounts[0]?.id || "",
   );
-  const meta = async (patch, fix = false) => {
-    await send(host, "content.meta", {
-      id: draft.id,
-      meta: patch,
-      fix_labels: fix,
+  const [form, setForm] = useState(null);
+  const [transferring, setTransferring] = useState(false);
+  const [scene, setScene] = useState(null);
+  const [upload, setUpload] = useState(null);
+  useEffect(() => {
+    if (focus && accounts.some((a) => a.id === focus)) setId(focus);
+  }, [focus]);
+  useEffect(() => {
+    // Pick up transfers decided while the page was closed; a desktop without an enterprise has none.
+    send(host, "transfer.sync", {})
+      .then(refresh)
+      .catch(() => undefined);
+  }, []);
+  const account = accounts.find((a) => a.id === id) || accounts[0];
+  useEffect(() => setForm(null), [account?.id, account?.version]);
+  const incoming = h(IncomingTransfers, {
+    snapshot,
+    host,
+    readOnly,
+    refresh,
+    onImported: (accountId) => setId(accountId),
+  });
+  const tags = (list) => rows(list).join("、") || "—";
+  const imagesOf = (a) => rows(a.character_images);
+  const imageText = (a) => {
+    const kind = (sources[a.id] || {}).kind;
+    const n = imagesOf(a).length;
+    return n
+      ? `${
+          kind === "authorized"
+            ? "授权照片"
+            : kind === "existing"
+            ? "品牌素材"
+            : "虚拟形象"
+        } ${n} 张`
+      : "—";
+  };
+  const persona = account?.persona || {};
+  const pool = account?.interest_pool || {};
+  const f =
+    form ||
+    (account
+      ? {
+          age: persona.age || "",
+          gender: persona.gender || "",
+          region: persona.region || "",
+          occupation: persona.occupation || "",
+          content_style: account.content_style || "生活记录",
+          bio_material: account.bio_material || "",
+          core: rows(pool.core).join(", "),
+          extended: rows(pool.extended).join(", "),
+          general: rows(pool.general).join(", "),
+        }
+      : null);
+  const set = (patch) => setForm({ ...f, ...patch });
+  const split = (s) =>
+    String(s)
+      .split(/[,，、\n]+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+  const source = account ? sources[account.id] || { kind: "ai" } : null;
+  const consent = source?.consent_id
+    ? rows(data.authorizations).find((c) => c.id === source.consent_id)
+    : null;
+  const image = async (payload) => {
+    await send(host, "persona_file.image", {
+      account_id: account.id,
+      ...payload,
     });
     await refresh();
   };
+  const transfer = account?.transfer;
+  const outgoingDone = account?.transfer_returned;
   return h(
     "div",
-    { className: "xhs-card", style: { marginTop: 12 } },
-    h("h3", null, "发布前检查与内容性质"),
+    { className: "xhs-stack" },
+    incoming,
     h(
-      "div",
-      { className: "xhs-two even" },
-      h(Select, {
-        label: "内容性质",
-        value: draft.nature || "",
-        disabled: readOnly,
-        onChange: (v) => meta({ nature: v }),
-        options: [
-          ["", "请选择"],
-          ["marketing", "营销内容 · 需披露"],
-          ["life", "生活内容"],
-          ["knowledge", "知识内容"],
+      Card,
+      { title: "号设档案库" },
+      h(Table, {
+        head: [
+          "账号",
+          "年龄 / 性别 / 地区",
+          "职业",
+          "垂直标签",
+          "泛兴趣标签",
+          "角色来源",
+          "形象素材",
+          "",
         ],
+        body: accounts.map((a) => {
+          const p = a.persona || {};
+          const [label, tone] =
+            SOURCE_KIND[(sources[a.id] || {}).kind] || SOURCE_KIND.ai;
+          return [
+            h("b", null, a.name || a.id),
+            [p.age, p.gender, p.region].filter(Boolean).join(" / ") || "—",
+            p.occupation || "—",
+            tags(a.interest_pool?.core),
+            tags(a.interest_pool?.general),
+            pill(label, tone, tone === "ok"),
+            imageText(a),
+            h(Button, { onClick: () => setId(a.id) }, "查看档案"),
+          ];
+        }),
+        empty: "还没有账号",
       }),
-      h(Select, {
-        label: "内容母版",
-        value: draft.template_id || "",
-        disabled: readOnly,
-        onChange: (v) => meta({ template_id: v }),
-        options: [["", "不使用母版"], ...templates.map((t) => [t.id, t.name])],
-      }),
-    ),
-    rows(draft.checks?.items).map((i) =>
       h(
         "div",
-        { key: i.key, className: "xhs-row" },
-        h("span", null, i.label),
+        { className: "xhs-actions" },
         h(
-          "span",
+          Button,
           {
-            className: `xhs-pill ${
-              i.level === "ok" ? "ok" : i.level === "bad" ? "bad" : "warn"
-            }`,
+            primary: true,
+            disabled: readOnly,
+            onClick: () => go("build", "personas"),
           },
-          (i.level === "ok" ? "✓ " : i.level === "bad" ? "✕ " : "! ") +
-            i.detail,
+          "批量生成账号人设",
+        ),
+        h(
+          Button,
+          { disabled: readOnly, onClick: () => go("build", "accounts") },
+          "添加自定义角色",
         ),
       ),
     ),
-    !draft.checks && h("div", { className: "xhs-meta" }, "还没有检查"),
-    h(
-      "div",
-      { className: "xhs-actions" },
-      h(
-        Button,
-        { disabled: readOnly, onClick: () => meta({}, true) },
-        "一键补上标识与披露",
-      ),
-      h(
-        Button,
-        {
-          disabled: readOnly,
-          onClick: async () => {
-            await send(host, "content.precheck", { id: draft.id });
-            await refresh();
-          },
-        },
-        "重新检查",
-      ),
-      h(
-        Button,
-        {
-          primary: true,
-          disabled: readOnly || draft.checks?.blocking,
-          onClick: async () => {
-            await send(host, "plan.update", {
-              action: "approve",
-              ids: [draft.id],
-            });
-            await refresh();
-          },
-        },
-        "提交审核并通过",
-      ),
-    ),
-    rows(draft.review_log).length > 0 &&
+    account &&
       h(
         "div",
-        { style: { marginTop: 8 } },
-        rows(draft.review_log).map((x, i) =>
+        { className: "xhs-2", style: { gap: 12, alignItems: "start" } },
+        h(
+          "div",
+          { className: "xhs-stack" },
           h(
-            "div",
-            { key: i, className: "xhs-meta" },
-            `${fmt(x.at, tz(snapshot))} · ${x.event}`,
+            Card,
+            {
+              title: `${account.name || account.id} · 人设与兴趣池`,
+              icon: "周末探店的 HR · 人设与兴趣池",
+            },
+            h(
+              "div",
+              { className: "xhs-4" },
+              h(Field, {
+                label: "年龄",
+                value: f.age,
+                disabled: readOnly,
+                onChange: (v) => set({ age: v }),
+              }),
+              h(Field, {
+                label: "性别",
+                value: f.gender,
+                disabled: readOnly,
+                onChange: (v) => set({ gender: v }),
+              }),
+              h(Field, {
+                label: "地区",
+                value: f.region,
+                disabled: readOnly,
+                onChange: (v) => set({ region: v }),
+              }),
+              h(Field, {
+                label: "职业或身份",
+                value: f.occupation,
+                disabled: readOnly,
+                onChange: (v) => set({ occupation: v }),
+              }),
+            ),
+            h(
+              "div",
+              { className: "xhs-2" },
+              h(Select, {
+                label: "内容风格",
+                value: f.content_style,
+                disabled: readOnly,
+                onChange: (v) => set({ content_style: v }),
+                options: ["生活记录", "知识分享", "清单整理"].map((s) => [
+                  s,
+                  s,
+                ]),
+              }),
+              h(Field, {
+                label: "简介素材（星座 + MBTI + 自我介绍 + 兴趣）",
+                value: f.bio_material,
+                disabled: readOnly,
+                onChange: (v) => set({ bio_material: v }),
+              }),
+            ),
+            h(
+              "div",
+              { className: "xhs-3" },
+              h(Field, {
+                label: "核心兴趣池",
+                multiline: true,
+                value: f.core,
+                disabled: readOnly,
+                onChange: (v) => set({ core: v }),
+              }),
+              h(Field, {
+                label: "扩展兴趣池",
+                multiline: true,
+                value: f.extended,
+                disabled: readOnly,
+                onChange: (v) => set({ extended: v }),
+              }),
+              h(Field, {
+                label: "泛内容兴趣池",
+                multiline: true,
+                value: f.general,
+                disabled: readOnly,
+                onChange: (v) => set({ general: v }),
+              }),
+            ),
+            h(
+              "div",
+              { className: "xhs-meta" },
+              "兴趣池长期保存，每天的养号任务和内容建议都从这里取词。",
+            ),
+            h(
+              "div",
+              { className: "xhs-actions" },
+              h(
+                Button,
+                {
+                  primary: true,
+                  disabled: readOnly,
+                  onClick: async () => {
+                    await send(host, "persona_file.save", {
+                      account_id: account.id,
+                      version: account.version,
+                      age: f.age,
+                      gender: f.gender,
+                      region: f.region,
+                      occupation: f.occupation,
+                      content_style: f.content_style,
+                      bio_material: f.bio_material,
+                      core: split(f.core),
+                      extended: split(f.extended),
+                      general: split(f.general),
+                    });
+                    toast("已保存");
+                    await refresh();
+                  },
+                },
+                "保存档案",
+              ),
+              snapshot.data.transfers?.enabled !== false &&
+                !transfer &&
+                h(
+                  Button,
+                  {
+                    disabled: readOnly || !rows(data.transfers?.members).length,
+                    onClick: () => setTransferring(true),
+                  },
+                  "转交给同事",
+                ),
+            ),
+            account.transferred_in &&
+              h(
+                "div",
+                { className: "xhs-meta", style: { marginTop: 6 } },
+                `${account.transferred_in.from_member_name || "同事"} 于 ${fmt(
+                  account.transferred_in.at,
+                  tz(snapshot),
+                )} 转交给你`,
+              ),
+            transfer &&
+              h(
+                Row,
+                {
+                  title: `正在转交给 ${transfer.to_member_name || "同事"}`,
+                  sub: (TRANSFER_STATUS[transfer.status] || [
+                    transfer.status,
+                  ])[0],
+                },
+                ["pending_approval", "approved"].includes(transfer.status) &&
+                  h(
+                    Button,
+                    {
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "transfer.cancel", {
+                          transfer_id: transfer.id,
+                        });
+                        await refresh();
+                      },
+                    },
+                    "撤回转交",
+                  ),
+                h(
+                  Button,
+                  {
+                    onClick: async () => {
+                      await send(host, "transfer.sync", {});
+                      await refresh();
+                    },
+                  },
+                  "刷新状态",
+                ),
+              ),
+            outgoingDone &&
+              !transfer &&
+              h(
+                "div",
+                { className: "xhs-meta", style: { marginTop: 6 } },
+                `上次转交${
+                  (TRANSFER_STATUS[outgoingDone.status] || ["已结束"])[0]
+                }${outgoingDone.note ? "：" + outgoingDone.note : ""}`,
+              ),
+          ),
+        ),
+        h(
+          "div",
+          { className: "xhs-stack" },
+          h(
+            Card,
+            {
+              title: "人物形象素材",
+              tip: "本人照片需要先在授权台账登记覆盖“肖像”的有效授权。AI 生成的形象带“虚拟人物”标记。",
+            },
+            Object.entries(IMAGE_GROUPS).map(([group, label]) => {
+              const list = imagesOf(account).filter(
+                (i) => (i.group || "portrait") === group,
+              );
+              if (!list.length && !["portrait", "reference"].includes(group))
+                return null;
+              return h(
+                "div",
+                { key: group },
+                h("div", { className: "xhs-label" }, label),
+                list.map((i) =>
+                  h(
+                    "span",
+                    { key: i.id, className: "xhs-thumb", title: i.label },
+                    h(PrivateImage, {
+                      host,
+                      image: i,
+                      alt: i.label || label,
+                      className: "xhs-preview",
+                    }),
+                    i.origin === "ai" &&
+                      h("span", { className: "xhs-mark" }, "虚拟人物"),
+                    !readOnly &&
+                      h(
+                        "button",
+                        {
+                          type: "button",
+                          className: "xhs-x",
+                          "aria-label": `删除 ${i.label || label}`,
+                          onClick: () =>
+                            image({ action: "delete", image_id: i.id }),
+                        },
+                        "×",
+                      ),
+                  ),
+                ),
+                !list.length &&
+                  h(
+                    "div",
+                    { className: "xhs-meta", style: { margin: "4px 0 8px" } },
+                    "还没有",
+                  ),
+              );
+            }),
+            h(
+              "div",
+              { className: "xhs-actions" },
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: () => setUpload({ group: "portrait", label: "" }),
+                },
+                "上传授权照片",
+              ),
+              h(
+                Button,
+                {
+                  disabled: readOnly,
+                  onClick: () => image({ action: "generate", scene: "" }),
+                },
+                "生成虚拟人物素材",
+              ),
+              h(
+                Button,
+                {
+                  disabled: readOnly || !imagesOf(account).length,
+                  onClick: () => setScene(""),
+                },
+                "用参考图生成场景图",
+              ),
+            ),
+          ),
+          h(
+            Card,
+            { title: "来源与授权" },
+            h(Table, {
+              head: ["项目", "内容"],
+              body: [
+                [
+                  "角色来源",
+                  source.kind === "authorized"
+                    ? `本人授权（${ROLES[consent?.role] || "授权人"}：${
+                        consent?.person || "—"
+                      }）`
+                    : source.kind === "existing"
+                    ? "已有账号 · 接管时读取的公开资料"
+                    : "AI 生成 · 虚拟角色",
+                ],
+                [
+                  "授权范围",
+                  consent
+                    ? `${rows(consent.covers)
+                        .map((c) => COVERS[c])
+                        .join("、")}可用于本账号；${
+                        USAGES[consent.usage] || ""
+                      }`
+                    : "不涉及个人授权",
+                ],
+                [
+                  "授权有效期",
+                  consent
+                    ? h(
+                        "span",
+                        null,
+                        `${consent.valid_from} 至 ${consent.valid_to} · `,
+                        pill(
+                          consent.status === "active"
+                            ? "有效"
+                            : consent.status === "withdrawn"
+                            ? "已撤回"
+                            : "待补授权书",
+                          consent.status === "active" ? "ok" : "warn",
+                          true,
+                        ),
+                      )
+                    : "—",
+                ],
+                [
+                  "真实经历素材",
+                  "只能用于本账号，不能改写成其他账号的亲身经历",
+                ],
+                [
+                  "AI 人设的边界",
+                  "AI 人设只指导内容风格，不作为真实消费体验或效果的证明",
+                ],
+              ],
+            }),
+            h(
+              "div",
+              { className: "xhs-actions" },
+              h(
+                Button,
+                { onClick: () => go("settings", "consent") },
+                "上传授权书",
+              ),
+              h(
+                Button,
+                { onClick: () => go("settings", "consent") },
+                "调整使用范围",
+              ),
+            ),
           ),
         ),
       ),
-  );
-}
-
-// ---- 暂停全部自动任务 ----
-function PauseButton({ snapshot, host, readOnly, refresh }) {
-  const settings = snapshot.data.member_settings || {};
-  const eff = snapshot.data.effective_policy || {};
-  const paused = Boolean(settings.paused);
-  return h(
-    "span",
-    { style: { display: "inline-flex", gap: 6, alignItems: "center" } },
-    eff.enterprise_paused && pill("企业已暂停", "bad"),
-    h(
-      "span",
-      { className: "xhs-pill ok" },
-      `${LEVEL_LABELS[eff.automation_level] || "半自动"} · 关键动作需你确认`,
-    ),
-    h(
-      Button,
-      {
-        danger: !paused,
-        disabled: readOnly,
-        onClick: async () => {
-          if (
-            !paused &&
-            !window.confirm(
-              "暂停你的全部养号、发布和回复？正在执行的任务会在当前这一步结束后停下，已排期的内容保留。",
-            )
-          )
-            return;
-          await send(host, "pause.set", { paused: !paused });
-          await refresh();
+    transferring &&
+      account &&
+      h(TransferDialog, {
+        snapshot,
+        host,
+        account,
+        refresh,
+        onClose: () => setTransferring(false),
+      }),
+    scene !== null &&
+      h(
+        Dialog,
+        {
+          title: "用参考图生成场景图",
+          desc: "按这个账号的人设生成一张场景图，带“虚拟人物”标记。",
+          onClose: () => setScene(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setScene(null) }, "取消"),
+            h(
+              Button,
+              {
+                key: "ok",
+                primary: true,
+                disabled: !scene.trim(),
+                onClick: async () => {
+                  const s = scene;
+                  setScene(null);
+                  await image({ action: "generate", scene: s });
+                },
+              },
+              "生成",
+            ),
+          ],
         },
-      },
-      paused ? "恢复自动任务" : "暂停全部自动任务",
-    ),
+        h(Field, {
+          label: "场景",
+          value: scene,
+          onChange: setScene,
+          placeholder: "例如：周末在咖啡店看书",
+        }),
+      ),
+    upload &&
+      h(
+        Dialog,
+        {
+          title: "上传形象照片",
+          desc: "本人照片需要有效的肖像授权；服装、发型等参考图不需要。",
+          onClose: () => setUpload(null),
+          footer: [
+            h(Button, { key: "c", onClick: () => setUpload(null) }, "取消"),
+          ],
+        },
+        h(Select, {
+          label: "类型",
+          value: upload.group,
+          onChange: (v) => setUpload({ ...upload, group: v }),
+          options: [
+            ["portrait", "本人授权的形象照"],
+            ["reference", "服装、发型等形象参考"],
+          ],
+        }),
+        h(Field, {
+          label: "标注",
+          value: upload.label,
+          onChange: (v) => setUpload({ ...upload, label: v }),
+          placeholder: "例如：正面、侧面、风衣",
+        }),
+        h(
+          "label",
+          { className: "xhs-btn primary", style: { marginTop: 10 } },
+          "选择图片",
+          h("input", {
+            type: "file",
+            accept: "image/png,image/jpeg,image/webp",
+            style: { display: "none" },
+            onChange: async (e) => {
+              const files = [...e.target.files];
+              e.target.value = "";
+              if (!files.length) return;
+              const [img] = await readImageFiles(files.slice(0, 1));
+              const u = upload;
+              setUpload(null);
+              await image({
+                action: "upload",
+                group: u.group,
+                label: u.label,
+                image: img,
+              }).catch((error) =>
+                window.dispatchEvent(
+                  new CustomEvent("octop:xhs-error", { detail: error }),
+                ),
+              );
+            },
+          }),
+        ),
+      ),
   );
 }
 
@@ -9901,7 +14359,6 @@ function WorkbenchCards({ host }) {
   );
 }
 
-// ---- 账号档案：一个账号的全部信息，以及转交给同事 ----
 const TRANSFER_STATUS = {
   pending_approval: ["待管理员审批", "warn"],
   approved: ["待对方接收", "warn"],
@@ -9911,27 +14368,6 @@ const TRANSFER_STATUS = {
   declined: ["对方已拒收", ""],
   cancelled: ["已撤回", ""],
 };
-const HEALTH_LABELS = {
-  healthy: ["正常", "ok"],
-  paused: ["已暂停", "bad"],
-  unconfigured: ["待绑定手机", "warn"],
-  transferring: ["转交中", "warn"],
-};
-const PROFILE_LABELS = [
-  ["nickname", "名字"],
-  ["bio", "简介"],
-  ["occupation", "职业"],
-  ["gender", "性别"],
-  ["birthday", "生日"],
-  ["region", "地区"],
-];
-const PERSONA_LABELS = [
-  ["age", "年龄"],
-  ["gender", "性别"],
-  ["region", "地区"],
-  ["occupation", "职业"],
-  ["life_status", "生活状态"],
-];
 const SUMMARY_LABELS = {
   drafts: "未发布草稿",
   materials: "素材",
@@ -9939,16 +14375,6 @@ const SUMMARY_LABELS = {
   leads: "线索",
   images: "图片",
 };
-
-function KV({ label, children }) {
-  return h(
-    "div",
-    { className: "xhs-row", style: { padding: "7px 0" } },
-    h("span", { className: "xhs-meta" }, label),
-    h("span", { style: { textAlign: "right", minWidth: 0 } }, children),
-  );
-}
-
 function TransferDialog({ snapshot, host, account, onClose, refresh }) {
   const transfer = snapshot.data.transfers || {};
   const members = rows(transfer.members);
@@ -10161,574 +14587,6 @@ function IncomingTransfers({ snapshot, host, readOnly, refresh, onImported }) {
   );
 }
 
-function AccountProfilePanel({ snapshot, host, readOnly, refresh, go, focus }) {
-  const data = snapshot.data;
-  const zone = tz(snapshot);
-  const accounts = rows(data.accounts);
-  const [selected, setSelected] = useState(focus || accounts[0]?.id || "");
-  const [transferring, setTransferring] = useState(false);
-  useEffect(() => {
-    if (focus) setSelected(focus);
-  }, [focus]);
-  useEffect(() => {
-    // Pick up transfers decided while the page was closed; a desktop without an enterprise has none.
-    send(host, "transfer.sync", {})
-      .then(() => refresh())
-      .catch(() => undefined);
-  }, []);
-  const account = accounts.find((a) => a.id === selected) || accounts[0];
-  const incoming = h(IncomingTransfers, {
-    snapshot,
-    host,
-    readOnly,
-    refresh,
-    onImported: (id) => setSelected(id),
-  });
-  if (!account)
-    return h(
-      "div",
-      { className: "xhs-stack" },
-      incoming,
-      h(
-        Card,
-        { title: "账号档案" },
-        h(
-          "div",
-          { className: "xhs-empty" },
-          "还没有账号。在 建号 › 账号与设备 里添加。",
-        ),
-      ),
-    );
-  const id = account.id;
-  const health =
-    rows(data.account_health).find((x) => x.account_id === id) || {};
-  const stage = (data.cold_start_status || {})[id];
-  const device = rows(snapshot.devices).find(
-    (d) => d.device_id === account.device_id,
-  );
-  const project = rows(data.projects).find((p) => p.id === account.project_id);
-  const drafts = rows(data.drafts).filter((d) => d.account_id === id);
-  const upcoming = drafts
-    .filter((d) => d.scheduled_at && d.review_status !== "published")
-    .sort((a, b) => (a.scheduled_at < b.scheduled_at ? -1 : 1));
-  const published = drafts.filter((d) => d.review_status === "published");
-  const runs = rows(data.runs).filter((r) => r.account_id === id);
-  const replies = rows(data.reply_items).filter((r) => r.account_id === id);
-  const leads = rows(data.leads).filter((l) => l.account_id === id);
-  const materials = rows(data.materials).filter((m) =>
-    rows(m.account_ids).includes(id),
-  );
-  const consents = rows(data.authorizations).filter((c) =>
-    rows(c.account_ids).includes(id),
-  );
-  const audits = rows(data.audits).filter((a) => a.account_id === id);
-  const orders = rows(data.change_orders).filter((o) => o.account_id === id);
-  const transfer = account.transfer;
-  const before = rows(account.history_before_transfer);
-  const [stateLabel, stateTone] = HEALTH_LABELS[health.state] || [
-    "待配置",
-    "warn",
-  ];
-  const persona = account.persona || {};
-  const tags = account.persona_tags || {};
-  const profile = account.profile_draft || {};
-  const history = [
-    ...published.map((d) => ({
-      at: d.published_at || d.updated_at || d.scheduled_at,
-      text: `发布「${d.title}」`,
-      tone: "ok",
-    })),
-    ...runs
-      .filter((r) => r.kind !== "publish")
-      .map((r) => ({
-        at: r.updated_at || r.created_at,
-        text: `${RUN_LABELS[r.kind] || r.kind} · ${statusLabel(r.status)}`,
-        tone: ["unknown", "interrupted", "error", "failed"].includes(r.status)
-          ? "bad"
-          : "",
-      })),
-    ...before.map((x) => ({
-      at: x.at,
-      text: `${
-        x.kind === "publish"
-          ? `发布「${x.title}」`
-          : `${RUN_LABELS[x.kind] || x.kind} · ${statusLabel(x.status)}`
-      }（转交前）`,
-      tone: "",
-    })),
-  ]
-    .filter((x) => x.at)
-    .sort((a, b) => (a.at < b.at ? 1 : -1))
-    .slice(0, 12);
-  const outgoing = rows(data.transfers?.items).filter(
-    (t) => t.account_id === id,
-  );
-  return h(
-    "div",
-    { className: "xhs-stack" },
-    incoming,
-    h(
-      "section",
-      {
-        className: "xhs-card",
-        style: {
-          display: "flex",
-          gap: 14,
-          alignItems: "center",
-          flexWrap: "wrap",
-        },
-      },
-      h(
-        "div",
-        {
-          style: {
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: "#ffe3e7",
-            color: C.red,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 20,
-            fontWeight: 700,
-            flex: "none",
-          },
-        },
-        (account.name || "?").slice(0, 1),
-      ),
-      h(
-        "div",
-        { style: { flex: 1, minWidth: 200 } },
-        h(
-          "div",
-          {
-            style: {
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              flexWrap: "wrap",
-            },
-          },
-          h("b", { style: { fontSize: 16 } }, account.name),
-          pill(stateLabel, stateTone),
-          pill(account.entry_mode === "new" ? "新账号" : "已有账号"),
-        ),
-        h(
-          "div",
-          { className: "xhs-meta", style: { marginTop: 4 } },
-          [
-            account.platform_account_id
-              ? `小红薯号 ${account.platform_account_id}`
-              : "未核对小红薯号",
-            project ? `项目 ${project.name}` : "",
-            stage
-              ? stage.graduated
-                ? "日常运营"
-                : `冷启动 · ${stage.name} · 第 ${stage.day} 天`
-              : "",
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        ),
-        account.transferred_in &&
-          h(
-            "div",
-            { className: "xhs-meta" },
-            `${account.transferred_in.from_member_name || "同事"} 于 ${fmt(
-              account.transferred_in.at,
-              zone,
-            )} 转交给你`,
-          ),
-      ),
-      accounts.length > 1 &&
-        h(
-          "select",
-          {
-            className: "xhs-select",
-            style: { width: 200, marginTop: 0 },
-            value: id,
-            "aria-label": "选择账号",
-            onChange: (e) => setSelected(e.target.value),
-          },
-          accounts.map((a) =>
-            h("option", { key: a.id, value: a.id }, a.name || a.id),
-          ),
-        ),
-      h(
-        "span",
-        { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
-        h(
-          Button,
-          { onClick: () => go("build", "accounts") },
-          account.device_id ? "账号与设备" : "绑定手机",
-        ),
-        h(Button, { onClick: () => go("nurture", "operations") }, "日常运营"),
-        !transfer &&
-          h(
-            Button,
-            { disabled: readOnly, onClick: () => setTransferring(true) },
-            "转交给同事",
-          ),
-      ),
-    ),
-    transfer &&
-      h(
-        "section",
-        { className: "xhs-card xhs-banner paused" },
-        h(Lock, { children: "转交中" }),
-        h(
-          "span",
-          { style: { flex: 1 } },
-          `正在转交给 ${transfer.to_member_name || "同事"} · ${
-            (TRANSFER_STATUS[transfer.status] || [transfer.status])[0]
-          }。这期间账号暂停全部自动任务，也不能修改。`,
-        ),
-        ["pending_approval", "approved"].includes(transfer.status) &&
-          h(
-            Button,
-            {
-              disabled: readOnly,
-              onClick: async () => {
-                await send(host, "transfer.cancel", {
-                  transfer_id: transfer.id,
-                });
-                await refresh();
-              },
-            },
-            "撤回转交",
-          ),
-        h(
-          Button,
-          {
-            onClick: async () => {
-              await send(host, "transfer.sync", {});
-              await refresh();
-            },
-          },
-          "刷新状态",
-        ),
-      ),
-    account.transfer_returned &&
-      !transfer &&
-      h(
-        "section",
-        { className: "xhs-card xhs-banner" },
-        h(
-          "span",
-          { style: { flex: 1 } },
-          `上次转交${
-            (TRANSFER_STATUS[account.transfer_returned.status] || ["已结束"])[0]
-          }${
-            account.transfer_returned.note
-              ? "：" + account.transfer_returned.note
-              : ""
-          }，账号已恢复。`,
-        ),
-      ),
-    transferring &&
-      h(TransferDialog, {
-        snapshot,
-        host,
-        account,
-        refresh,
-        onClose: () => setTransferring(false),
-      }),
-    h(
-      "div",
-      { className: "xhs-two" },
-      h(
-        "div",
-        { className: "xhs-stack" },
-        h(
-          Card,
-          {
-            title: "人设与定位",
-            right: h(
-              Button,
-              { onClick: () => go("build", "personas") },
-              "人设规划",
-            ),
-          },
-          h(
-            "div",
-            null,
-            account.positioning ||
-              h("span", { className: "xhs-meta" }, "还没有定位"),
-          ),
-          h(
-            "div",
-            {
-              style: {
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                margin: "8px 0",
-              },
-            },
-            [...rows(tags.vertical), ...rows(tags.general)].map((t) =>
-              h("span", { key: t, className: "xhs-pill" }, t),
-            ),
-          ),
-          PERSONA_LABELS.filter(([k]) => persona[k]).map(([k, l]) =>
-            h(KV, { key: k, label: l }, persona[k]),
-          ),
-        ),
-        h(
-          Card,
-          {
-            title: "主页资料",
-            right: h(
-              Button,
-              {
-                onClick: () =>
-                  go(
-                    "build",
-                    account.entry_mode === "new" ? "profiles" : "audits",
-                  ),
-              },
-              account.entry_mode === "new" ? "新号资料" : "老号接管",
-            ),
-          },
-          PROFILE_LABELS.some(([k]) => profile[k])
-            ? PROFILE_LABELS.map(([k, l]) =>
-                h(
-                  KV,
-                  { key: k, label: l },
-                  profile[k] || h("span", { className: "xhs-meta" }, "—"),
-                ),
-              )
-            : h("div", { className: "xhs-empty" }, "还没有资料草稿"),
-          audits.length > 0 &&
-            h(
-              KV,
-              { label: "账号审计" },
-              `${audits.length} 次 · 最近 ${statusLabel(
-                audits[audits.length - 1].status,
-              )}`,
-            ),
-          orders.length > 0 &&
-            h(
-              KV,
-              { label: "资料变更单" },
-              `${orders.length} 张 · 最近 ${statusLabel(
-                orders[orders.length - 1].status,
-              )}`,
-            ),
-        ),
-        h(
-          Card,
-          {
-            title: "内容",
-            right: h(
-              Button,
-              { onClick: () => go("content", "plan") },
-              "内容计划",
-            ),
-          },
-          h(
-            "div",
-            {
-              style: {
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                marginBottom: 8,
-              },
-            },
-            Object.entries(REVIEW_LABELS)
-              .filter(([k]) => k !== "scheduled")
-              .map(([k, l]) => [
-                l,
-                drafts.filter(
-                  (d) =>
-                    (d.review_status || "pending_review") === k ||
-                    (k === "approved" && d.review_status === "scheduled"),
-                ).length,
-              ])
-              .filter(([, n]) => n > 0)
-              .map(([l, n]) =>
-                h("span", { key: l, className: "xhs-pill" }, `${l} ${n}`),
-              ),
-          ),
-          h(Table, {
-            head: ["接下来", "排期", "检查"],
-            body: upcoming
-              .slice(0, 5)
-              .map((d) => [
-                d.title,
-                fmt(d.scheduled_at, zone),
-                checkPills(d.checks),
-              ]),
-            empty: "没有排期中的内容",
-          }),
-        ),
-        h(
-          Card,
-          { title: "运营记录" },
-          history.length
-            ? history.map((x, i) =>
-                h(
-                  "div",
-                  { key: i, className: "xhs-row", style: { padding: "6px 0" } },
-                  h(
-                    "span",
-                    { className: x.tone === "bad" ? "xhs-danger" : "" },
-                    x.text,
-                  ),
-                  h("span", { className: "xhs-meta" }, fmt(x.at, zone)),
-                ),
-              )
-            : h("div", { className: "xhs-empty" }, "还没有记录"),
-        ),
-      ),
-      h(
-        "div",
-        { className: "xhs-stack" },
-        h(
-          Card,
-          { title: "手机与登录" },
-          h(
-            KV,
-            { label: "手机" },
-            device
-              ? `${device.name || device.device_id}${
-                  device.online ? "" : " · 离线"
-                }`
-              : account.device_id
-              ? account.device_id
-              : "未绑定",
-          ),
-          h(
-            KV,
-            { label: "登录" },
-            pill(
-              health.login === "ok"
-                ? "正常"
-                : health.login === "lost"
-                ? "登录失效"
-                : "未绑定",
-              health.login === "ok" ? "ok" : "bad",
-            ),
-          ),
-          h(
-            KV,
-            { label: "身份核对" },
-            account.identity_confirmed_at
-              ? fmt(account.identity_confirmed_at, zone)
-              : account.entry_mode === "new"
-              ? "新账号"
-              : "未核对",
-          ),
-          h(
-            KV,
-            { label: "近 7 天养号完成率" },
-            health.nurture_rate == null ? "—" : `${health.nurture_rate}%`,
-          ),
-          h(
-            KV,
-            { label: "近 7 天发布" },
-            `${health.publish_ok ?? 0} / ${health.publish_total ?? 0}${
-              health.publish_unknown
-                ? ` · ${health.publish_unknown} 篇结果不明`
-                : ""
-            }`,
-          ),
-          rows(health.notices).length > 0 &&
-            h(
-              KV,
-              { label: "平台通知" },
-              rows(health.notices).slice(-1)[0].text,
-            ),
-        ),
-        h(
-          Card,
-          {
-            title: "评论与线索",
-            right: h(
-              Button,
-              { onClick: () => go("publish", "upkeep") },
-              "笔记维护",
-            ),
-          },
-          h(
-            KV,
-            { label: "待你审核的回复" },
-            replies.filter((r) => ["new", "failed"].includes(r.status)).length,
-          ),
-          h(
-            KV,
-            { label: "已自动回复" },
-            replies.filter((r) => r.auto && r.status === "sent").length,
-          ),
-          h(
-            KV,
-            { label: "意向线索" },
-            `${leads.length}（新 ${
-              leads.filter((l) => l.status === "new").length
-            }）`,
-          ),
-          h(
-            KV,
-            { label: "上次读取新评论" },
-            account.inbox_checked_at
-              ? fmt(account.inbox_checked_at, zone)
-              : "—",
-          ),
-        ),
-        h(
-          Card,
-          {
-            title: "素材与授权",
-            right: h(
-              Button,
-              { onClick: () => go("settings", "consent") },
-              "授权台账",
-            ),
-          },
-          h(KV, { label: "绑定的素材" }, `${materials.length} 条`),
-          consents.length
-            ? consents.map((c) =>
-                h(
-                  KV,
-                  { key: c.id, label: c.person },
-                  pill(
-                    c.status === "withdrawn" ? "已撤回" : `至 ${c.valid_to}`,
-                    c.status === "withdrawn" ? "bad" : "ok",
-                  ),
-                ),
-              )
-            : h("div", { className: "xhs-meta" }, "没有登记个人授权"),
-        ),
-        outgoing.length > 0 &&
-          h(
-            Card,
-            { title: "转交记录" },
-            outgoing
-              .slice(0, 5)
-              .map((t) =>
-                h(
-                  KV,
-                  {
-                    key: t.id,
-                    label: `${
-                      t.direction === "incoming"
-                        ? `${t.from_member_name} → 你`
-                        : `你 → ${t.to_member_name}`
-                    } · ${fmt(t.created_at, zone)}`,
-                  },
-                  pill(
-                    (TRANSFER_STATUS[t.status] || [t.status])[0],
-                    (TRANSFER_STATUS[t.status] || [])[1],
-                  ),
-                ),
-              ),
-          ),
-      ),
-    ),
-  );
-}
-
 function XhsOpsPage({ host, license }) {
   useStyle();
   const [textModels, setTextModels] = useState([]);
@@ -10738,6 +14596,20 @@ function XhsOpsPage({ host, license }) {
   const [tab, setTab] = useState("overview");
   const [focus, setFocus] = useState("");
   const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    let timer;
+    const receive = (event) => {
+      setNote(String(event.detail || ""));
+      clearTimeout(timer);
+      timer = setTimeout(() => setNote(""), 2400);
+    };
+    window.addEventListener("octop:xhs-toast", receive);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("octop:xhs-toast", receive);
+    };
+  }, []);
   const locale = String(host.getToolContext().locale || "zh");
   const readOnly =
     !effectiveLicense ||
@@ -10806,7 +14678,7 @@ function XhsOpsPage({ host, license }) {
         id: "build",
         label: "建号",
         tabs: [
-          { id: "projects", label: "项目与画像" },
+          { id: "projects", label: "项目" },
           { id: "personas", label: "人设规划", feature: "xhs.ops" },
           { id: "accounts", label: "账号与设备", feature: "xhs.ops" },
           { id: "profile", label: "账号档案", feature: "xhs.ops" },
@@ -10911,8 +14783,8 @@ function XhsOpsPage({ host, license }) {
   const group =
     groups.find((g) => g.tabs.some((item) => item.id === tab)) || groups[0];
   const current = group.tabs.find((item) => item.id === tab) || group.tabs[0];
-  const go = (_group, id, accountId) => {
-    if (accountId) setFocus(accountId);
+  const go = (_group, id, target) => {
+    setFocus(target || "");
     setTab(id);
   };
   const common = { snapshot, host, readOnly, refresh, modelRef, go, focus };
@@ -10920,8 +14792,7 @@ function XhsOpsPage({ host, license }) {
     overview: () => h(OverviewPanel, common),
     queue: () => h(QueuePanel, common),
     alerts: () => h(AlertsPanel, common),
-    projects: () =>
-      h(ProjectPanel, { ...common, license: effectiveLicense }),
+    projects: () => h(ProjectPanel, { ...common, license: effectiveLicense }),
     personas: () => h(PersonaPanel, common),
     accounts: () => h(AccountPanel, common),
     profile: () => h(AccountProfilePanel, common),
@@ -10931,7 +14802,7 @@ function XhsOpsPage({ host, license }) {
     coldstart: () => h(ColdStartPanel, common),
     comments: () => h(CommentsPanel, common),
     plan: () => h(PlanPanel, common),
-    editor: () => h(DraftPanel, common),
+    editor: () => h(EditorPanel, common),
     materials: () => h(MaterialsPanel, common),
     templates: () => h(TemplatesPanel, common),
     bizdocs: () => h(BizDocsPanel, common),
@@ -10965,9 +14836,26 @@ function XhsOpsPage({ host, license }) {
       h("img", {
         src: XHS_LOGO,
         alt: "小红薯",
-        style: { width: 56, height: 28 },
+        style: { height: 30, width: "auto", borderRadius: 30, flex: "none" },
       }),
-      h("b", { style: { fontSize: 16 } }, "运营"),
+      h(
+        "div",
+        null,
+        h("h1", { style: { margin: 0, fontSize: 18 } }, "小红薯运营"),
+        h(
+          "div",
+          { className: "xhs-meta" },
+          [
+            effectiveLicense.plugin_version,
+            effectiveLicense.tenant_name,
+            effectiveLicense.expires_at
+              ? "许可至 " + String(effectiveLicense.expires_at).slice(0, 10)
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        ),
+      ),
       h("span", { style: { flex: 1 } }),
       textModels.length > 0 &&
         h(
@@ -11002,8 +14890,12 @@ function XhsOpsPage({ host, license }) {
           {
             key: g.id,
             className: `xhs-btn xhs-group${g.id === group.id ? " active" : ""}`,
-            onClick: () => setTab(g.tabs.find(allowed)?.id || g.tabs[0].id),
+            onClick: () => {
+              setFocus("");
+              setTab(g.tabs.find(allowed)?.id || g.tabs[0].id);
+            },
           },
+          ic(g.label),
           g.label,
         ),
       ),
@@ -11017,9 +14909,13 @@ function XhsOpsPage({ host, license }) {
           {
             key: item.id,
             className: `xhs-tab${current.id === item.id ? " active" : ""}`,
-            onClick: () => setTab(item.id),
+            onClick: () => {
+              setFocus("");
+              setTab(item.id);
+            },
             title: readOnly || allowed(item) ? undefined : "未分配给你",
           },
+          ic(item.label),
           item.label,
           !readOnly &&
             !allowed(item) &&
@@ -11052,6 +14948,7 @@ function XhsOpsPage({ host, license }) {
         "当前授权为只读状态，编辑、发布和协作操作已禁用。",
       ),
     panel,
+    note && h("div", { className: "xhs-toast", role: "status" }, note),
   );
 }
 

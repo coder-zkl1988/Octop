@@ -31,6 +31,7 @@ from . import (
     playbook,
     profiles,
     reporting,
+    studio,
     takeover_rules,
     transfers,
     workspace,
@@ -1140,6 +1141,7 @@ async def snapshot(ctx: Any) -> dict[str, Any]:
             doc, doc["operation_clock"]["date"], doc["operation_clock"]["timezone"]
         )
     workspace.snapshot_extras(ctx, sys.modules[__name__], doc)
+    studio.snapshot_extras(ctx, sys.modules[__name__], doc)
     doc["transfers"] = transfers.snapshot(doc)
     return cast(dict[str, Any], doc)
 
@@ -1149,11 +1151,14 @@ def ready(
     account: dict[str, Any],
     *,
     kind: str = "publish",
+    pause_kind: str | None = None,
 ) -> dict[str, Any]:
     # Every phone dispatch passes here: an enterprise or member emergency pause stops new work.
     if workspace.paused_reason(ctx):
         fail("enterprise_paused", 409)
-    if getattr(ctx, "member_paused", False):
+    if workspace.member_pause_applies(
+        getattr(ctx, "member_doc", None) or {}, account, pause_kind or kind
+    ):
         fail("member_paused", 409)
     if transfers.frozen(account):
         fail("account_transferring", 409)
@@ -1685,10 +1690,13 @@ async def command(ctx: Any, name: str, payload: dict[str, Any]) -> None:
 async def _command(ctx: Any, name: str, payload: dict[str, Any]) -> None:
     await assert_expected_updated_at(ctx, name, payload)
     current = await ctx.read()
-    ctx.member_paused = workspace.paused_reason(ctx, current) == "member_paused"
+    ctx.member_doc = {"member_settings": current.get("member_settings")}
     transfers.guard(current, name, payload)
     if name in transfers.COMMANDS:
         await transfers.command(ctx, sys.modules[__name__], name, payload)
+        return
+    if name in studio.HANDLERS:
+        await studio.command(ctx, sys.modules[__name__], name, payload)
         return
     if name in workspace.HANDLERS:
         await workspace.command(ctx, sys.modules[__name__], name, payload)
@@ -2959,7 +2967,7 @@ async def _command(ctx: Any, name: str, payload: dict[str, Any]) -> None:
 
 async def tick(ctx: Any) -> None:
     """Run due schedules only when the host scheduler invokes this hook."""
-    ctx.member_paused = workspace.paused_reason(ctx, await ctx.read()) == "member_paused"
+    ctx.member_doc = {"member_settings": (await ctx.read()).get("member_settings")}
     await workspace.tick(ctx, sys.modules[__name__])
     # The scheduler also runs for members who only hold xhs.comment; nurture stays with xhs.ops.
     features = getattr(ctx.license, "features", None)

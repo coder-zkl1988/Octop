@@ -406,7 +406,7 @@ describe("小红薯运营 workbench", () => {
       "能力与配额",
     ])
       await openXhsTab(tab);
-    expect(screen.getByText("向管理员申请")).toBeInTheDocument();
+    expect(screen.getAllByText("向管理员申请").length).toBeGreaterThan(0);
   });
 
   it("approves a prepared draft from the overview", async () => {
@@ -424,8 +424,8 @@ describe("小红薯运营 workbench", () => {
   it("keeps automation levels above the enterprise cap unselectable", async () => {
     const { posts } = renderPage();
     await openXhsTab("自动化与风控");
-    expect(screen.getByRole("button", { name: /全自动/ })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "保存设置" }));
+    expect(screen.getByRole("radio", { name: /全自动/ })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole("button", { name: "保存" })[0]);
     await waitFor(() =>
       expect(posts.some((p) => p.command === "settings.save")).toBe(true),
     );
@@ -439,7 +439,7 @@ describe("小红薯运营 workbench", () => {
     const { posts } = renderPage();
     await openXhsTab("笔记维护");
     expect(
-      screen.getByRole("heading", { name: "已自动回复" }),
+      screen.getByRole("heading", { name: /已自动回复 · 今天/ }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "删除回复" }));
     await waitFor(() =>
@@ -466,23 +466,21 @@ describe("小红薯运营 workbench", () => {
 
   it("pauses every automatic task after an explicit confirmation", async () => {
     const { posts } = renderPage();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    try {
-      fireEvent.click(
-        await screen.findByRole("button", { name: "暂停全部自动任务" }),
-      );
-      await waitFor(() =>
-        expect(posts).toContainEqual({
-          command: "pause.set",
-          payload: { paused: true },
-        }),
-      );
-      expect(
-        await screen.findByRole("button", { name: "恢复自动任务" }),
-      ).toBeInTheDocument();
-    } finally {
-      confirm.mockRestore();
-    }
+    fireEvent.click(
+      await screen.findByRole("button", { name: "暂停全部自动任务" }),
+    );
+    expect(posts.some((p) => p.command === "pause.set")).toBe(false);
+    fireEvent.click(screen.getByLabelText("数据回收"));
+    fireEvent.click(screen.getByRole("button", { name: "暂停" }));
+    await waitFor(() =>
+      expect(posts).toContainEqual({
+        command: "pause.set",
+        payload: { paused: true, scope: ["nurture", "publish", "reply"] },
+      }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "恢复自动任务" }),
+    ).toBeInTheDocument();
   });
 
   it("locks tabs that are not assigned to the member", async () => {
@@ -542,8 +540,12 @@ describe("小红薯运营 workbench", () => {
   it("opens an account's profile from the overview and hands it to a colleague", async () => {
     const { posts } = renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "小鹿" }));
-    expect(await screen.findByText("手机与登录")).toBeInTheDocument();
-    expect(screen.getByText(/冷启动 · 起步 · 第 2 天/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /小鹿 · 人设与兴趣池/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /号设档案库/ }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "转交给同事" }));
     const send = screen.getByRole("button", { name: "发起转交" });
     expect(send).toBeDisabled();
@@ -585,9 +587,8 @@ describe("小红薯运营 workbench", () => {
     };
     render(<value.Page host={value.host} license={value.snapshot.license} />);
     await openXhsTab("账号档案");
-    expect(
-      screen.getByText(/正在转交给 阿北 · 待管理员审批/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("正在转交给 阿北")).toBeInTheDocument();
+    expect(screen.getByText("待管理员审批")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "转交给同事" }),
     ).not.toBeInTheDocument();

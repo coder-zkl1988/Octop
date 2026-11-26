@@ -50,7 +50,7 @@ def _gate(
             raise PluginAppError("takeover_plan_required", status=409)
         domain.latest_confirmed_audit(state, account["id"])
     try:
-        domain.ready(ctx, account, kind="profile")
+        domain.ready(ctx, account, kind="profile", pause_kind="nurture")
     except PluginAppError as exc:
         if not (allow_busy and exc.reason == "device_busy"):
             raise
@@ -1069,7 +1069,11 @@ async def tick(ctx: Any, domain: Any) -> None:
         accepted = 0
         skipped: dict[str, int] = {}
         for account in domain.rows(snapshot, "accounts"):
-            if account["project_id"] != project["id"] or not account.get("device_id"):
+            if (
+                account["project_id"] != project["id"]
+                or not account.get("device_id")
+                or account.get("cold_start_paused")
+            ):
                 continue
             try:
                 latest = await ctx.read()

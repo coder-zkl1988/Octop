@@ -402,7 +402,7 @@ describe("XHS daily operations through the registered workbench", () => {
       accepted: 1,
       skipped: { device_busy: 2 },
     };
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     try {
       const checkbox = await screen.findByRole("checkbox", {

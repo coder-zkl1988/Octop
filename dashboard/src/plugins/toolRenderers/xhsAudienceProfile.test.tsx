@@ -103,7 +103,7 @@ function fixture(features = ["xhs.content", "xhs.ops"]) {
 describe("XHS audience profile through the registered plugin page", () => {
   it("requires a human review and sends the frozen project version", async () => {
     const { snapshot, request } = fixture();
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑目标画像" }),
     );
@@ -135,7 +135,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("preserves legacy source fields during a project rename", async () => {
     const { request } = fixture();
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑客户资料" }),
     );
@@ -163,7 +163,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("disables profile commands when only content access is granted", async () => {
     const { request } = fixture(["xhs.content"]);
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     expect(
       await screen.findByRole("button", { name: "编辑目标画像" }),
     ).toBeDisabled();
@@ -173,7 +173,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("preserves list separators while typing structured source fields", async () => {
     const { request } = fixture();
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑客户资料" }),
     );
@@ -200,7 +200,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("requires reviewing again after the operator changes profile content", async () => {
     fixture();
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑目标画像" }),
     );
@@ -316,7 +316,7 @@ describe("XHS audience profile through the registered plugin page", () => {
     Object.assign(snapshot, {
       license: { status: "active", version: 2, features: ["xhs.content"] },
     });
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     expect(
       await screen.findByRole("button", { name: "生成目标画像" }),
     ).toBeDisabled();
@@ -325,7 +325,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("shows a quota explanation without exposing raw backend details", async () => {
     const { request } = fixture();
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     const generate = await screen.findByRole("button", {
       name: "生成目标画像",
     });
@@ -345,7 +345,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("passes the selected personal model to audience generation", async () => {
     const { request } = fixture();
-    await openXhsTab("项目与画像");
+    await openXhsTab("项目");
     fireEvent.change(await screen.findByLabelText("生成模型"), {
       target: { value: "personal:provider/model" },
     });

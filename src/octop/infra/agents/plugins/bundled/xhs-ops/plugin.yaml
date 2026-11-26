@@ -132,6 +132,15 @@ app:
     reply.lead: [xhs.comment]
     lead.update: [xhs.comment]
     notice.record: [xhs.ops, xhs.takeover]
+    persona_file.save: [xhs.ops]
+    persona_file.image: [xhs.ops]
+    content.rewrite: [xhs.content]
+    plan.reschedule: [xhs.publish]
+    material.reconstruct: [xhs.content]
+    alert.dismiss: []
+    coldstart.observe: [xhs.ops]
+    coldstart.pause: [xhs.ops]
+    template.candidate: [xhs.content]
     transfer.sync: [xhs.ops]
     transfer.create: [xhs.ops]
     transfer.cancel: [xhs.ops]
@@ -179,6 +188,10 @@ app:
     member_requests: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
     last_plan: [xhs.content]
     transfers: [xhs.ops]
+    plan_suggestions: [xhs.content]
+    persona_sources: [xhs.ops]
+    coldstart_observation: [xhs.ops]
+    last_reschedule: [xhs.publish]
   record_scopes:
     runs:
       kinds:
