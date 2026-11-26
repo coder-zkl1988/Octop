@@ -23,6 +23,7 @@ from octop.infra.enterprise_device import headers as device_headers
 from octop.infra.enterprise_device import is_registered, mark_registered, registration_body
 from octop.infra.enterprise_policy import enterprise_policy_permissions
 from octop.infra.errors import ErrorCode, OctopError
+from octop.infra.users.resource_policy import POLICY_MAX_AGENTS
 from octop.infra.utils.env_file import env_file_path, load_env_file
 
 router = APIRouter()
@@ -247,6 +248,23 @@ async def _sync_enterprise_plugins(
     return changed
 
 
+def _apply_expert_limit(server: Any, user_id: int, policy_raw: dict[str, Any]) -> None:
+    """Set how many experts this member may create from the role policy. Absent on older control planes."""
+    body = policy_raw.get("policy")
+    limits = body.get("limits") if isinstance(body, dict) else None
+    repo = getattr(getattr(server, "services", None), "user_policy_repo", None)
+    if not isinstance(limits, dict) or "max_experts" not in limits or repo is None:
+        return
+    limit = limits["max_experts"]
+    wanted = (
+        str(limit)
+        if isinstance(limit, int) and not isinstance(limit, bool) and limit >= 0
+        else None
+    )
+    if repo.get(user_id, POLICY_MAX_AGENTS) != wanted:
+        repo.merge(user_id, {POLICY_MAX_AGENTS: wanted})
+
+
 async def _sync_enterprise_env(server: Any, user_id: int) -> None:
     """Apply the environment variables the enterprise delivers to this member."""
     settings = getattr(getattr(server, "services", None), "settings_repo", None)
@@ -392,6 +410,7 @@ async def _snapshot(server: Any, user_id: int) -> dict[str, Any]:
         # Older control-plane responses did not expose a member quota. Keep
         # those tenants usable while preferring an explicit member limit.
         quota_points = max(balance, month_usage, 1.0)
+    _apply_expert_limit(server, user_id, policy_raw)
     policy = _policy_payload(policy_raw, updated_at=updated_at)
     raw_policy = policy_raw.get("policy")
     policy_body = _object(raw_policy)
