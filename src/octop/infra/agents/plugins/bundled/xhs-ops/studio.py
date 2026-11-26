@@ -206,6 +206,119 @@ async def _profile_sync(ctx: Any, domain: Any, payload: dict[str, Any]) -> None:
     await ctx.update(apply)
 
 
+TIERS = {"low": 0, "mid": 1, "high": 2}
+
+
+def clean_ops_plan(value: Any) -> dict[str, Any]:
+    """Keep only the known, bounded parts of a diagnosis's operating advice."""
+    if not isinstance(value, dict):
+        return {}
+    pool = value.get("interest_pool") if isinstance(value.get("interest_pool"), dict) else {}
+    plan: dict[str, Any] = {
+        "interest_pool": {
+            key: _clean([str(v) for v in pool.get(key) or [] if isinstance(v, str)])[:10]
+            for key in ("core", "extended", "general")
+        },
+        "topics": [str(t).strip()[:40] for t in value.get("topics") or [] if str(t).strip()][:5],
+    }
+    for key, low, high in (("weekly_posts", 0, 14), ("min_interval_hours", 1, 720)):
+        if type(value.get(key)) is int and low <= value[key] <= high:
+            plan[key] = value[key]
+    if value.get("tier") in TIERS:
+        plan["tier"] = value["tier"]
+    return plan
+
+
+async def _takeover_apply_plan(ctx: Any, domain: Any, payload: dict[str, Any]) -> None:
+    """Write one part of a diagnosis's operating advice into the account, on an explicit click."""
+    await ctx.require("xhs.takeover")
+    domain.confirmed(payload)
+    part = payload.get("part")
+
+    def apply(state: dict[str, Any]) -> None:
+        diagnosis = domain.find(state, "diagnoses", str(payload["id"]))
+        if diagnosis.get("status") == "superseded":
+            _fail("diagnosis_not_editable", 409)
+        plan = diagnosis.get("ops_plan") or {}
+        account = domain.find(state, "accounts", diagnosis["account_id"])
+        if part == "pool":
+            current = dict(account.get("interest_pool") or {})
+            account["interest_pool"] = {
+                key: _clean([*(current.get(key) or []), *plan["interest_pool"].get(key, [])])[:30]
+                for key in ("core", "extended", "general")
+            }
+        elif part == "pace":
+            if "weekly_posts" not in plan and "min_interval_hours" not in plan:
+                _fail("plan_part_missing")
+            account["pace"] = {
+                **({"weekly_max_posts": plan["weekly_posts"]} if "weekly_posts" in plan else {}),
+                **(
+                    {"min_interval_hours": plan["min_interval_hours"]}
+                    if "min_interval_hours" in plan
+                    else {}
+                ),
+            }
+        elif part == "tier":
+            if plan.get("tier") not in TIERS:
+                _fail("plan_part_missing")
+            stage = workspace.DEFAULT_STAGES[TIERS[plan["tier"]]]
+            previous = account.get("operation_settings") or {}
+            browse = domain.operations.BrowseDefaults.model_validate(
+                previous.get("browse_defaults") or {}
+            ).model_dump()
+            # A tier only ever lowers the budget; raising it is the owner's own decision.
+            if stage["daily_target_posts"] > browse["daily_target_posts"]:
+                _fail("tier_would_raise", 409)
+            browse.update(
+                daily_target_posts=stage["daily_target_posts"],
+                daily_segments=stage["segments"],
+                search_ratio_percent=stage["search_ratio_percent"],
+            )
+            interaction = domain.operations.InteractionConfig.model_validate(
+                previous.get("interaction") or {}
+            ).model_dump()
+            for key in ("like", "collect"):
+                enabled, cap, ratio = stage[key]
+                interaction[key].update(
+                    enabled=bool(enabled) and interaction[key]["enabled"],
+                    daily_cap=min(int(cap), interaction[key]["daily_cap"]),
+                    ratio_percent=min(int(ratio), interaction[key]["ratio_percent"]),
+                )
+            account["operation_settings"] = {
+                **previous,
+                "version": int(previous.get("version", 0)) + 1,
+                "browse_defaults": browse,
+                "interaction": interaction,
+                "source": "account",
+                "updated_at": _now(),
+            }
+        elif part == "topics":
+            if not plan.get("topics"):
+                _fail("plan_part_missing")
+            domain.rows(state, "content_tasks").extend(
+                {
+                    "id": uuid4().hex,
+                    "version": 1,
+                    "title": topic,
+                    "account_id": account["id"],
+                    "template_id": "",
+                    "nature": "knowledge",
+                    "reason": "老号接管诊断的首批选题",
+                    "material_ids": [],
+                    "source": "ai",
+                    "status": "to_make",
+                    "created_at": _now(),
+                }
+                for topic in plan["topics"]
+            )
+        else:
+            _fail("invalid_input")
+        account.update(version=int(account.get("version", 0)) + 1, updated_at=_now())
+        diagnosis["applied"] = {**(diagnosis.get("applied") or {}), str(part): _now()}
+
+    await ctx.update(apply)
+
+
 async def _onboarding_tags_done(ctx: Any, domain: Any, payload: dict[str, Any]) -> None:
     """Record that the owner picked the first-launch interest tags on the phone themselves."""
     await ctx.require("xhs.ops")
@@ -520,6 +633,7 @@ HANDLERS = {
     "profile.sync_personas": _profile_sync,
     "persona.regenerate_one": _persona_regenerate_one,
     "onboarding.tags_done": _onboarding_tags_done,
+    "takeover.apply_plan": _takeover_apply_plan,
     "coldstart.observe": _coldstart_observe,
     "coldstart.pause": _coldstart_pause,
     "template.candidate": _template_candidate,

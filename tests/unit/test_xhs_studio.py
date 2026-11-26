@@ -294,3 +294,61 @@ async def test_enterprise_report_is_a_summary_and_is_sent_only_when_it_changes()
     ctx.doc["accounts"][0]["paused"] = True
     await domain.tick(ctx)
     assert len(sent) == 2 and sent[1]["accounts"][0]["status"] == "paused"
+
+
+@pytest.mark.asyncio
+async def test_takeover_plan_parts_are_written_only_on_request_and_never_raise_the_budget() -> None:
+    ctx = ctx_with(FULL)
+    account = ctx.doc["accounts"][0]
+    account["interest_pool"] = {"core": ["通勤"], "extended": [], "general": []}
+    plan = domain.studio.clean_ops_plan(
+        {
+            "interest_pool": {"core": ["大衣", "通勤"], "general": ["咖啡"], "x": ["y"]},
+            "weekly_posts": 3,
+            "min_interval_hours": 72,
+            "tier": "low",
+            "topics": ["通勤包怎么选"],
+            "publish_now": True,
+        }
+    )
+    assert "publish_now" not in plan and "x" not in plan["interest_pool"]
+    ctx.doc["diagnoses"] = [{"id": "dg", "account_id": "a1", "status": "draft", "ops_plan": plan}]
+    call = {"id": "dg", "confirmed": True}
+    with pytest.raises(domain.PluginAppError, match="confirmation_required"):
+        await domain.command(ctx, "takeover.apply_plan", {"id": "dg", "part": "pool"})
+    await domain.command(ctx, "takeover.apply_plan", {**call, "part": "pool"})
+    assert ctx.doc["accounts"][0]["interest_pool"]["core"] == ["通勤", "大衣"]
+    await domain.command(ctx, "takeover.apply_plan", {**call, "part": "pace"})
+    assert ctx.doc["accounts"][0]["pace"] == {"weekly_max_posts": 3, "min_interval_hours": 72}
+    await domain.command(ctx, "takeover.apply_plan", {**call, "part": "tier"})
+    browse = ctx.doc["accounts"][0]["operation_settings"]["browse_defaults"]
+    assert browse["daily_target_posts"] == 30 and browse["daily_segments"] == 1
+    # "high" would raise the budget above what the tier just set, so it is refused.
+    ctx.doc["diagnoses"][0]["ops_plan"]["tier"] = "high"
+    with pytest.raises(domain.PluginAppError, match="tier_would_raise"):
+        await domain.command(ctx, "takeover.apply_plan", {**call, "part": "tier"})
+    await domain.command(ctx, "takeover.apply_plan", {**call, "part": "topics"})
+    assert [t["title"] for t in ctx.doc["content_tasks"]] == ["通勤包怎么选"]
+    assert set(ctx.doc["diagnoses"][0]["applied"]) == {"pool", "pace", "tier", "topics"}
+
+
+def test_an_account_pace_can_only_tighten_the_schedule() -> None:
+    ctx = ctx_with(FULL)
+    base = datetime(2026, 11, 2, 12, tzinfo=UTC)
+    doc = {
+        "member_settings": {"min_interval_hours": 48},
+        "accounts": [{"id": "a1", "pace": {"min_interval_hours": 72, "weekly_max_posts": 9}}],
+        "drafts": [
+            {
+                "id": "d0",
+                "account_id": "a1",
+                "review_status": "scheduled",
+                "scheduled_at": base.isoformat(),
+            }
+        ],
+    }
+    draft = {"id": "d1", "account_id": "a1", "nature": "life"}
+    assert "min_interval" in workspace.check_pace(ctx, doc, draft, base + timedelta(hours=60))
+    assert "min_interval" not in workspace.check_pace(ctx, doc, draft, base + timedelta(hours=73))
+    # The enterprise weekly cap of 4 still wins over the account's looser 9.
+    assert workspace.effective(ctx, doc)["weekly_max_posts"] == 4

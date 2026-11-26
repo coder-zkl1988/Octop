@@ -150,6 +150,9 @@ function operationError(error, locale) {
     invalid_gateway_response: "企业模型返回不完整，请重试或联系管理员。",
     user_suspended: "当前企业成员已停用，请联系企业管理员。",
     version_conflict: "资料已更新，请重新打开并核对后保存。",
+    tier_would_raise:
+      "建议的档位比现在的预算高。档位只降不升，要加量请自己在日常运营里调整。",
+    plan_part_missing: "这次诊断没有给出这一项。",
     project_default_missing:
       "这个项目还没有默认预算。请先在一个账号上点“另存为项目默认”。",
     portrait_authorization_required:
@@ -5785,6 +5788,12 @@ function CommentsPanel({ snapshot, host, readOnly, refresh, modelRef }) {
   );
 }
 
+const PLAN_ACTIONS = {
+  pool: "写入兴趣池",
+  pace: "写入排期规则",
+  tier: "设为该账号档位",
+  topics: "加入内容计划",
+};
 const TAKEOVER_FIELD_LABELS = {
   nickname: "昵称",
   bio: "简介",
@@ -5977,6 +5986,99 @@ function DiagnosisCard({ d, account, cmd, host, readOnly, refresh, modelRef }) {
           ),
       ),
     ),
+    (() => {
+      const plan = d.ops_plan || {};
+      const pool = plan.interest_pool || {};
+      const apply = (part, done) =>
+        h(
+          Button,
+          {
+            primary: !d.applied?.[part],
+            disabled: readOnly || d.status === "superseded",
+            onClick: async () => {
+              await cmd("takeover.apply_plan", {
+                id: d.id,
+                part,
+                confirmed: true,
+              });
+              toast(done);
+            },
+          },
+          d.applied?.[part] ? "已写入，再写一次" : PLAN_ACTIONS[part],
+        );
+      const parts = [
+        rows(pool.core).length +
+          rows(pool.extended).length +
+          rows(pool.general).length >
+          0 &&
+          h(
+            Row,
+            {
+              key: "pool",
+              title: "兴趣池",
+              sub: `核心 ${rows(pool.core).join("、") || "—"} · 扩展 ${
+                rows(pool.extended).join("、") || "—"
+              } · 泛 ${rows(pool.general).join("、") || "—"}`,
+            },
+            apply("pool", "已写入兴趣池"),
+          ),
+        (plan.weekly_posts != null || plan.min_interval_hours != null) &&
+          h(
+            Row,
+            {
+              key: "pace",
+              title: "发布节奏",
+              sub: `${
+                plan.weekly_posts != null ? `每周 ${plan.weekly_posts} 篇` : ""
+              }${
+                plan.weekly_posts != null && plan.min_interval_hours != null
+                  ? "，"
+                  : ""
+              }${
+                plan.min_interval_hours != null
+                  ? `同一账号间隔 ≥ ${plan.min_interval_hours} 小时`
+                  : ""
+              }；只对这个账号生效，不会比企业和你的设置更宽`,
+            },
+            apply("pace", "已写入排期规则"),
+          ),
+        plan.tier &&
+          h(
+            Row,
+            {
+              key: "tier",
+              title: "养号档位",
+              sub: `建议“${
+                { low: "低", mid: "中", high: "高" }[plan.tier]
+              }”档；档位只降不升，调整由你确认`,
+            },
+            apply("tier", "已设为该账号档位"),
+          ),
+        rows(plan.topics).length > 0 &&
+          h(
+            Row,
+            {
+              key: "topics",
+              title: "首批选题",
+              sub: rows(plan.topics).join("、"),
+            },
+            apply("topics", "已加入内容计划"),
+          ),
+      ].filter(Boolean);
+      return (
+        parts.length > 0 &&
+        h(
+          Card,
+          {
+            title: "运营方案",
+            icon: "内容与运营建议",
+            tip: "每一项都要你点了才写入，写入的是这个账号自己的设置。",
+            style: { marginTop: 12 },
+          },
+          parts,
+        )
+      );
+    })(),
     rows(d.recommendations).length > 0 &&
       h(
         Card,

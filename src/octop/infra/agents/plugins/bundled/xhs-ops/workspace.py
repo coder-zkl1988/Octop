@@ -525,7 +525,9 @@ def check_pace(ctx: Any, doc: dict[str, Any], draft: dict[str, Any], when: datet
         and d.get("scheduled_at")
         and d.get("review_status") in {"approved", "scheduled", "published"}
     ]
-    gap = timedelta(hours=eff["min_interval_hours"])
+    # An account can carry its own, stricter pace (for example from a takeover plan).
+    own = next((a for a in doc.get("accounts", []) if a["id"] == account_id), {}).get("pace") or {}
+    gap = timedelta(hours=max(eff["min_interval_hours"], int(own.get("min_interval_hours") or 0)))
     if any(abs(_parse(d["scheduled_at"]) - when) < gap for d in same):
         reasons.append("min_interval")
     week_start = (local - timedelta(days=local.weekday())).replace(
@@ -538,7 +540,9 @@ def check_pace(ctx: Any, doc: dict[str, Any], draft: dict[str, Any], when: datet
         <= _parse(d["scheduled_at"]).astimezone(local.tzinfo)
         < week_start + timedelta(days=7)
     ]
-    if len(in_week) + 1 > eff["weekly_max_posts"]:
+    if len(in_week) + 1 > min(
+        eff["weekly_max_posts"], int(own.get("weekly_max_posts") or eff["weekly_max_posts"])
+    ):
         reasons.append("weekly_max")
     if draft.get("nature") == "marketing":
         total = len(in_week) + 1

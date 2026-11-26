@@ -141,6 +141,7 @@ app:
     profile.sync_personas: [xhs.ops]
     persona.regenerate_one: [xhs.ops]
     onboarding.tags_done: [xhs.ops]
+    takeover.apply_plan: [xhs.takeover]
     coldstart.observe: [xhs.ops]
     coldstart.pause: [xhs.ops]
     template.candidate: [xhs.content]
