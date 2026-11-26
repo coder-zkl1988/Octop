@@ -331,6 +331,7 @@ function fixture(features = ALL, rules: Row = {}) {
   Object.assign(window, { __OCTOP_REACT__: React });
   let Page: ComponentType<PluginPageProps> | undefined;
   let Renderer: ComponentType<ToolRenderProps> | undefined;
+  let Card: ComponentType<ToolRenderProps> | undefined;
   const snapshot = snapshotFor(features, rules);
   const posts: Row[] = [];
   const request = vi.fn(async (path: string, init?: RequestInit) => {
@@ -356,7 +357,8 @@ function fixture(features = ALL, rules: Row = {}) {
       Page = registration.component;
     },
     registerRenderer: (registration) => {
-      Renderer = registration.component;
+      if (registration.id === "xhs_card") Card = registration.component;
+      else Renderer = registration.component;
     },
     getToolContext: () => ({
       agentId: null,
@@ -376,7 +378,7 @@ function fixture(features = ALL, rules: Row = {}) {
   )() as (host: OctopPluginUIHost) => void;
   setup(host);
   if (!Page || !Renderer) throw new Error("Plugin did not register");
-  return { snapshot, posts, request, host, Page, Renderer };
+  return { snapshot, posts, request, host, Page, Renderer, Card: Card! };
 }
 
 function renderPage(features = ALL, rules: Row = {}) {
@@ -641,5 +643,66 @@ describe("小红薯运营 workbench", () => {
         confirmed: true,
       },
     });
+  });
+
+  it("shows a generated audience profile in chat and confirms it only on a click", async () => {
+    const { Card, host, posts, snapshot } = fixture();
+    snapshot.data.projects[0].profile = {
+      summary: "通勤时间长的职场女性",
+      base: {
+        age_range: "25–34 岁",
+        gender_ratio: "女 90%",
+        regions: ["上海"],
+      },
+      vertical_interests: ["通勤穿搭"],
+      general_interests: ["咖啡"],
+      confirmed_at: null,
+    };
+    const project = snapshot.data.projects[0];
+    render(
+      <Card
+        pluginId="xhs-ops"
+        toolName="xhs_generate_profile"
+        status="done"
+        args={{}}
+        data={{ kind: "profile", project_id: project.id }}
+        host={host}
+        isStreaming={false}
+      />,
+    );
+    expect(
+      await screen.findByText(`目标画像确认 · ${project.name}`),
+    ).toBeInTheDocument();
+    expect(screen.getByText("需要你确认")).toBeInTheDocument();
+    expect(posts).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "确认画像" }));
+    await waitFor(() =>
+      expect(posts).toContainEqual({
+        command: "profile.confirm",
+        payload: expect.objectContaining({
+          project_id: project.id,
+          version: project.version,
+          confirmed: true,
+        }),
+      }),
+    );
+  });
+
+  it("falls back to the workbench link for a card it cannot show", async () => {
+    const { Card, host } = fixture();
+    render(
+      <Card
+        pluginId="xhs-ops"
+        toolName="xhs_generate_personas"
+        status="done"
+        args={{}}
+        data={{ kind: "personas", project_id: "missing" }}
+        host={host}
+        isStreaming={false}
+      />,
+    );
+    expect(
+      await screen.findByRole("button", { name: "打开小红薯运营工作台" }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,4 +1,28 @@
 {
-  "pages": [{ "id": "main", "title": "小红薯运营" }],
-  "renderers": [{ "id": "xhs_workbench", "tools": ["xhs_workbench"] }]
+  "pages": [
+    {
+      "id": "main",
+      "title": "小红薯运营"
+    }
+  ],
+  "renderers": [
+    {
+      "id": "xhs_workbench",
+      "tools": [
+        "xhs_workbench"
+      ]
+    },
+    {
+      "id": "xhs_card",
+      "tools": [
+        "xhs_generate_profile",
+        "xhs_generate_personas",
+        "xhs_prepare_content",
+        "xhs_organize_material",
+        "xhs_check_comments",
+        "xhs_account_alerts",
+        "xhs_diagnose_account"
+      ]
+    }
+  ]
 }
