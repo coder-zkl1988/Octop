@@ -150,6 +150,7 @@ function operationError(error, locale) {
     invalid_gateway_response: "企业模型返回不完整，请重试或联系管理员。",
     user_suspended: "当前企业成员已停用，请联系企业管理员。",
     version_conflict: "资料已更新，请重新打开并核对后保存。",
+    keyword_not_in_pool: "这个关键词已经不在核心兴趣池里了，请刷新后再看。",
     tier_would_raise:
       "建议的档位比现在的预算高。档位只降不升，要加量请自己在日常运营里调整。",
     plan_part_missing: "这次诊断没有给出这一项。",
@@ -2093,6 +2094,10 @@ function OnboardingFlow({ account, host, readOnly, refresh }) {
   );
 }
 
+const IMAGE_PRESETS = {
+  avatar: ["人物半身照 + 自然环境背景", "只拍环境，不出现人物", "自定义"],
+  cover: ["当地知名风景 + 人物背影", "生活场景一角", "自定义"],
+};
 function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
   const accounts = rows(snapshot.data?.accounts).filter(
     (account) => account.entry_mode === "new",
@@ -2110,6 +2115,26 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
   const [imageModel, setImageModel] = useState("");
   const [avatarPrompt, setAvatarPrompt] = useState("");
   const [coverPrompt, setCoverPrompt] = useState("");
+  const [avatarPreset, setAvatarPreset] = useState(IMAGE_PRESETS.avatar[0]);
+  const [coverPreset, setCoverPreset] = useState(IMAGE_PRESETS.cover[0]);
+  const withPreset = (preset, extra) =>
+    [preset === "自定义" ? "" : preset, extra.trim()]
+      .filter(Boolean)
+      .join("；");
+  const rewriteBio = async (part) => {
+    const result = await request("profile.rewrite_bio", {
+      account_id: accountId,
+      part,
+      bio: draft.bio || "",
+      ...(modelRef ? { model_ref: modelRef } : {}),
+    });
+    const text = result.data?.bio_suggestion?.text;
+    if (!text) throw new Error("没有拿到重写结果，请重试。");
+    const parts = String(draft.bio || "").split("｜");
+    while (parts.length < 3) parts.push("");
+    parts[part] = text;
+    change("bio", parts.join("｜").slice(0, 100));
+  };
   const [evidenceViewed, setEvidenceViewed] = useState("");
   const [imagesConfirmed, setImagesConfirmed] = useState(false);
   const [reference, setReference] = useState("");
@@ -2234,8 +2259,8 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
         parts: [part],
         ...(modelRef ? { model_ref: modelRef } : {}),
         ...(imageModel ? { image_model_ref: imageModel } : {}),
-        avatar_prompt: avatarPrompt,
-        cover_prompt: coverPrompt,
+        avatar_prompt: withPreset(avatarPreset, avatarPrompt),
+        cover_prompt: withPreset(coverPreset, coverPrompt),
       });
       const updated = rows(result.data?.accounts).find(
         (item) => item.id === accountId,
@@ -2514,6 +2539,26 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
           }),
         ),
         h(
+          "div",
+          { className: "xhs-actions", style: { marginTop: 0 } },
+          h(
+            "span",
+            { className: "xhs-meta", style: { alignSelf: "center" } },
+            "简介三段：星座 + MBTI｜自我介绍｜兴趣，可分别重写",
+          ),
+          ["重写星座与 MBTI", "重写自我介绍", "重写兴趣"].map((label, part) =>
+            h(
+              Button,
+              {
+                key: label,
+                disabled: disabled || !account.persona_reviewed_at,
+                onClick: () => rewriteBio(part),
+              },
+              label,
+            ),
+          ),
+        ),
+        h(
           "label",
           { className: "xhs-field" },
           "性别",
@@ -2579,6 +2624,13 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
             "section",
             { className: "xhs-card", key: part, style: { marginTop: 12 } },
             h("h3", null, part === "avatar" ? "头像候选" : "背景图候选"),
+            h(Select, {
+              label: part === "avatar" ? "头像预设" : "背景图预设",
+              value: part === "avatar" ? avatarPreset : coverPreset,
+              onChange: part === "avatar" ? setAvatarPreset : setCoverPreset,
+              disabled,
+              options: IMAGE_PRESETS[part].map((x) => [x, x]),
+            }),
             h(Field, {
               label: part === "avatar" ? "头像生成要求" : "背景图生成要求",
               value: part === "avatar" ? avatarPrompt : coverPrompt,
@@ -4722,11 +4774,40 @@ function ReportPanel({ snapshot, host, readOnly, refresh, go }) {
               title: `关键词“${k.keyword}”回执偏少`,
               sub: `计划 ${k.planned} 篇 · 回执 ${k.browsed} 篇 · 互动 ${k.interactions} 次`,
             },
-            h(
-              Button,
-              { primary: true, onClick: () => go("build", "profile") },
-              "换一个关键词",
-            ),
+            (() => {
+              const owner = rows(snapshot.data.accounts).find((a) =>
+                rows(a.interest_pool?.core).includes(k.keyword),
+              );
+              const next =
+                owner &&
+                rows(owner.interest_pool?.extended).find(
+                  (word) =>
+                    !rows(report.keywords).some((x) => x.keyword === word),
+                );
+              return next
+                ? h(
+                    Button,
+                    {
+                      primary: true,
+                      disabled: readOnly,
+                      onClick: async () => {
+                        await send(host, "pool.replace_keyword", {
+                          account_id: owner.id,
+                          from: k.keyword,
+                          to: next,
+                        });
+                        toast(`已把“${k.keyword}”换成“${next}”`);
+                        await refresh();
+                      },
+                    },
+                    `替换为“${next}”`,
+                  )
+                : h(
+                    Button,
+                    { primary: true, onClick: () => go("build", "profile") },
+                    "换一个关键词",
+                  );
+            })(),
             h(
               Button,
               {

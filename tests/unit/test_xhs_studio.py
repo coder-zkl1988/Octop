@@ -352,3 +352,39 @@ def test_an_account_pace_can_only_tighten_the_schedule() -> None:
     assert "min_interval" not in workspace.check_pace(ctx, doc, draft, base + timedelta(hours=73))
     # The enterprise weekly cap of 4 still wins over the account's looser 9.
     assert workspace.effective(ctx, doc)["weekly_max_posts"] == 4
+
+
+@pytest.mark.asyncio
+async def test_bio_segment_rewrite_is_a_suggestion_that_leaves_the_draft_alone() -> None:
+    ctx = ctx_with(FULL)
+    before = json.dumps(ctx.doc["accounts"], sort_keys=True)
+
+    async def generate(system: str, _prompt: str, **_kwargs: Any) -> str:
+        assert "不写联系方式" in system
+        return "“155 的通勤穿搭记录｜加微信”\n"
+
+    ctx.generate_text = generate
+    await domain.command(
+        ctx, "profile.rewrite_bio", {"account_id": "a1", "part": 1, "bio": "白羊｜旧｜兴趣"}
+    )
+    suggestion = ctx.doc["bio_suggestion"]
+    assert suggestion["part"] == 1 and "｜" not in suggestion["text"]
+    assert json.dumps(ctx.doc["accounts"], sort_keys=True) == before
+    with pytest.raises(domain.PluginAppError, match="invalid_input"):
+        await domain.command(ctx, "profile.rewrite_bio", {"account_id": "a1", "part": 5})
+
+
+@pytest.mark.asyncio
+async def test_replacing_a_core_keyword_keeps_the_old_one_in_the_extended_pool() -> None:
+    ctx = ctx_with(FULL)
+    ctx.doc["accounts"][0]["interest_pool"] = {
+        "core": ["通勤包", "大衣"],
+        "extended": ["托特包通勤"],
+        "general": [],
+    }
+    call = {"account_id": "a1", "from": "通勤包", "to": "托特包通勤"}
+    await domain.command(ctx, "pool.replace_keyword", call)
+    pool = ctx.doc["accounts"][0]["interest_pool"]
+    assert pool["core"] == ["托特包通勤", "大衣"] and pool["extended"] == ["通勤包"]
+    with pytest.raises(domain.PluginAppError, match="keyword_not_in_pool"):
+        await domain.command(ctx, "pool.replace_keyword", call)

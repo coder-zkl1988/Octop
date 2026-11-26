@@ -141,6 +141,8 @@ app:
     profile.sync_personas: [xhs.ops]
     persona.regenerate_one: [xhs.ops]
     onboarding.tags_done: [xhs.ops]
+    pool.replace_keyword: [xhs.ops]
+    profile.rewrite_bio: [xhs.ops]
     takeover.apply_plan: [xhs.takeover]
     coldstart.observe: [xhs.ops]
     coldstart.pause: [xhs.ops]
@@ -196,6 +198,7 @@ app:
     persona_sources: [xhs.ops]
     coldstart_observation: [xhs.ops]
     last_reschedule: [xhs.publish]
+    bio_suggestion: [xhs.ops]
     dismissed_alerts: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
   record_scopes:
     runs:
