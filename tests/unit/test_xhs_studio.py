@@ -242,3 +242,55 @@ async def test_regenerating_one_candidate_leaves_the_others_untouched() -> None:
     assert by_id["c1"]["status"] == "stale" and by_id["c2"]["status"] == "draft"
     fresh = [c for c in ctx.doc["persona_candidates"] if c["id"] not in {"c1", "c2"}]
     assert [c["label"] for c in fresh] == ["HR"] and fresh[0]["status"] == "draft"
+
+
+@pytest.mark.asyncio
+async def test_enterprise_report_is_a_summary_and_is_sent_only_when_it_changes() -> None:
+    ctx = ctx_with(FULL)
+    sent: list[dict[str, Any]] = []
+
+    async def enterprise(
+        method: str, name: str, body: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        if (method, name) == ("POST", "report"):
+            assert body is not None
+            sent.append(body)
+        return {}
+
+    ctx.has_enterprise = True
+    ctx.enterprise = enterprise
+    ctx.doc["authorizations"] = [
+        {
+            "id": "c1",
+            "person": "小王",
+            "role": "employee",
+            "covers": ["portrait"],
+            "account_ids": ["a1"],
+            "valid_to": "2099-01-01",
+            "status": "active",
+            "proof_asset": "授权书.pdf",
+        }
+    ]
+    await domain.tick(ctx)
+    await domain.tick(ctx)
+    assert len(sent) == 1
+    body = sent[0]
+    assert body["accounts"][0]["name"] == "A" and body["accounts"][0]["status"] == "ok"
+    assert body["authorizations"] == [
+        {
+            "person": "小王",
+            "role": "employee",
+            "covers": ["portrait"],
+            "accounts": ["A"],
+            "valid_to": "2099-01-01",
+            "status": "active",
+            "has_proof": True,
+            "materials": 0,
+        }
+    ]
+    # Nothing that identifies the platform account or carries content leaves the desktop.
+    text = json.dumps(body, ensure_ascii=False)
+    assert "secret-account" not in text and "old content" not in text and "授权书.pdf" not in text
+    ctx.doc["accounts"][0]["paused"] = True
+    await domain.tick(ctx)
+    assert len(sent) == 2 and sent[1]["accounts"][0]["status"] == "paused"

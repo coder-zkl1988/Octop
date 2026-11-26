@@ -14350,7 +14350,7 @@ function EntitlementPanel({ snapshot, host, readOnly, refresh }) {
     h(
       "div",
       { className: "xhs-meta" },
-      "不需要单独分配：工作台、授权台账、自动化与风控、能力与配额。",
+      "不需要单独分配：工作台、授权台账、自动化与风控、能力与配额。连接企业后，账号名称与阶段、授权摘要和未处理的异常会同步给企业管理员；笔记内容、素材、图片和小红薯号不会同步。",
     ),
     h(
       "div",

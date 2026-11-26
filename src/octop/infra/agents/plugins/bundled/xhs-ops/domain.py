@@ -2974,6 +2974,7 @@ async def tick(ctx: Any) -> None:
     if features is None or "xhs.ops" in features:
         await daily.tick(ctx, sys.modules[__name__])
         await transfers.tick(ctx, sys.modules[__name__])
+    await studio.report_tick(ctx, sys.modules[__name__])
 
 
 async def order_command(ctx: Any, name: str, payload: dict[str, Any]) -> None:

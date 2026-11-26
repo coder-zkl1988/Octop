@@ -533,6 +533,96 @@ async def command(ctx: Any, domain: Any, name: str, payload: dict[str, Any]) -> 
     )
 
 
+# ------------------------------------------------------------------ enterprise report
+
+
+def enterprise_report(ctx: Any, doc: dict[str, Any]) -> dict[str, Any]:
+    """What the tenant admin sees about this member's accounts: names, stage, status, authorization
+    summaries and open alerts. No note text, drafts, materials, images or platform account ids."""
+    names = {a["id"]: str(a.get("name") or "")[:40] for a in doc.get("accounts", [])}
+    health = {row["account_id"]: row for row in workspace.health(ctx, doc)}
+    devices = {d["device_id"]: d for d in getattr(ctx, "devices", lambda: [])()}
+    since = (datetime.now(UTC) - timedelta(days=7)).isoformat()
+    accounts = []
+    for account in doc.get("accounts", []):
+        state = health.get(account["id"], {})
+        if account.get("cold_start_started_on"):
+            stage = workspace.cold_start_stage(ctx, doc, account) or {}
+            label = f"{'日常运营' if stage.get('graduated') else '冷启动'} · 第 {stage.get('day', 1)} 天"
+        else:
+            label = "接管" if account.get("entry_mode") == "existing" else "建号"
+        status = (
+            "restricted"
+            if account.get("safety_pause")
+            else "login_lost"
+            if state.get("login") == "lost"
+            else "transferring"
+            if account.get("transfer")
+            else "unbound"
+            if not account.get("device_id")
+            else "paused"
+            if account.get("paused")
+            else "ok"
+        )
+        device = devices.get(account.get("device_id") or "", {})
+        accounts.append(
+            {
+                "id": account["id"],
+                "name": names[account["id"]],
+                "device": str(device.get("name") or device.get("model") or "")[:40],
+                "stage": label,
+                "posts_7d": sum(
+                    1
+                    for d in doc.get("drafts", [])
+                    if d.get("account_id") == account["id"]
+                    and d.get("review_status") == "published"
+                    and str(d.get("published_at") or d.get("updated_at") or "") >= since
+                ),
+                "status": status,
+            }
+        )
+    authorizations = [
+        {
+            "person": str(c.get("person") or "")[:40],
+            "role": c.get("role", ""),
+            "covers": list(c.get("covers") or []),
+            "accounts": [names.get(i, "") for i in c.get("account_ids") or []][:10],
+            "valid_to": str(c.get("valid_to") or ""),
+            "status": c.get("status", ""),
+            "has_proof": bool(c.get("proof_asset")),
+            "materials": sum(1 for m in doc.get("materials", []) if m.get("consent_id") == c["id"]),
+        }
+        for c in doc.get("authorizations", [])
+    ][:200]
+    alerts = [
+        {
+            "code": str(a.get("code") or "")[:40],
+            "label": str(a.get("label") or a.get("title") or "")[:80],
+            "account": names.get(a.get("account_id") or "", ""),
+            "at": str(a.get("at") or "")[:40],
+        }
+        for a in workspace.alerts(ctx, doc)
+        if a.get("level") == "action"
+    ][:50]
+    return {"accounts": accounts[:100], "authorizations": authorizations, "alerts": alerts}
+
+
+async def report_tick(ctx: Any, domain: Any) -> None:
+    """Send the report when it changed; a failure waits for the next tick."""
+    if not getattr(ctx, "has_enterprise", False):
+        return
+    doc = await ctx.read()
+    body = enterprise_report(ctx, doc)
+    digest = domain.digest(body)
+    if doc.get("enterprise_report_digest") == digest:
+        return
+    try:
+        await ctx.enterprise("POST", "report", body)
+    except PluginAppError:
+        return
+    await ctx.update(lambda state: state.update(enterprise_report_digest=digest))
+
+
 # ------------------------------------------------------------------ snapshot
 
 

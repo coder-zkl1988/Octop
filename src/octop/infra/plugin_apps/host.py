@@ -721,7 +721,15 @@ class AppContext:
 
     # Desktop endpoints of the plugin's own enterprise policy; nothing else is reachable from plugin code.
     ENTERPRISE_PLUGIN_PATHS = frozenset(
-        {"usage", "catalog", "requests", "template-submissions", "transfers", "transfer-actions"}
+        {
+            "usage",
+            "catalog",
+            "requests",
+            "template-submissions",
+            "transfers",
+            "transfer-actions",
+            "report",
+        }
     )
 
     @property
