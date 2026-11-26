@@ -6,6 +6,7 @@ a button the person presses on that card or in the workbench.
 import contextlib
 import json
 from typing import Any
+from uuid import uuid4
 
 from octop_harness.plugins import PluginContext
 
@@ -176,11 +177,67 @@ async def xhs_check_comments() -> str:
     )
 
 
-async def xhs_account_alerts() -> str:
+async def xhs_account_alerts(account: str = "") -> str:
     ctx = current_context.get()
     await ctx.require_any(ALL)
+    doc = await ctx.read()
+    paused = [a for a in doc.get("accounts", []) if a.get("paused")]
+    if account.strip() or len(paused) == 1:
+        found = _pick(paused, account, "已暂停账号")
+        if isinstance(found, str):
+            return _say(found)
+        return _card(
+            "alerts",
+            f"「{found['name']}」已暂停，养号和发布都停下了。需要用户本人在手机上处理（例如重新登录），"
+            "再在卡片上只读核对小红薯号、确认后才恢复。不要替用户重试登录，也不要换手机或换账号继续。",
+            account_id=found["id"],
+        )
     return _card(
         "alerts", "这是当前需要用户处理的账号异常。异常账号的自动任务已停下，恢复由用户决定。"
+    )
+
+
+async def xhs_audit_account(account: str = "") -> str:
+    ctx = current_context.get()
+    await ctx.require("xhs.takeover")
+    doc = await ctx.read()
+    found = _pick(
+        [a for a in doc.get("accounts", []) if a.get("entry_mode") == "existing"],
+        account,
+        "已有账号",
+    )
+    if isinstance(found, str):
+        return _say(found)
+    if not found.get("authorized_at"):
+        return _say(
+            f"「{found['name']}」还没有授权接管。授权要用户本人在工作台“老号接管”里完成，授权后再来盘点。"
+        )
+    audits = [a for a in doc.get("audits", []) if a.get("account_id") == found["id"]]
+    open_runs = [
+        r
+        for r in doc.get("runs", [])
+        if r.get("account_id") == found["id"]
+        and r.get("kind") == "audit"
+        and r.get("status") in {"queued", "preparing", "running", "waiting"}
+    ]
+    pending = [a for a in audits if a.get("status") == "pending_confirmation"]
+    if not open_runs and not pending:
+        _, _, refused = await _run(
+            "run.start",
+            {
+                "kind": "audit",
+                "account_id": found["id"],
+                "idempotency_key": f"chat-audit-{uuid4().hex}",
+                "confirmed": True,
+            },
+        )
+        if refused:
+            return _refused(refused)
+    return _card(
+        "audit",
+        f"已安排手机只读盘点「{found['name']}」的公开资料、可见作品和页面指标，不改动账号。"
+        "盘点完成后由用户核对并确认基线，之后才能生成诊断。",
+        account_id=found["id"],
     )
 
 
@@ -200,8 +257,10 @@ async def xhs_diagnose_account(account: str = "") -> str:
         if a.get("account_id") == found["id"] and a.get("status") == "confirmed"
     ]
     if not audits:
-        return _say(
-            "这个账号还没有确认过的审计基线。请用户先在工作台的“老号接管”里完成只读盘点并确认基线。"
+        return _card(
+            "audit",
+            f"「{found['name']}」还没有确认过的审计基线。先完成只读盘点并由用户确认基线，再生成诊断。",
+            account_id=found["id"],
         )
     _, _, refused = await _run(
         "diagnosis.generate", {"account_id": found["id"], "audit_id": audits[-1]["id"]}
@@ -336,7 +395,12 @@ def setup(ctx: PluginContext) -> None:
     ctx.tool(
         "xhs_account_alerts",
         xhs_account_alerts,
-        description="小红薯 · 账号异常。显示需要用户处理的账号异常（登录失效、受限等）。不要尝试恢复或绕过。",
+        description="小红薯 · 账号异常。显示需要用户处理的账号异常（登录失效、受限等）。account 为已暂停账号名称时显示该账号的异常与重新核对身份卡片。不要尝试恢复或绕过，恢复由用户在卡片上核对后确认。",
+    )
+    ctx.tool(
+        "xhs_audit_account",
+        xhs_audit_account,
+        description="小红薯 · 只读盘点账号。为已授权接管的已有账号安排一次只读盘点（公开资料、可见作品、页面指标），并显示盘点卡片。确认基线和生成后的方案由用户决定。",
     )
     ctx.tool(
         "xhs_diagnose_account",

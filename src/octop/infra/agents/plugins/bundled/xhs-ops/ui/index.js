@@ -16668,6 +16668,408 @@ function ChatComment({ c, snapshot, host, readOnly, refresh }) {
     ),
   );
 }
+const maskId = (value) => {
+  const v = String(value || "");
+  return v.length > 6 ? `${v.slice(0, 7)}****${v.slice(-2)}` : v || "未读到";
+};
+function pausedWork(snapshot, account, zone) {
+  const d = snapshot.data;
+  const today =
+    d.operation_clock?.date || new Date().toISOString().slice(0, 10);
+  const days = rows(d.operation_days).filter(
+    (x) =>
+      x.account_id === account.id &&
+      x.date === today &&
+      !["completed", "cancelled"].includes(x.status),
+  );
+  const drafts = rows(d.drafts)
+    .filter(
+      (x) =>
+        x.account_id === account.id &&
+        x.review_status === "scheduled" &&
+        x.scheduled_at &&
+        String(x.scheduled_at).slice(0, 10) >= today,
+    )
+    .sort((a, b) => String(a.scheduled_at).localeCompare(b.scheduled_at));
+  const now = Date.now();
+  return [
+    ...days.map((x) => ({
+      key: "d" + x.id,
+      text: `养号 第 ${x.round || 1} 轮`,
+      late: false,
+    })),
+    ...drafts.map((x) => ({
+      key: "p" + x.id,
+      text: `${hm(x.scheduled_at, zone)} 发布「${x.title || "未命名"}」`,
+      late: new Date(x.scheduled_at).getTime() < now,
+    })),
+  ];
+}
+function AccountAlertCard({
+  snapshot,
+  account,
+  host,
+  readOnly,
+  refresh,
+  zone,
+}) {
+  const [stage, setStage] = useState("alert");
+  const [checked, setChecked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const d = snapshot.data;
+  const name = account.name || "账号";
+  const alert = rows(d.alerts).find(
+    (a) => a.account_id === account.id && a.level === "action",
+  );
+  const pause = account.safety_pause || {};
+  const reason =
+    alert && alert.code !== "account_paused"
+      ? alert.label
+      : { manual: "人工暂停", login_required: "登录失效" }[pause.code] ||
+        pause.reason ||
+        "账号已暂停";
+  const since = pause.since || pause.at || alert?.at || account.updated_at;
+  const cooling =
+    pause.cooldown_until && new Date(pause.cooldown_until) > new Date();
+  const work = pausedWork(snapshot, account, zone);
+  const pending = work.filter((w) => !w.late);
+  const existing = account.entry_mode === "existing";
+  const proof = existing ? account.profile_identity : account.preparation;
+  const reading = proof?.status === "running";
+  const readId = existing ? proof?.account_id : "";
+  const matches = existing
+    ? proof?.status === "visible" &&
+      Boolean(readId) &&
+      readId === account.platform_account_id &&
+      Boolean(proof?.evidence_url)
+    : proof?.status === "ready" && Boolean(proof?.identity_checked);
+  const fresh =
+    proof?.created_at &&
+    proof?.account_version === account.version &&
+    new Date(proof.created_at).getTime() + 5 * 60 * 1000 > Date.now();
+  const act = (command, payload) => async () => {
+    setBusy(true);
+    try {
+      await send(host, command, payload);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!account.paused && stage !== "alert")
+    return h(
+      ChatCard,
+      {
+        title: `${name}已恢复 · ${pending.length} 项任务按原时间继续`,
+        state: "已恢复",
+        tone: "ok",
+        tab: "queue",
+        note:
+          work.length > pending.length ? "已过期的任务需要重新排期" : undefined,
+      },
+      null,
+    );
+  if (!account.paused)
+    return h(
+      ChatCard,
+      {
+        title: `账号异常 · ${name}`,
+        state: "已恢复",
+        tone: "ok",
+        tab: "alerts",
+      },
+      h(
+        "div",
+        { className: "xhs-meta" },
+        "这个账号已经恢复，没有待处理的异常。",
+      ),
+    );
+  if (stage === "kept")
+    return h(
+      ChatCard,
+      {
+        title: `保持暂停 · ${name}`,
+        state: "已暂停",
+        tone: "bad",
+        tab: "alerts",
+        foot: [
+          h(
+            Button,
+            { key: "re", onClick: () => setStage("alert") },
+            "重新打开",
+          ),
+        ],
+      },
+      null,
+    );
+  if (stage === "recheck")
+    return h(
+      ChatCard,
+      {
+        title: "重新核对身份",
+        state: "需要你确认",
+        tone: "warn",
+        tab: "accounts",
+        foot: [
+          h(
+            Button,
+            {
+              key: "ok",
+              primary: true,
+              disabled:
+                readOnly || busy || cooling || !matches || !fresh || !checked,
+              onClick: act("account.resume", {
+                account_id: account.id,
+                version: account.version,
+                confirmed: true,
+              }),
+            },
+            "确认并恢复",
+          ),
+          h(Button, { key: "back", onClick: () => setStage("alert") }, "返回"),
+          existing &&
+            h(PrivateEvidence, {
+              key: "ev",
+              host,
+              url: proof?.evidence_url,
+              label: "查看身份核对截图",
+            }),
+        ],
+      },
+      kv([
+        existing
+          ? ["手机回读的小红薯号", reading ? "正在只读核对…" : maskId(readId)]
+          : ["账号准备检查", reading ? "正在检查…" : proof?.status || "未检查"],
+        [
+          "目标账号",
+          existing ? `${name} · ${maskId(account.platform_account_id)}` : name,
+        ],
+        [
+          "恢复范围",
+          `今天还没执行的 ${pending.length} 项任务按原时间继续${
+            work.length > pending.length ? "；已过期的需要重新排期" : ""
+          }`,
+        ],
+      ]),
+      !reading &&
+        proof &&
+        !matches &&
+        h(
+          "div",
+          { className: "xhs-danger" },
+          existing
+            ? "手机回读的小红薯号和目标账号不一致或没读到，账号保持暂停。请在手机上确认登录的是目标账号后重新核对。"
+            : "准备检查没有通过，账号保持暂停。",
+        ),
+      !reading &&
+        matches &&
+        !fresh &&
+        h(
+          "div",
+          { className: "xhs-meta" },
+          "核对结果已超过 5 分钟，请重新核对。",
+        ),
+      cooling &&
+        h(
+          "div",
+          { className: "xhs-meta" },
+          `安全冷却到 ${fmt(pause.cooldown_until, zone)}，之前不能恢复。`,
+        ),
+      h(Check, {
+        label: existing
+          ? "我已对照截图核对小红薯号"
+          : "我已在手机上确认这是目标账号",
+        checked,
+        onChange: setChecked,
+        disabled: readOnly || !matches,
+      }),
+    );
+  return h(
+    ChatCard,
+    {
+      title: `账号异常 · ${name}`,
+      state: "需要你处理",
+      tone: "bad",
+      tab: "alerts",
+      foot: [
+        h(
+          Button,
+          {
+            key: "re",
+            primary: true,
+            disabled: readOnly || busy || !account.device_id,
+            onClick: async () => {
+              await act(existing ? "account.identity" : "account.prepare", {
+                account_id: account.id,
+                version: account.version,
+                confirmed: true,
+              })();
+              setChecked(false);
+              setStage("recheck");
+            },
+          },
+          "我已重新登录，重新核对身份",
+        ),
+        h(Button, { key: "keep", onClick: () => setStage("kept") }, "保持暂停"),
+        h(
+          Button,
+          { key: "q", onClick: () => openWorkbench("queue") },
+          "查看执行队列",
+        ),
+      ],
+    },
+    kv([
+      ["异常", `${reason}${since ? ` · ${fmt(since, zone)}` : ""}`],
+      [
+        "手机",
+        `${deviceName(snapshot, account.device_id)}${
+          rows(snapshot.devices).find((x) => x.device_id === account.device_id)
+            ?.online
+            ? " · 在线"
+            : ""
+        }`,
+      ],
+      ["已暂停", work.map((w) => w.text).join(" · ") || "没有排着的任务"],
+      ["没有做", "没有重试登录，没有换手机或换账号继续"],
+    ]),
+  );
+}
+function AuditChatCard({ snapshot, account, host, readOnly, refresh }) {
+  const [checked, setChecked] = useState(false);
+  const d = snapshot.data;
+  const name = account.name || "账号";
+  const audits = rows(d.audits).filter((a) => a.account_id === account.id);
+  const run = rows(d.runs)
+    .filter((r) => r.account_id === account.id && r.kind === "audit")
+    .slice(-1)[0];
+  const confirmed = audits.filter((a) => a.status === "confirmed").slice(-1)[0];
+  const pending = audits
+    .filter((a) => a.status === "pending_confirmation")
+    .slice(-1)[0];
+  const audit = pending || confirmed;
+  const diagnosis = rows(d.diagnoses)
+    .filter((x) => x.account_id === account.id && x.status !== "superseded")
+    .slice(-1)[0];
+  const cmd = async (command, payload) => {
+    await send(host, command, payload);
+    await refresh();
+  };
+  const running =
+    run && ["queued", "preparing", "running", "waiting"].includes(run.status);
+  const metrics = audit?.evidence?.metrics || {};
+  const metricText =
+    Object.entries(metrics)
+      .filter(([, v]) => v !== null && v !== "" && typeof v !== "object")
+      .map(([k, v]) => `${k} ${v}`)
+      .join(" · ") || "页面未显示指标";
+  const state = confirmed
+    ? diagnosis
+      ? diagnosis.status === "confirmed"
+        ? "已确认"
+        : "需要你确认"
+      : "基线已确认"
+    : pending
+    ? "需要你确认"
+    : running
+    ? "盘点中"
+    : operationLabel(run?.status || "pending");
+  return h(
+    ChatCard,
+    {
+      title: diagnosis ? `账号诊断 · ${name}` : `只读盘点 · ${name}`,
+      state,
+      tone: confirmed && !diagnosis ? "ok" : running ? "ok" : "warn",
+      tab: "audits",
+      note: diagnosis
+        ? "确认后才会生成变更单，改资料前还会逐项让你确认"
+        : "盘点是只读的，不会改动账号",
+      foot: diagnosis
+        ? null
+        : [
+            pending &&
+              h(
+                Button,
+                {
+                  key: "ok",
+                  primary: true,
+                  disabled: readOnly || !pending.verified || !checked,
+                  onClick: () =>
+                    cmd("audit.confirm", { id: pending.id, confirmed: true }),
+                },
+                "确认审计基线",
+              ),
+            confirmed &&
+              h(
+                Button,
+                {
+                  key: "gen",
+                  primary: true,
+                  disabled: readOnly,
+                  onClick: () =>
+                    cmd("diagnosis.generate", {
+                      account_id: account.id,
+                      audit_id: confirmed.id,
+                    }),
+                },
+                "生成诊断",
+              ),
+            run &&
+              h(PrivateEvidence, {
+                key: "ev",
+                host,
+                url: run.evidence_url,
+                label: "查看盘点截图",
+              }),
+          ],
+    },
+    kv([
+      [
+        "账号",
+        `${name} · 已有账号 · 小红薯号 ${maskId(account.platform_account_id)}`,
+      ],
+      audit
+        ? [
+            "资料",
+            `${audit.profile?.nickname || "—"} · ${
+              audit.profile?.bio || "无简介"
+            }`,
+          ]
+        : [
+            "盘点",
+            running
+              ? "手机正在只读读取公开资料、可见作品和页面指标…"
+              : "还没有盘点结果",
+          ],
+      audit && ["盘点", metricText],
+      audit &&
+        rows(audit.evidence?.observations).length > 0 && [
+          "观察",
+          rows(audit.evidence.observations).slice(0, 3).join("；"),
+        ],
+      confirmed && [
+        "基线",
+        `${fmt(confirmed.confirmed_at || confirmed.created_at)} 已确认`,
+      ],
+    ]),
+    pending &&
+      !diagnosis &&
+      h(Check, {
+        label: "我已对照截图核对盘点结果，确认作为接管基线",
+        checked,
+        onChange: setChecked,
+        disabled: readOnly || !pending.verified,
+      }),
+    diagnosis &&
+      h(DiagnosisCard, {
+        d: diagnosis,
+        account,
+        cmd,
+        host,
+        readOnly,
+        refresh,
+      }),
+  );
+}
 function XhsChatCard({ host, data }) {
   useStyle();
   const [snapshot, setSnapshot] = useState(null);
@@ -17243,6 +17645,21 @@ function XhsChatCard({ host, data }) {
           ),
       ),
     ];
+  } else if (kind === "alerts" && data.account_id) {
+    const account = rows(d.accounts).find((a) => a.id === data.account_id);
+    if (account)
+      card = h(AccountAlertCard, {
+        snapshot,
+        account,
+        host,
+        readOnly,
+        refresh,
+        zone,
+      });
+  } else if (kind === "audit") {
+    const account = rows(d.accounts).find((a) => a.id === data.account_id);
+    if (account)
+      card = h(AuditChatCard, { snapshot, account, host, readOnly, refresh });
   } else if (kind === "alerts") {
     const alerts = rows(d.alerts).filter((a) => a.level === "action");
     card = h(
@@ -17589,6 +18006,7 @@ export function setup(host) {
       "xhs_daily_plan",
       "xhs_precheck_batch",
       "xhs_comment_candidates",
+      "xhs_audit_account",
     ],
     component: XhsChatCard,
   });

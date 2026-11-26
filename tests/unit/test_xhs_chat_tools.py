@@ -77,7 +77,8 @@ async def test_organizing_a_material_saves_it_unconfirmed_and_returns_a_card() -
 async def test_diagnosis_needs_a_confirmed_baseline_first() -> None:
     ctx = _ctx()
     result = await _call(ctx, tools.xhs_diagnose_account, "A")
-    assert "octop_ui" not in result and "审计基线" in result["text"]
+    # No baseline yet: the audit card comes back instead of a diagnosis.
+    assert result["data"]["kind"] == "audit" and "审计基线" in result["text"]
     assert ctx.doc["diagnoses"] == []
 
 
@@ -98,3 +99,40 @@ async def test_daily_plan_tool_prechecks_but_never_starts_the_phone() -> None:
     assert day["status"] == "planned" and day["precheck"]["digest"]
     # Nothing is dispatched: starting stays a click on the card.
     assert ctx.doc["runs"] == [] and ctx.phone_calls == [] and ctx.spawned == []
+
+
+@pytest.mark.asyncio
+async def test_audit_tool_starts_one_read_only_inventory_and_leaves_the_baseline_to_the_person() -> (
+    None
+):
+    ctx = _ctx()
+    result = await _call(ctx, tools.xhs_audit_account, "A")
+    assert result["data"] == {"kind": "audit", "url": "/apps/xhs-ops", "account_id": "a1"}
+    audit_runs = [r for r in ctx.doc["runs"] if r["kind"] == "audit"]
+    assert len(audit_runs) == 1 and audit_runs[0]["status"] == "queued"
+    # Asking again while it runs does not queue a second inventory.
+    await _call(ctx, tools.xhs_audit_account, "A")
+    assert len([r for r in ctx.doc["runs"] if r["kind"] == "audit"]) == 1
+    assert ctx.doc["audits"] == []
+
+
+@pytest.mark.asyncio
+async def test_audit_tool_needs_the_person_to_authorize_takeover_first() -> None:
+    ctx = _ctx()
+    ctx.doc["accounts"][0]["authorized_at"] = None
+    result = await _call(ctx, tools.xhs_audit_account, "A")
+    assert "octop_ui" not in result and "授权" in result["text"]
+    assert ctx.doc["runs"] == []
+
+
+@pytest.mark.asyncio
+async def test_alerts_for_one_paused_account_open_the_identity_recheck_card() -> None:
+    ctx = _ctx()
+    ctx.doc["accounts"][0].update(paused=True, safety_pause={"code": "login_required"})
+    result = await _call(ctx, tools.xhs_account_alerts)
+    assert result["data"]["kind"] == "alerts" and result["data"]["account_id"] == "a1"
+    # Nothing is resumed or retried by the tool itself.
+    assert ctx.doc["accounts"][0]["paused"] is True and ctx.doc["runs"] == []
+    ctx.doc["accounts"][0]["paused"] = False
+    general = await _call(ctx, tools.xhs_account_alerts)
+    assert "account_id" not in general["data"]
