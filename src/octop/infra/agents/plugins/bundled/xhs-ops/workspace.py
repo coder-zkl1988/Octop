@@ -32,6 +32,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from octop.infra.plugin_apps.contracts import PluginAppError
 
+from . import performance
+
 COLLECTIONS = ("materials", "biz_docs", "authorizations", "content_tasks", "reply_items", "leads")
 LEVELS = ("manual", "semi", "full")
 FREQUENCIES = ("off", "weekly", "daily")
@@ -118,6 +120,9 @@ class Settings(Input):
     remind_after: Literal["2h", "none"] = "2h"
     browse_rules: list[bool] = Field(default_factory=lambda: [True] * 4, min_length=4, max_length=4)
     auto_reply_paused: bool = False
+    stats_checkpoints: list[Literal["24h", "3d", "7d"]] = Field(
+        default_factory=lambda: ["24h", "3d", "7d"], max_length=3
+    )
     version: int = Field(default=0, ge=0)
 
     @field_validator("my_words", "reply_phrases")
@@ -323,6 +328,7 @@ PAUSE_BUCKETS = {
     "audit": "collect",
     "inbox": "collect",
     "read": "collect",
+    "stats": "collect",
 }
 
 
@@ -1630,6 +1636,7 @@ INSTRUCTIONS = {
     "inbox": "加载 creator/profile 技能。只读：打开本人作品页，查看 since 之后有新评论的笔记，逐条读取评论。不点赞、不回复、不删除、不私信、不修改任何内容。返回 comments 数组（每项 note_title, note_url, author, text）和 verified=true。",
     "reply": "加载 comment 技能。打开本人笔记 note_title，找到作者为 comment_author、原文为 comment_text 的那条评论，点回复，只输入任务数据 text 的原文一次并发送。找不到或有多条同名时立即停止，不猜测。不能换文案、不能回复其他评论、不能私信。回读本人回复后返回 verified、account_matches、text（必须为原文）、status=sent；不能确认返回 unknown。",
     "reply_delete": "加载 comment 技能。打开本人笔记 note_title，找到本人对作者 comment_author 的评论 comment_text 的回复，且回复原文为 text，长按删除这一条本人回复。找不到或不唯一时立即停止。不删除任何其他内容。完成后回读确认已不可见，返回 verified、account_matches、status=deleted；不能确认返回 unknown。",
+    "stats": performance.INSTRUCTION,
 }
 
 
@@ -1755,6 +1762,8 @@ def receipt_ok(kind: str, payload: dict[str, Any], proof: dict[str, Any]) -> boo
         return proof.get("text") == payload["text"] and proof.get("status") == "sent"
     if kind == "reply_delete":
         return proof.get("status") == "deleted"
+    if kind == "stats":
+        return performance.receipt_ok(proof)
     return False
 
 
@@ -1789,6 +1798,8 @@ def on_finish(
             sent_at=now() if verified else None,
             version=item["version"] + 1,
         )
+    if run["kind"] == "stats":
+        performance.on_finish(state, run, verified, proof)
     if run["kind"] == "reply_delete":
         item = domain.find(state, "reply_items", payload["reply_id"])
         if verified:
@@ -2227,6 +2238,7 @@ async def _notice_record(ctx: Any, domain: Any, payload: dict[str, Any]) -> None
 
 
 HANDLERS = {
+    **performance.HANDLERS,
     "settings.save": _settings_save,
     "pause.set": _pause_set,
     "material.save": _material_save,

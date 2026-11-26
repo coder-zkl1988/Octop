@@ -4319,6 +4319,387 @@ const ANOMALY_HANDLING = {
   interrupted: "停止分段，对账后未补跑",
   rate_limited: "停下，等下一个时段",
 };
+const SOURCE_LABEL = {
+  instruction: "运营指令",
+  ai: "AI 主动",
+  manual: "手动创作",
+};
+const CHECKPOINT_LABEL = {
+  "24h": "发布后 24 小时",
+  "3d": "发布后 3 天",
+  "7d": "发布后 7 天",
+};
+const CHECKPOINT_READS = {
+  "24h": "阅读、点赞、收藏、评论",
+  "3d": "同上，加新增粉丝",
+  "7d": "同上，作为这篇的定稿数据",
+};
+const GOOD_RATE = 5;
+// Same rules as performance.py: unknown stays unknown, and the latest reading wins.
+function performanceNotes(data, days) {
+  const since = Date.now() - days * 86400000;
+  const order = { "24h": 0, "3d": 1, "7d": 2 };
+  const tasks = new Map(rows(data.content_tasks).map((t) => [t.id, t]));
+  return rows(data.runs)
+    .filter(
+      (r) =>
+        r.kind === "publish" &&
+        ["awaiting_verification", "operator_verified", "success"].includes(
+          r.status,
+        ) &&
+        r.created_at &&
+        Date.parse(r.created_at) >= since,
+    )
+    .map((run) => {
+      const readings = rows(data.post_stats)
+        .filter((s) => s.publish_run_id === run.id)
+        .sort(
+          (a, b) => (order[a.checkpoint] ?? -1) - (order[b.checkpoint] ?? -1),
+        );
+      const latest = readings.at(-1) || null;
+      const draft =
+        run.draft_snapshot ||
+        rows(data.drafts).find((d) => d.id === run.draft_id) ||
+        {};
+      const task = tasks.get(draft.task_id) || {};
+      const stats = latest?.status === "read" ? latest.stats || {} : null;
+      const parts = stats ? [stats.likes, stats.collects, stats.comments] : [];
+      const rate =
+        stats && stats.views && parts.every((p) => p != null)
+          ? (parts.reduce((a, b) => a + b, 0) * 100) / stats.views
+          : null;
+      return {
+        id: run.id,
+        title: draft.title || "（标题不可见）",
+        accountId: run.account_id,
+        source: draft.source || task.source || "manual",
+        templateId: draft.template_id || task.template_id || "",
+        publishedAt: run.created_at,
+        latest,
+        stats,
+        rate,
+      };
+    })
+    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+}
+function count(value) {
+  if (value == null) return "未知";
+  return value >= 10000
+    ? `${(value / 10000).toFixed(1)}万`
+    : value.toLocaleString();
+}
+function PerformancePanel({ snapshot, host, readOnly, refresh }) {
+  const data = snapshot.data || {};
+  const [days, setDays] = useState(30);
+  const [accountId, setAccountId] = useState("");
+  const [templateId, setTemplateId] = useState("");
+  const [topics, setTopics] = useState(true);
+  const [templates, setTemplates] = useState(false);
+  const [memo, setMemo] = useState(data.performance_note?.text || "");
+  const [busy, setBusy] = useState(false);
+  const all = performanceNotes(data, days);
+  const notes = all.filter(
+    (n) =>
+      (!accountId || n.accountId === accountId) &&
+      (!templateId || n.templateId === templateId),
+  );
+  const accounts = rows(data.accounts);
+  const accountName = (id) =>
+    accounts.find((a) => a.id === id)?.name || "已移除的账号";
+  const templateIds = [
+    ...new Set(all.map((n) => n.templateId).filter(Boolean)),
+  ];
+  const byTemplate = templateIds
+    .map((id) => {
+      const mine = all.filter((n) => n.templateId === id);
+      const rated = mine.filter((n) => n.rate != null);
+      const avg = rated.length
+        ? rated.reduce((a, n) => a + n.rate, 0) / rated.length
+        : null;
+      return { id, count: mine.length, rated: rated.length, avg };
+    })
+    .sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+  const settings = data.member_settings || {};
+  const checkpoints = settings.stats_checkpoints || ["24h", "3d", "7d"];
+  const toggleCheckpoint = async (name, on) => {
+    await send(host, "performance.configure", {
+      checkpoints: on
+        ? [...checkpoints, name]
+        : checkpoints.filter((c) => c !== name),
+    });
+    await refresh();
+  };
+  const applyFeedback = async () => {
+    setBusy(true);
+    try {
+      await send(host, "performance.feedback", {
+        days,
+        topics,
+        templates,
+        note: memo,
+      });
+      toast(topics || templates ? "已应用到内容计划" : "运营备注已保存");
+      await refresh();
+    } catch (err) {
+      toast(
+        String(err?.message || "").includes("no_good_notes")
+          ? `最近 ${days} 天还没有互动率达到 ${GOOD_RATE}% 的笔记`
+          : "保存失败",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  const leadsByNote = new Map();
+  for (const item of rows(data.reply_items)) {
+    if (item.kind !== "intent") continue;
+    const row = leadsByNote.get(item.note_title) || {
+      intent: 0,
+      transferred: 0,
+    };
+    row.intent += 1;
+    leadsByNote.set(item.note_title, row);
+  }
+  for (const lead of rows(data.leads)) {
+    const row = leadsByNote.get(lead.note_title) || {
+      intent: 0,
+      transferred: 0,
+    };
+    if (lead.status !== "new") row.transferred += 1;
+    leadsByNote.set(lead.note_title, row);
+  }
+  const canSeeLeads = hasFeature(snapshot.license, "xhs.comment");
+  return h(
+    "div",
+    null,
+    h(
+      "div",
+      {
+        style: {
+          display: "flex",
+          gap: 10,
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+          marginBottom: 10,
+        },
+      },
+      h(Select, {
+        label: "最近",
+        value: String(days),
+        onChange: (v) => setDays(Number(v)),
+        options: [
+          ["7", "7 天"],
+          ["30", "30 天"],
+          ["90", "90 天"],
+        ],
+      }),
+      h(Select, {
+        label: "账号",
+        value: accountId,
+        onChange: setAccountId,
+        options: [["", "全部账号"], ...accounts.map((a) => [a.id, a.name])],
+      }),
+      h(Select, {
+        label: "母版",
+        value: templateId,
+        onChange: setTemplateId,
+        options: [
+          ["", "全部母版"],
+          ...templateIds.map((id) => [id, templateName(snapshot, id)]),
+        ],
+      }),
+    ),
+    h(
+      "p",
+      { className: "xhs-meta" },
+      "数据按创作者中心页面原样读取，不推算未显示的数据；新号未开通数据时记为“未知”，不判为差。",
+    ),
+    h(
+      Card,
+      { title: "已发布笔记", icon: "内容表现" },
+      h(Table, {
+        head: [
+          "笔记",
+          "账号",
+          "来源",
+          "母版",
+          "发布",
+          "阅读",
+          "点赞",
+          "收藏",
+          "评论",
+          "互动率",
+        ],
+        empty: `最近 ${days} 天没有确认发布的笔记`,
+        body: notes.map((n) => [
+          h(
+            "div",
+            null,
+            h("b", null, n.title),
+            n.latest &&
+              h(
+                "div",
+                { className: "xhs-meta" },
+                n.latest.checkpoint === "7d"
+                  ? "定稿数据"
+                  : CHECKPOINT_LABEL[n.latest.checkpoint] + "的数据",
+              ),
+          ),
+          accountName(n.accountId),
+          SOURCE_LABEL[n.source] || "手动创作",
+          n.templateId ? templateName(snapshot, n.templateId) : "—",
+          n.publishedAt.slice(5, 10),
+          ...(n.stats
+            ? [
+                count(n.stats.views),
+                count(n.stats.likes),
+                count(n.stats.collects),
+                count(n.stats.comments),
+              ]
+            : [
+                n.latest ? "未知" : "待读取",
+                n.latest ? "未知" : "—",
+                n.latest ? "未知" : "—",
+                n.latest ? "未知" : "—",
+              ]),
+          n.rate == null
+            ? n.latest
+              ? "未知"
+              : "—"
+            : `约 ${Math.round(n.rate)}%`,
+        ]),
+      }),
+    ),
+    h(
+      "div",
+      {
+        className: "xhs-grid",
+        style: {
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          marginTop: 12,
+        },
+      },
+      h(
+        Card,
+        { title: "按母版", icon: "内容母版" },
+        byTemplate.length
+          ? byTemplate.map((t) =>
+              h(
+                Row,
+                {
+                  key: t.id,
+                  title: templateName(snapshot, t.id),
+                  sub:
+                    `${t.count} 篇` +
+                    (t.rated && t.rated < t.count
+                      ? `（${t.rated} 篇有数据）`
+                      : "") +
+                    (t.avg == null
+                      ? " · 互动率未知"
+                      : ` · 平均互动率约 ${Math.round(t.avg)}%`),
+                },
+                t.avg == null
+                  ? pill("数据不足")
+                  : t.avg >= GOOD_RATE
+                  ? pill("建议多用", "ok")
+                  : pill("正常"),
+              ),
+            )
+          : h(
+              "div",
+              { className: "xhs-empty" },
+              "这段时间发布的笔记都没有用母版。",
+            ),
+        h(
+          "p",
+          { className: "xhs-meta", style: { marginTop: 8 } },
+          `互动率 =（点赞 + 收藏 + 评论）÷ 阅读。参考值 > ${GOOD_RATE}%，只作参考，不作结论。`,
+        ),
+      ),
+      h(
+        Card,
+        { title: "反馈到下一轮", icon: "内容计划" },
+        h(Check, {
+          label: "把表现较好的选题角度加入下周内容建议",
+          checked: topics,
+          disabled: readOnly,
+          onChange: setTopics,
+        }),
+        h(Check, {
+          label: "把表现较好的笔记提交为母版候选",
+          checked: templates,
+          disabled: readOnly || !hasFeature(snapshot.license, "xhs.content"),
+          onChange: setTemplates,
+        }),
+        h(
+          "div",
+          { className: "xhs-label", style: { marginTop: 8 } },
+          "运营备注",
+        ),
+        h("textarea", {
+          className: "xhs-textarea",
+          style: { minHeight: 60 },
+          maxLength: 500,
+          value: memo,
+          disabled: readOnly,
+          placeholder: "例如：误区类标题带数字的收藏更高。",
+          onChange: (e) => setMemo(e.target.value),
+        }),
+        h(
+          "button",
+          {
+            className: "xhs-btn primary",
+            style: { marginTop: 8 },
+            disabled: readOnly || busy,
+            onClick: applyFeedback,
+          },
+          ic("b:应用到内容计划", 14),
+          " 应用到内容计划",
+        ),
+      ),
+    ),
+    h(
+      Card,
+      { title: "数据回收", icon: "数据回收", style: { marginTop: 12 } },
+      h(Table, {
+        head: ["时间点", "读取内容", "状态"],
+        body: Object.keys(CHECKPOINT_LABEL).map((name) => [
+          CHECKPOINT_LABEL[name],
+          CHECKPOINT_READS[name],
+          h(Check, {
+            label: checkpoints.includes(name) ? "已开启" : "已关闭",
+            checked: checkpoints.includes(name),
+            disabled: readOnly,
+            onChange: (on) => toggleCheckpoint(name, on),
+          }),
+        ]),
+      }),
+      h(
+        "p",
+        { className: "xhs-meta", style: { marginTop: 8 } },
+        "到点后由绑定的手机只读打开这篇笔记读取；手机忙、账号暂停或在「暂停自动任务」里暂停了数据回收时顺延，超过 2 天没读到就跳过这一次。",
+      ),
+    ),
+    canSeeLeads &&
+      h(
+        Card,
+        { title: "从内容到线索", icon: "意向线索", style: { marginTop: 12 } },
+        h(Table, {
+          head: ["笔记", "意向评论", "已转交", "母版"],
+          empty: "这段时间的笔记还没有意向评论。",
+          body: notes
+            .filter((n) => leadsByNote.has(n.title))
+            .map((n) => [
+              n.title,
+              leadsByNote.get(n.title).intent,
+              leadsByNote.get(n.title).transferred,
+              n.templateId ? templateName(snapshot, n.templateId) : "—",
+            ]),
+        }),
+      ),
+  );
+}
+
 function ReportPanel({ snapshot, host, readOnly, refresh, go }) {
   const source = snapshot.data?.reports;
   const [days, setDays] = useState(7);
@@ -15916,7 +16297,10 @@ function XhsOpsPage({ host, license }) {
       {
         id: "review",
         label: "复盘",
-        tabs: [{ id: "reports", label: "复盘报表", feature: "xhs.analytics" }],
+        tabs: [
+          { id: "reports", label: "复盘报表", feature: "xhs.analytics" },
+          { id: "performance", label: "内容表现", feature: "xhs.analytics" },
+        ],
       },
       {
         id: "settings",
@@ -16008,6 +16392,7 @@ function XhsOpsPage({ host, license }) {
     runs: () => h(RunPanel, { ...common, license: effectiveLicense }),
     upkeep: () => h(UpkeepPanel, common),
     reports: () => h(ReportPanel, common),
+    performance: () => h(PerformancePanel, common),
     settings: () => h(SettingsPanel, common),
     consent: () => h(ConsentPanel, common),
     entitlement: () => h(EntitlementPanel, common),

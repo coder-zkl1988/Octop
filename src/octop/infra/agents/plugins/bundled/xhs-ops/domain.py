@@ -28,6 +28,7 @@ from . import (
     comments,
     daily,
     migration,
+    performance,
     playbook,
     profiles,
     reporting,
@@ -1421,6 +1422,7 @@ async def execute(ctx: Any, id: str) -> None:
             "inbox": "xhs.comment",
             "reply": "xhs.comment",
             "reply_delete": "xhs.comment",
+            "stats": "xhs.analytics",
         }[kind]
         await ctx.require(feature)
         ready(ctx, account, kind="comment" if kind in {"reply", "reply_delete"} else kind)
@@ -2977,6 +2979,7 @@ async def tick(ctx: Any) -> None:
         await daily.tick(ctx, sys.modules[__name__])
         await transfers.tick(ctx, sys.modules[__name__])
     await studio.report_tick(ctx, sys.modules[__name__])
+    await performance.tick(ctx, sys.modules[__name__], workspace)
 
 
 async def order_command(ctx: Any, name: str, payload: dict[str, Any]) -> None:
