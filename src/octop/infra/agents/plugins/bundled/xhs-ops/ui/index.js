@@ -3436,6 +3436,19 @@ function OperationRules({
               disabled,
               onChange: (item) => change("ratio_percent", item),
             }),
+          ["like", "collect"].includes(kind) &&
+            h(Select, {
+              label: prefix + label + "限定",
+              value: rows(rule.target_types).join(","),
+              disabled,
+              onChange: (item) =>
+                change("target_types", item ? item.split(",") : []),
+              options: [
+                ["", "不限"],
+                ["core,extended", "仅核心与扩展兴趣内容"],
+                ["core", "仅核心兴趣内容"],
+              ],
+            }),
           kind === "follow" &&
             h(Field, {
               label: prefix + "允许关注的对象类型",
@@ -16090,6 +16103,19 @@ function XhsChatCard({ host, data }) {
             ),
             h(
               Button,
+              {
+                key: "re",
+                disabled: readOnly,
+                onClick: run("persona.generate", {
+                  project_id: project.id,
+                  version: project.version,
+                  count: Math.max(1, candidates.length || 4),
+                }),
+              },
+              `再生成 ${Math.max(1, candidates.length || 4)} 个`,
+            ),
+            h(
+              Button,
               { key: "e", onClick: () => openWorkbench("personas") },
               "编辑人设",
             ),
@@ -16414,6 +16440,21 @@ function XhsChatCard({ host, data }) {
                 Button,
                 { key: "all", onClick: () => openWorkbench("upkeep") },
                 "查看全部",
+              ),
+              h(
+                Button,
+                {
+                  key: "pause",
+                  disabled:
+                    readOnly || Boolean(d.member_settings?.auto_reply_paused),
+                  onClick: () =>
+                    saveSettings(host, snapshot, refresh, {
+                      auto_reply_paused: true,
+                    }),
+                },
+                d.member_settings?.auto_reply_paused
+                  ? "自动回复已暂停"
+                  : "暂停自动回复",
               ),
             ],
           },

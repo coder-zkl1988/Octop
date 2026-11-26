@@ -345,6 +345,7 @@ async def test_inbox_then_small_talk_replies_go_out_automatically_within_the_cap
         "automation_level": "full",
         "small_talk": "auto",
         "auto_reply_daily": 20,
+        "task_gap_minutes": 0,
     }
     ctx.receipts.append(
         {
@@ -448,3 +449,44 @@ async def test_plan_generate_keeps_only_known_accounts_templates_and_materials()
     assert [t["title"] for t in tasks] == ["大衣 vs 羽绒服", "病例"]
     assert tasks[1]["template_id"] == "" and tasks[0]["source"] == "instruction"
     assert ctx.doc["last_plan"]["count"] == 2
+
+
+def test_automatic_work_rests_the_phone_by_gap_daily_hours_and_publish_slot() -> None:
+    ctx = ctx_with(FULL)
+    current = datetime.now(UTC)
+    doc: dict[str, Any] = {
+        "member_settings": {"task_gap_minutes": 5, "device_daily_hours": 1},
+        "accounts": [{"id": "a1", "device_id": "phone-1"}],
+        "runs": [],
+        "drafts": [],
+    }
+    assert workspace.device_rest_reason(ctx, doc, "phone-1", "nurture") == ""
+    done = {
+        "device_id": "phone-1",
+        "status": "success",
+        "created_at": (current - timedelta(minutes=12)).isoformat(),
+        "updated_at": (current - timedelta(minutes=2)).isoformat(),
+    }
+    doc["runs"] = [done]
+    assert workspace.device_rest_reason(ctx, doc, "phone-1", "reply") == "task_gap"
+    assert workspace.device_rest_reason(ctx, doc, "other-phone", "reply") == ""
+    doc["runs"] = [
+        {
+            **done,
+            "created_at": (current - timedelta(minutes=80)).isoformat(),
+            "updated_at": (current - timedelta(minutes=10)).isoformat(),
+        }
+    ]
+    assert workspace.device_rest_reason(ctx, doc, "phone-1", "nurture") == "device_daily_hours"
+    doc["runs"] = []
+    doc["member_settings"]["publish_slot"] = "strict"
+    doc["drafts"] = [
+        {
+            "account_id": "a1",
+            "review_status": "scheduled",
+            "scheduled_at": (current + timedelta(minutes=10)).isoformat(),
+        }
+    ]
+    assert workspace.device_rest_reason(ctx, doc, "phone-1", "nurture") == "publish_slot"
+    # A reply is short; only nurture steps aside for a publish that is about to be confirmed.
+    assert workspace.device_rest_reason(ctx, doc, "phone-1", "reply") == ""

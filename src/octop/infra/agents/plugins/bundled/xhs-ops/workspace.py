@@ -1793,6 +1793,46 @@ def on_stop(domain: Any, state: dict[str, Any], run: dict[str, Any], sent: bool)
         item.update(status="unknown" if sent else "failed", version=item["version"] + 1)
 
 
+def device_rest_reason(ctx: Any, doc: dict[str, Any], device_id: str, kind: str) -> str:
+    """Why automatic work should leave this phone alone for now; empty when it may start.
+
+    Applies only to work the scheduler starts by itself. What a person starts by hand is theirs.
+    """
+    mine = settings(doc)
+    current = datetime.now(UTC)
+    zone = ZoneInfo(ctx.host.server.services.config.default_timezone)
+    today = current.astimezone(zone).date()
+    used = 0.0
+    last_end: datetime | None = None
+    for run in doc.get("runs", []):
+        if run.get("device_id") != device_id or not run.get("created_at"):
+            continue
+        started = _parse(run["created_at"])
+        ended = _parse(run["updated_at"]) if run.get("updated_at") else started
+        if started.astimezone(zone).date() == today:
+            used += max(0.0, (ended - started).total_seconds())
+        if run.get("status") not in {"waiting", "queued"} and (
+            last_end is None or ended > last_end
+        ):
+            last_end = ended
+    if used >= mine["device_daily_hours"] * 3600:
+        return "device_daily_hours"
+    if last_end and current - last_end < timedelta(minutes=mine["task_gap_minutes"]):
+        return "task_gap"
+    if kind == "nurture" and mine["publish_slot"] == "strict":
+        accounts = {a["id"] for a in doc.get("accounts", []) if a.get("device_id") == device_id}
+        soon = current + timedelta(minutes=30)
+        if any(
+            d.get("account_id") in accounts
+            and d.get("review_status") == "scheduled"
+            and d.get("scheduled_at")
+            and current - timedelta(minutes=30) <= _parse(d["scheduled_at"]) <= soon
+            for d in doc.get("drafts", [])
+        ):
+            return "publish_slot"
+    return ""
+
+
 async def tick(ctx: Any, domain: Any) -> None:
     """Scheduler hook: move cold-start accounts to their stage, check inboxes, send queued automatic replies one at a time."""
     doc = await ctx.read()
@@ -1829,6 +1869,7 @@ async def tick(ctx: Any, domain: Any) -> None:
             or (account.get("transfer") or {}).get("id")
             or member_pause_applies(doc, account, "reply")
             or account.get("device_id") in busy
+            or device_rest_reason(ctx, doc, account.get("device_id") or "", "reply")
         ):
             continue
         if (
