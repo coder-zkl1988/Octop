@@ -3092,6 +3092,14 @@ class AgentManager:
         await self.reload_all()
         return view
 
+    def refresh_security(self) -> None:
+        """Push the effective security policy into running agents after the enterprise floor changed."""
+        if self._harness_manager is not None:
+            try:
+                self._harness_manager.set_security_policy(self._security.harness_policy())
+            except Exception:
+                logger.exception("failed to apply security policy to running harness agents")
+
     def save_security(self, policy: SecurityPolicy | dict[str, Any]) -> SecurityPolicy:
         """Persist security policy and push it into harness agents."""
         resolved = self._security.save(policy)

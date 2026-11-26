@@ -772,7 +772,8 @@
         "header": "[引用消息]",
         "current": "[当前消息]"
       }
-    }
+    },
+    "dlp_blocked": "这条消息包含「{rule}」，按企业安全规则没有发送。请去掉相关内容后再试。"
   },
   "threads": {
     "gc_kept_postgres": "保留了 {agent} 的 {threads} 个孤儿检查点会话（{bytes} 字节）：PostgreSQL 上的检查点只报告、不删除。",

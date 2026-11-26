@@ -772,7 +772,8 @@
         "header": "[Quoted message]",
         "current": "[Current message]"
       }
-    }
+    },
+    "dlp_blocked": "This message contains \"{rule}\" and was not sent under your organization's security rules. Remove it and try again."
   },
   "threads": {
     "gc_kept_postgres": "Kept {threads} orphan checkpoint threads of {agent} ({bytes} bytes): PostgreSQL checkpoints are reported only, not deleted.",

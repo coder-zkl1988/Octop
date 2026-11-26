@@ -23,6 +23,7 @@ from octop_harness.teams.inbox import InboxMessage
 from octop_harness.teams.processor import ReplyEvent
 from octop_harness.teams.util import PeerCall, PeerSession
 
+from octop.i18n import tr
 from octop.i18n.domains.stream import format_stream_error
 from octop.infra.agents.providers.reasoning import reasoning_request_parameters
 from octop.infra.agents.settings.profile import parse_config_json
@@ -207,6 +208,7 @@ class GlobalProcessor:
             if knowledge_repo is not None and settings_repo is not None
             else None
         )
+        self._settings_repo = settings_repo
         self._dispatcher = dispatcher
         self._usage_repo = usage_repo
         self._thread_message_repo = thread_message_repo
@@ -860,6 +862,35 @@ class GlobalProcessor:
 
     # -- IM channel entry (MessageEvent stream) --------------------------------
 
+    def _enterprise_dlp(self, msg: InboundMessage) -> tuple[InboundMessage, str | None]:
+        """Apply the enterprise sensitive-information rules to what the member typed.
+
+        Returns the message to process and, when a rule blocks it, that rule's name.
+        """
+        if self._settings_repo is None:
+            return msg, None
+        from octop.infra import enterprise_security  # noqa: PLC0415
+
+        security = enterprise_security.load(self._settings_repo)
+        if not security.get("dlp_rules"):
+            return msg, None
+        blocked: str | None = None
+        hits: dict[str, int] = {}
+        parts = []
+        for part in msg.content:
+            text = getattr(part, "text", None)
+            if getattr(part, "type", "") == "text" and isinstance(text, str) and text:
+                cleaned, rule, found = enterprise_security.scan_text(text, security)
+                blocked = blocked or rule
+                for rule_id, count in found.items():
+                    hits[rule_id] = hits.get(rule_id, 0) + count
+                part = part.model_copy(update={"text": cleaned}) if cleaned != text else part
+            parts.append(part)
+        enterprise_security.add_hits(self._settings_repo, hits)
+        if blocked:
+            return msg, blocked
+        return (msg.model_copy(update={"content": parts}) if hits else msg), None
+
     async def __call__(self, msg: InboundMessage) -> AsyncIterator[MessageEvent]:
         from octop.infra.metrics import METRICS  # noqa: PLC0415
 
@@ -887,6 +918,11 @@ class GlobalProcessor:
             channel_type=channel_type,
             metadata=msg.metadata,
         )
+        msg, dlp_blocked = self._enterprise_dlp(msg)
+        if dlp_blocked:
+            yield MessageEvent.error_event(tr("channel.dlp_blocked", locale, rule=dlp_blocked))
+            yield MessageEvent.completed()
+            return
         if cmd is not None and cmd.name in HITL_APPROVAL_COMMANDS:
             async for ev in self._relay_im_approval(
                 msg,
@@ -1200,6 +1236,11 @@ class GlobalProcessor:
             metadata=meta,
         )
         cmd = parse_slash(msg.text)
+        msg, dlp_blocked = self._enterprise_dlp(msg)
+        if dlp_blocked:
+            yield {"type": "error", "message": tr("channel.dlp_blocked", locale, rule=dlp_blocked)}
+            yield {"type": "done"}
+            return
         if cmd is not None and cmd.name in HITL_APPROVAL_COMMANDS:
             usage_tracker = UsageTracker()
             slash_outcome = HitlSlashOutcome()

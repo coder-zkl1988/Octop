@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from octop.api.deps import current_user, get_server
-from octop.infra import enterprise_plugins
+from octop.infra import enterprise_plugins, enterprise_security
 from octop.infra.agents.plugins.bundled import default_bundled_plugins_root
 from octop.infra.enterprise_client import clear_persisted_session
 from octop.infra.enterprise_client import session_entry as load_session_entry
@@ -246,6 +246,29 @@ async def _sync_enterprise_plugins(
     return changed
 
 
+async def _sync_enterprise_security(server: Any, user_id: int, policy_raw: dict[str, Any]) -> None:
+    """Keep the enterprise security floor from the signed policy and report rule hit counts."""
+    settings = getattr(getattr(server, "services", None), "settings_repo", None)
+    if settings is None:
+        return
+    body = policy_raw.get("policy")
+    security = body.get("security") if isinstance(body, dict) else None
+    if enterprise_security.store(settings, security if isinstance(security, dict) else None):
+        runtime = getattr(server, "app_runtime", None)
+        if runtime is not None:
+            runtime.agent_registry.refresh_security()
+    hits = enterprise_security.take_hits(settings)
+    if hits:
+        try:
+            await _upstream(
+                server, user_id, "POST", "/desktop/v1/security/hits", body={"hits": hits}
+            )
+        except OctopError as exc:
+            enterprise_security.add_hits(settings, hits)
+            if exc.status == 401:
+                raise
+
+
 def _points_value(value: Any) -> float:
     if isinstance(value, dict):
         value = value.get("points", 0)
@@ -470,6 +493,7 @@ async def _load_snapshot_inputs(
     )
     usage = await _upstream(server, user_id, "GET", "/desktop/v1/usage")
     await _sync_enterprise_plugins(server, user_id, str(device_key.get("device_id") or ""))
+    await _sync_enterprise_security(server, user_id, policy)
     return me, policy, resources, device_key, usage
 
 

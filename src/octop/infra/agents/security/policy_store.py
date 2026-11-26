@@ -50,7 +50,10 @@ class SecuritySettingsStore:
         return resolved
 
     def harness_policy(self) -> SecurityPolicy:
-        return self.load()
+        """The policy agents run with: the member's settings tightened to the enterprise floor."""
+        from octop.infra.enterprise_security import apply_floor, load
+
+        return apply_floor(self.load(), load(self._settings))
 
 
 def tool_execution_may_pause(policy: SecurityPolicy) -> bool:
