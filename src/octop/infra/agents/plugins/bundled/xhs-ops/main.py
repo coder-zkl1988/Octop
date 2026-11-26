@@ -215,6 +215,93 @@ async def xhs_diagnose_account(account: str = "") -> str:
     )
 
 
+async def xhs_daily_plan(account: str = "") -> str:
+    ctx = current_context.get()
+    domain = ctx.host.module(ctx.plugin_id)
+    doc = await ctx.read()
+    found = _pick(
+        [a for a in doc.get("accounts", []) if a.get("device_id")], account, "已绑定手机的账号"
+    )
+    if isinstance(found, str):
+        return _say(found)
+    today = domain.daily.today(ctx)
+    day = next(
+        (
+            d
+            for d in reversed(doc.get("operation_days", []))
+            if d["account_id"] == found["id"] and d["date"] == today
+        ),
+        None,
+    )
+    if day is None or day["status"] == "planned":
+        saved = found.get("operation_settings") or {}
+        _, _, refused = await _run(
+            "ops.save",
+            {
+                "account_id": found["id"],
+                "account_version": found["version"],
+                "date": today,
+                "browse_defaults": saved.get("browse_defaults") or {},
+                "interaction": saved.get("interaction") or {},
+                **({"id": day["id"], "version": day["version"]} if day else {}),
+            },
+        )
+        if refused:
+            return _refused(refused)
+        day = next(
+            d
+            for d in reversed((await ctx.read()).get("operation_days", []))
+            if d["account_id"] == found["id"] and d["date"] == today
+        )
+        _, _, refused = await _run("ops.precheck", {"id": day["id"], "version": day["version"]})
+        if refused:
+            return _refused(refused)
+    return _card(
+        "daily",
+        f"「{found['name']}」今天的养号计划已生成并预检，等待用户在卡片上确认启动；确认五分钟内有效。",
+        day_id=day["id"],
+    )
+
+
+async def xhs_precheck_batch(batch: str = "") -> str:
+    ctx = current_context.get()
+    doc = await ctx.read()
+    found = _pick(
+        [b for b in doc.get("batches", []) if b.get("status") in {"draft", "prechecked"}],
+        batch,
+        "待发布批次",
+    )
+    if isinstance(found, str):
+        return _say(found)
+    _, _, refused = await _run("batch.precheck", {"id": found["id"], "version": found["version"]})
+    if refused:
+        return _refused(refused)
+    return _card(
+        "batch",
+        f"批次「{found['name']}」已预检，等待用户在卡片上确认启动；确认五分钟内有效。",
+        batch_id=found["id"],
+    )
+
+
+async def xhs_comment_candidates() -> str:
+    ctx = current_context.get()
+    domain = ctx.host.module(ctx.plugin_id)
+    doc = await ctx.read()
+    sources = domain.comments.sources(domain, doc)
+    if not sources:
+        return _say("最近完成的浏览里没有值得评论的笔记。评论只从已完成浏览的回执里生成。")
+    run_id = sources[-1]["run_id"]
+    posts = [
+        {"chunk_index": s["chunk_index"], "post_index": s["post_index"]}
+        for s in sources
+        if s["run_id"] == run_id
+    ][:3]
+    _, _, refused = await _run("comment.generate", {"run_id": run_id, "posts": posts})
+    if refused:
+        return _refused(refused)
+    return _card("comments", "已生成候选评论，等待用户审核；发送前还要在工作台预检并确认。")
+
+
 def setup(ctx: PluginContext) -> None:
     ctx.tool(
         "xhs_workbench",
@@ -255,4 +342,19 @@ def setup(ctx: PluginContext) -> None:
         "xhs_diagnose_account",
         xhs_diagnose_account,
         description="小红薯 · 生成诊断。基于已确认的审计基线为已有账号生成诊断和资料变更提案，并显示卡片。提案由用户逐项决定。",
+    )
+    ctx.tool(
+        "xhs_daily_plan",
+        xhs_daily_plan,
+        description="小红薯 · 生成今日计划并预检。为一个已绑定手机的账号生成今天的养号计划并预检，显示确认卡片。是否启动由用户在卡片上确认。",
+    )
+    ctx.tool(
+        "xhs_precheck_batch",
+        xhs_precheck_batch,
+        description="小红薯 · 预检发布批次。预检一个待发布批次并显示确认卡片。是否发布由用户在卡片上确认，不要替用户确认。",
+    )
+    ctx.tool(
+        "xhs_comment_candidates",
+        xhs_comment_candidates,
+        description="小红薯 · 从已完成浏览生成候选评论。只为已完成浏览里值得评论的笔记生成候选，显示审核卡片；审核和发送由用户决定。",
     )

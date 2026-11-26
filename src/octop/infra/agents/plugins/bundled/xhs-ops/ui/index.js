@@ -15965,6 +15965,73 @@ const chips = (list) =>
       ? rows(list).map((x) => h("span", { key: x, className: "xhs-pill" }, x))
       : "—",
   );
+function ChatComment({ c, snapshot, host, readOnly, refresh }) {
+  const [value, setValue] = useState(c.text || rows(c.candidates)[0] || "");
+  const count = [...value.trim()].length;
+  const review = (decision) => async () => {
+    await send(host, "comment.review", {
+      id: c.id,
+      version: c.version || 1,
+      decision,
+      ...(decision === "approved" ? { text: value.trim() } : {}),
+      note: "",
+    });
+    await refresh();
+  };
+  return h(
+    "div",
+    { className: "xhs-row", style: { alignItems: "flex-start" } },
+    h(
+      "div",
+      { style: { flex: 1, minWidth: 0 } },
+      h("b", null, c.post?.title || c.post_title || "笔记"),
+      h(
+        "div",
+        { className: "xhs-meta" },
+        `${accountName(snapshot, c.account_id)} · 2–10 字，正向具体，不含营销`,
+      ),
+      rows(c.candidates).length > 1 &&
+        h(
+          "div",
+          { className: "xc-chips", style: { margin: "5px 0" } },
+          rows(c.candidates).map((text) =>
+            h(
+              "button",
+              {
+                key: text,
+                type: "button",
+                className: `xhs-btn${text === value ? " is-active" : ""}`,
+                onClick: () => setValue(text),
+              },
+              text,
+            ),
+          ),
+        ),
+      h("input", {
+        className: "xhs-input",
+        "aria-label": "评论原文",
+        value,
+        maxLength: 10,
+        disabled: readOnly,
+        onChange: (e) => setValue(e.target.value),
+      }),
+    ),
+    h(
+      "div",
+      { style: { display: "flex", gap: 6 } },
+      h(
+        Button,
+        {
+          primary: true,
+          disabled: readOnly || count < 2 || count > 10,
+          onClick: review("approved"),
+        },
+        "审核通过",
+      ),
+      h(Button, { disabled: readOnly, onClick: review("rejected") }, "拒绝"),
+    ),
+  );
+}
 function XhsChatCard({ host, data }) {
   useStyle();
   const [snapshot, setSnapshot] = useState(null);
@@ -16596,6 +16663,257 @@ function XhsChatCard({ host, data }) {
         }),
       );
   }
+  if (kind === "daily") {
+    const day = rows(d.operation_days).find((x) => x.id === data.day_id);
+    if (day) {
+      const runs = rows(d.runs).filter((r) => r.day_id === day.id);
+      const active = runs.find((r) =>
+        ["queued", "preparing", "running"].includes(r.status),
+      );
+      const check = day.precheck;
+      const fresh =
+        check?.expires_at && new Date(check.expires_at) > new Date();
+      const planned = day.status === "planned";
+      card = h(
+        ChatCard,
+        {
+          title: planned
+            ? `今日养号计划确认 · ${String(day.date).slice(5)} · 第 ${
+                day.round || 1
+              } 轮`
+            : `今日养号 · ${operationLabel(day.status)}`,
+          state: planned ? "需要你确认" : operationLabel(day.status),
+          tone: planned ? "warn" : "ok",
+          tab: "operations",
+          note:
+            planned && fresh
+              ? `确认有效至 ${hm(check.expires_at, zone)}`
+              : planned
+              ? "预检已过期，请重新预检"
+              : undefined,
+          foot: planned
+            ? [
+                h(
+                  Button,
+                  {
+                    key: "go",
+                    primary: true,
+                    disabled: readOnly || !fresh,
+                    onClick: run("ops.start", {
+                      id: day.id,
+                      version: day.version,
+                      confirm_digest: check?.digest,
+                      confirmed: true,
+                    }),
+                  },
+                  "确认启动日常运营",
+                ),
+                !fresh &&
+                  h(
+                    Button,
+                    {
+                      key: "re",
+                      disabled: readOnly,
+                      onClick: run("ops.precheck", {
+                        id: day.id,
+                        version: day.version,
+                      }),
+                    },
+                    "重新预检",
+                  ),
+                h(
+                  Button,
+                  { key: "edit", onClick: () => openWorkbench("operations") },
+                  "调整计划",
+                ),
+              ]
+            : [
+                h(
+                  Button,
+                  { key: "see", onClick: () => openWorkbench("operations") },
+                  "查看账号核对截图",
+                ),
+                active &&
+                  h(
+                    Button,
+                    {
+                      key: "stop",
+                      disabled: readOnly,
+                      onClick: run("run.cancel", { run_id: active.id }),
+                    },
+                    "停止此分段",
+                  ),
+              ],
+        },
+        kv([
+          ["账号", accountName(snapshot, day.account_id)],
+          ...rows(day.plans).map((p, i) => [
+            `第 ${p.segment?.index || i + 1} 段`,
+            `搜索 ${rows(p.keywords)
+              .map((k) => `「${k.keyword}」${k.count} 篇`)
+              .join("、")}${
+              p.home_feed_count ? ` · 首页 ${p.home_feed_count} 篇` : ""
+            } · 每篇停留 ${p.dwell_sec_min}–${p.dwell_sec_max} 秒`,
+          ]),
+          [
+            "互动上限",
+            ["like", "collect", "follow"]
+              .map((k) => [k, rows(day.plans)[0]?.interaction?.[k]])
+              .filter(([, r]) => r?.enabled)
+              .map(
+                ([k, r]) =>
+                  `${{ like: "点赞", collect: "收藏", follow: "关注" }[k]} ≤ ${
+                    r.daily_cap
+                  }`,
+              )
+              .join(" · ") || "全部关闭",
+          ],
+          !planned && [
+            "进度",
+            runs
+              .map(
+                (r) =>
+                  `${operationLabel(r.status)}${
+                    r.summary
+                      ? ` ${r.summary.browsed}/${r.summary.planned}`
+                      : ""
+                  }`,
+              )
+              .join(" · ") || "—",
+          ],
+        ]),
+      );
+    }
+  } else if (kind === "batch") {
+    const batch = rows(d.batches).find((x) => x.id === data.batch_id);
+    if (batch) {
+      const check = batch.precheck;
+      const fresh =
+        check?.expires_at && new Date(check.expires_at) > new Date();
+      const waiting = batch.status === "prechecked";
+      const items = rows(check?.items || batch.items);
+      card = h(
+        ChatCard,
+        {
+          title: `批量发布${waiting ? "确认" : ""} · ${batch.name || ""} · ${
+            items.length
+          } 篇`,
+          state: waiting ? "需要你确认" : statusLabel(batch.status),
+          tone: waiting ? "warn" : "ok",
+          tab: "batches",
+          note:
+            waiting && fresh
+              ? `五分钟内有效 · 至 ${hm(check.expires_at, zone)}`
+              : waiting
+              ? "预检已过期，请重新预检"
+              : undefined,
+          foot: waiting
+            ? [
+                h(
+                  Button,
+                  {
+                    key: "go",
+                    primary: true,
+                    disabled: readOnly || !fresh,
+                    onClick: run("batch.start", {
+                      id: batch.id,
+                      version: batch.version,
+                      confirm_digest: check?.digest,
+                      confirmed: true,
+                      idempotency_key: `batch-${batch.id}-${check?.digest}`,
+                    }),
+                  },
+                  `确认启动 ${items.length} 篇`,
+                ),
+                !fresh &&
+                  h(
+                    Button,
+                    {
+                      key: "re",
+                      disabled: readOnly,
+                      onClick: run("batch.precheck", {
+                        id: batch.id,
+                        version: batch.version,
+                      }),
+                    },
+                    "重新预检",
+                  ),
+                h(
+                  Button,
+                  { key: "edit", onClick: () => openWorkbench("batches") },
+                  "返回修改",
+                ),
+              ]
+            : [
+                !["completed", "cancelled", "draft"].includes(batch.status) &&
+                  h(
+                    Button,
+                    {
+                      key: "stop",
+                      disabled: readOnly,
+                      onClick: run("batch.cancel", {
+                        id: batch.id,
+                        confirmed: true,
+                      }),
+                    },
+                    "停止批次",
+                  ),
+                h(
+                  Button,
+                  { key: "see", onClick: () => openWorkbench("runs") },
+                  "查看截图证据",
+                ),
+              ],
+        },
+        items.map((item, i) => {
+          const draft = rows(d.drafts).find((x) => x.id === item.draft_id);
+          const changed =
+            draft &&
+            item.draft_version !== undefined &&
+            draft.version !== item.draft_version;
+          return h(
+            Row,
+            {
+              key: item.id || i,
+              title: `第 ${i + 1} 篇 · ${draft?.title || "草稿已删除"}`,
+              sub: `${accountName(snapshot, item.account_id)} · ${
+                rows(draft?.images).length
+              } 张图`,
+            },
+            changed
+              ? pill("! 预检后有改动，请重新预检", "warn")
+              : pill("✓ 预检通过", "ok"),
+          );
+        }),
+      );
+    }
+  } else if (kind === "comments") {
+    const pending = rows(d.comments)
+      .filter((c) => c.status === "pending")
+      .slice(0, 3);
+    card = h(
+      ChatCard,
+      {
+        title: `评论审核 · ${pending.length} 条候选`,
+        state: pending.length ? "需要你确认" : "没有待审核",
+        tone: pending.length ? "warn" : "ok",
+        tab: "comments",
+        note: "审核通过后，发送前还要在工作台预检并确认",
+        foot: [
+          h(
+            Button,
+            { key: "all", onClick: () => openWorkbench("comments") },
+            "去评论审核",
+          ),
+        ],
+      },
+      pending.map((c) =>
+        h(ChatComment, { key: c.id, c, snapshot, host, readOnly, refresh }),
+      ),
+      !pending.length &&
+        h("div", { className: "xhs-meta" }, "没有待审核的候选评论。"),
+    );
+  }
   if (!card) return h(WorkbenchLink, { host });
   return h("div", null, style, problem, card);
 }
@@ -16632,6 +16950,9 @@ export function setup(host) {
       "xhs_check_comments",
       "xhs_account_alerts",
       "xhs_diagnose_account",
+      "xhs_daily_plan",
+      "xhs_precheck_batch",
+      "xhs_comment_candidates",
     ],
     component: XhsChatCard,
   });

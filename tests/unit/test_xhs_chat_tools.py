@@ -79,3 +79,22 @@ async def test_diagnosis_needs_a_confirmed_baseline_first() -> None:
     result = await _call(ctx, tools.xhs_diagnose_account, "A")
     assert "octop_ui" not in result and "审计基线" in result["text"]
     assert ctx.doc["diagnoses"] == []
+
+
+@pytest.mark.asyncio
+async def test_daily_plan_tool_prechecks_but_never_starts_the_phone() -> None:
+    from tests.unit import test_xhs_daily as daily_fixture
+
+    ctx = await daily_fixture.context()
+    ctx.host = SimpleNamespace(**vars(ctx.host), module=lambda _id: domain)
+    account = ctx.doc["accounts"][0]
+    account["operation_settings"] = {
+        "browse_defaults": {"daily_target_posts": 2, "daily_segments": 1},
+        "interaction": domain.operations.InteractionConfig().model_dump(),
+    }
+    result = await _call(ctx, tools.xhs_daily_plan, account["name"])
+    day = ctx.doc["operation_days"][-1]
+    assert result["data"]["kind"] == "daily" and result["data"]["day_id"] == day["id"]
+    assert day["status"] == "planned" and day["precheck"]["digest"]
+    # Nothing is dispatched: starting stays a click on the card.
+    assert ctx.doc["runs"] == [] and ctx.phone_calls == [] and ctx.spawned == []

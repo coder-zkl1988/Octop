@@ -705,4 +705,89 @@ describe("小红薯运营 workbench", () => {
       await screen.findByRole("button", { name: "打开小红薯运营工作台" }),
     ).toBeInTheDocument();
   });
+
+  it("starts a prechecked daily plan from the chat card with its exact digest", async () => {
+    const { Card, host, posts, snapshot } = fixture();
+    snapshot.data.operation_days = [
+      {
+        id: "day1",
+        version: 3,
+        account_id: "a1",
+        date: "2026-11-25",
+        round: 1,
+        status: "planned",
+        plans: [
+          {
+            keywords: [{ keyword: "通勤", count: 2 }],
+            home_feed_count: 1,
+            dwell_sec_min: 11,
+            dwell_sec_max: 25,
+            interaction: { like: { enabled: true, daily_cap: 3 } },
+          },
+        ],
+        precheck: {
+          digest: "abc",
+          expires_at: new Date(Date.now() + 240000).toISOString(),
+        },
+      },
+    ];
+    render(
+      <Card
+        pluginId="xhs-ops"
+        toolName="xhs_daily_plan"
+        status="done"
+        args={{}}
+        data={{ kind: "daily", day_id: "day1" }}
+        host={host}
+        isStreaming={false}
+      />,
+    );
+    expect(
+      await screen.findByText(/今日养号计划确认 · 11-25/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/「通勤」2 篇/)).toBeInTheDocument();
+    expect(posts).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "确认启动日常运营" }));
+    await waitFor(() =>
+      expect(posts).toContainEqual({
+        command: "ops.start",
+        payload: {
+          id: "day1",
+          version: 3,
+          confirm_digest: "abc",
+          confirmed: true,
+        },
+      }),
+    );
+  });
+
+  it("will not start a daily plan whose precheck has expired", async () => {
+    const { Card, host, snapshot } = fixture();
+    snapshot.data.operation_days = [
+      {
+        id: "day1",
+        version: 3,
+        account_id: "a1",
+        date: "2026-11-25",
+        status: "planned",
+        plans: [],
+        precheck: { digest: "abc", expires_at: "2020-01-01T00:00:00Z" },
+      },
+    ];
+    render(
+      <Card
+        pluginId="xhs-ops"
+        toolName="xhs_daily_plan"
+        status="done"
+        args={{}}
+        data={{ kind: "daily", day_id: "day1" }}
+        host={host}
+        isStreaming={false}
+      />,
+    );
+    expect(
+      await screen.findByRole("button", { name: "确认启动日常运营" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "重新预检" })).toBeEnabled();
+  });
 });

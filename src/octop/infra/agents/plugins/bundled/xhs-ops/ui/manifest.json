@@ -21,7 +21,10 @@
         "xhs_organize_material",
         "xhs_check_comments",
         "xhs_account_alerts",
-        "xhs_diagnose_account"
+        "xhs_diagnose_account",
+        "xhs_daily_plan",
+        "xhs_precheck_batch",
+        "xhs_comment_candidates"
       ]
     }
   ]
