@@ -481,6 +481,16 @@ def _store_cache(state: dict[str, Any], result: dict[str, Any]) -> None:
     ][:100]
     if "members" in result:
         cache["members"] = result["members"]
+    if "orders" in result:
+        # The admin asked for these accounts to be handed over; shown to the owner, never acted on by itself.
+        cache["orders"] = [
+            {
+                k: str(o.get(k) or "")[:500]
+                for k in ("id", "account_id", "to_member_id", "to_member_name", "note", "by")
+            }
+            for o in result["orders"]
+            if isinstance(o, dict)
+        ][:50]
     cache["fetched_at"] = _now()
     state["transfer_cache"] = cache
 
@@ -572,5 +582,6 @@ def snapshot(doc: dict[str, Any]) -> dict[str, Any]:
     return {
         "items": cache.get("items", []),
         "members": cache.get("members", []),
+        "orders": cache.get("orders", []),
         "fetched_at": cache.get("fetched_at"),
     }

@@ -14760,6 +14760,43 @@ function AccountProfilePanel({ snapshot, host, readOnly, refresh, go, focus }) {
     refresh,
     onImported: (accountId) => setId(accountId),
   });
+  const orders = rows(data.transfers?.orders).filter((o) =>
+    accounts.some((a) => a.id === o.account_id && !a.transfer),
+  );
+  const ordered =
+    orders.length > 0 &&
+    h(
+      Card,
+      {
+        title: `管理员要求转交 · ${orders.length}`,
+        icon: "账号概览",
+        tip: "管理员已经同意这次转交，你发起后不用再等审批。账号资料在你的电脑上，所以需要你来点。",
+      },
+      orders.map((o) =>
+        h(
+          Row,
+          {
+            key: o.id,
+            title: `${accountName(snapshot, o.account_id)} → ${
+              o.to_member_name || "同事"
+            }`,
+            sub: `${o.by || "管理员"}${o.note ? " · " + o.note : ""}`,
+          },
+          h(
+            Button,
+            {
+              primary: true,
+              disabled: readOnly,
+              onClick: () => {
+                setId(o.account_id);
+                setTransferring(true);
+              },
+            },
+            "按转交单转交",
+          ),
+        ),
+      ),
+    );
   const tags = (list) => rows(list).join("、") || "—";
   const imagesOf = (a) => rows(a.character_images);
   const imageText = (a) => {
@@ -14815,6 +14852,7 @@ function AccountProfilePanel({ snapshot, host, readOnly, refresh, go, focus }) {
     "div",
     { className: "xhs-stack" },
     incoming,
+    ordered,
     h(
       Card,
       { title: "号设档案库" },
@@ -15210,6 +15248,7 @@ function AccountProfilePanel({ snapshot, host, readOnly, refresh, go, focus }) {
         host,
         account,
         refresh,
+        presetTo: orders.find((o) => o.account_id === account.id)?.to_member_id,
         onClose: () => setTransferring(false),
       }),
     scene !== null &&
@@ -15502,10 +15541,19 @@ const SUMMARY_LABELS = {
   leads: "线索",
   images: "图片",
 };
-function TransferDialog({ snapshot, host, account, onClose, refresh }) {
+function TransferDialog({
+  snapshot,
+  host,
+  account,
+  onClose,
+  refresh,
+  presetTo,
+}) {
   const transfer = snapshot.data.transfers || {};
   const members = rows(transfer.members);
-  const [to, setTo] = useState(members[0]?.id || "");
+  const [to, setTo] = useState(
+    members.some((m) => m.id === presetTo) ? presetTo : members[0]?.id || "",
+  );
   const [note, setNote] = useState("");
   const [sure, setSure] = useState(false);
   const id = account.id;
