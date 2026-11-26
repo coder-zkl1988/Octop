@@ -184,3 +184,61 @@ async def test_scoped_pause_records_scope_and_resolves_a_project() -> None:
     assert settings["paused_accounts"] == ["a1"]
     await domain.command(ctx, "pause.set", {"paused": False})
     assert ctx.doc["member_settings"]["paused"] is False
+
+
+@pytest.mark.asyncio
+async def test_profile_sync_adds_general_interests_only_after_confirmation() -> None:
+    ctx = ctx_with(FULL)
+    ctx.doc["projects"][0]["profile"] = {"general_interests": ["健身"], "confirmed_at": None}
+    ctx.doc["accounts"][0]["interest_pool"] = {"core": ["通勤"], "general": ["咖啡"]}
+    call = {"project_id": "p1", "version": 1, "confirmed": True}
+    with pytest.raises(domain.PluginAppError, match="confirmation_required"):
+        await domain.command(ctx, "profile.sync_personas", {**call, "confirmed": False})
+    with pytest.raises(domain.PluginAppError, match="profile_confirmation_required"):
+        await domain.command(ctx, "profile.sync_personas", call)
+    ctx.doc["projects"][0]["profile"]["confirmed_at"] = domain.now()
+    await domain.command(ctx, "profile.sync_personas", call)
+    account = ctx.doc["accounts"][0]
+    assert account["interest_pool"] == {"core": ["通勤"], "general": ["咖啡", "健身"]}
+    assert account["version"] == 2
+
+
+def _persona(label: str, core: str) -> dict[str, Any]:
+    return {
+        "label": label,
+        "positioning": "通勤穿搭记录",
+        "persona": {
+            "age": "27",
+            "gender": "女",
+            "region": "上海",
+            "occupation": label,
+            "life_status": "独居",
+        },
+        "persona_tags": {"vertical": ["通勤穿搭"], "general": ["咖啡", "探店"]},
+        "interest_pool": {"core": [core], "extended": ["大衣"], "general": ["咖啡"]},
+    }
+
+
+@pytest.mark.asyncio
+async def test_regenerating_one_candidate_leaves_the_others_untouched() -> None:
+    ctx = ctx_with(FULL)
+    ctx.doc["projects"][0]["profile"] = {"confirmed_at": domain.now()}
+    ctx.doc["persona_candidates"] = [
+        {**_persona("设计师", "胶囊衣橱"), "id": "c1", "project_id": "p1", "status": "draft"},
+        {**_persona("产品经理", "小个子"), "id": "c2", "project_id": "p1", "status": "draft"},
+    ]
+
+    async def generate(_system: str, prompt: str, **_kwargs: Any) -> str:
+        assert "产品经理" in prompt and "设计师" not in json.loads(prompt)["existing"][0]["label"]
+        return json.dumps(_persona("HR", "通勤包"), ensure_ascii=False)
+
+    ctx.generate_text = generate
+    await domain.command(
+        ctx,
+        "persona.regenerate_one",
+        {"project_id": "p1", "version": 1, "candidate_id": "c1"},
+    )
+    by_id = {c["id"]: c for c in ctx.doc["persona_candidates"]}
+    assert by_id["c1"]["status"] == "stale" and by_id["c2"]["status"] == "draft"
+    fresh = [c for c in ctx.doc["persona_candidates"] if c["id"] not in {"c1", "c2"}]
+    assert [c["label"] for c in fresh] == ["HR"] and fresh[0]["status"] == "draft"

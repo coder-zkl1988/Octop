@@ -138,6 +138,9 @@ app:
     plan.reschedule: [xhs.publish]
     material.reconstruct: [xhs.content]
     alert.dismiss: []
+    profile.sync_personas: [xhs.ops]
+    persona.regenerate_one: [xhs.ops]
+    onboarding.tags_done: [xhs.ops]
     coldstart.observe: [xhs.ops]
     coldstart.pause: [xhs.ops]
     template.candidate: [xhs.content]
@@ -192,6 +195,7 @@ app:
     persona_sources: [xhs.ops]
     coldstart_observation: [xhs.ops]
     last_reschedule: [xhs.publish]
+    dismissed_alerts: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
   record_scopes:
     runs:
       kinds:

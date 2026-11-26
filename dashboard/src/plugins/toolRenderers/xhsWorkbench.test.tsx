@@ -600,4 +600,46 @@ describe("小红薯运营 workbench", () => {
       }),
     );
   });
+
+  it("decides takeover proposals one by one before confirming the plan", async () => {
+    const value = fixture();
+    value.snapshot.data.diagnoses = [
+      {
+        id: "dg1",
+        account_id: "a1",
+        status: "draft",
+        summary: "简介偏官方",
+        proposals: [
+          { id: "p1", field: "bio", after: "每周一套通勤穿搭", risk: "L1" },
+          { id: "p2", field: "nickname", after: "新昵称", risk: "L2" },
+        ],
+        recommendations: ["通勤包怎么选"],
+      },
+    ];
+    render(<value.Page host={value.host} license={value.snapshot.license} />);
+    await openXhsTab("老号接管");
+    const confirm = await screen.findByRole("button", { name: "确认方案" });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(screen.getAllByRole("button", { name: "采纳" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "不采纳" })[1]);
+    expect(confirm).toBeDisabled();
+    fireEvent.click(
+      screen.getByLabelText("我已逐项核对提案，理解每项的观察期"),
+    );
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(value.posts).toContainEqual({
+        command: "diagnosis.confirm",
+        payload: { id: "dg1", confirmed: true },
+      }),
+    );
+    expect(value.posts).toContainEqual({
+      command: "diagnosis.decisions",
+      payload: {
+        id: "dg1",
+        decisions: { p1: { decision: "adopt" }, p2: { decision: "skip" } },
+        confirmed: true,
+      },
+    });
+  });
 });

@@ -1,5 +1,47 @@
 const React = window.__OCTOP_REACT__;
-const h = React.createElement;
+// Card headings follow the design: an icon chip in front of the title. Plain h3 calls get it here
+// so every screen shares one heading style.
+function headingIcon(title) {
+  const exact = ICON_OF["h:" + title];
+  if (exact != null) return exact;
+  let best = null;
+  let score = 1;
+  for (const key of Object.keys(ICON_OF)) {
+    if (!key.startsWith("h:")) continue;
+    const name = key.slice(2);
+    let prefix = 0;
+    while (prefix < name.length && name[prefix] === title[prefix]) prefix += 1;
+    let suffix = 0;
+    while (
+      suffix < name.length &&
+      name[name.length - 1 - suffix] === title[title.length - 1 - suffix]
+    )
+      suffix += 1;
+    if (Math.max(prefix, suffix) > score) {
+      score = Math.max(prefix, suffix);
+      best = ICON_OF[key];
+    }
+  }
+  return best ?? ICON_OF["h:内容任务池"];
+}
+function h(type, props, ...children) {
+  if (type !== "h3" || props?.className)
+    return React.createElement(type, props, ...children);
+  const title = children
+    .flat(Infinity)
+    .filter((c) => typeof c === "string" || typeof c === "number")
+    .join("");
+  return React.createElement(
+    "h3",
+    { ...props, className: "xhs-h" },
+    React.createElement(
+      "span",
+      { className: "xhs-hic" },
+      React.createElement(Icon, { id: headingIcon(title), size: 15 }),
+    ),
+    React.createElement("span", null, ...children),
+  );
+}
 const { useEffect, useMemo, useState } = React;
 
 const C = {
@@ -556,6 +598,185 @@ function AudienceEditor({
   );
 }
 
+// The ten steps a project goes through, read from what is already recorded; nothing here starts work.
+function ProjectFlow({ snapshot, host, project, readOnly, refresh }) {
+  const data = snapshot.data;
+  const accounts = rows(data.accounts).filter(
+    (a) => a.project_id === project.id,
+  );
+  const ids = new Set(accounts.map((a) => a.id));
+  const candidates = rows(data.persona_candidates).filter(
+    (c) => c.project_id === project.id && c.status !== "stale",
+  );
+  const today = data.operation_clock?.date;
+  const days = rows(data.operation_days).filter(
+    (d) => ids.has(d.account_id) && d.date === today,
+  );
+  const running = rows(data.runs).filter(
+    (r) =>
+      ids.has(r.account_id) &&
+      ["nurture", "browse"].includes(r.kind) &&
+      ["queued", "preparing", "running"].includes(r.status),
+  );
+  const recorded = new Set(
+    rows(data.runs)
+      .filter(
+        (r) =>
+          ids.has(r.account_id) &&
+          r.completed_at &&
+          Date.now() - new Date(r.completed_at).getTime() < 7 * 86400000,
+      )
+      .map((r) => String(r.completed_at).slice(0, 10)),
+  );
+  const verified = accounts.filter(
+    (a) => a.profile_draft?.verified_at || a.entry_mode === "existing",
+  );
+  const pooled = accounts.filter((a) => rows(a.interest_pool?.core).length);
+  const rules = accounts.map((a) => operationSettings(a).interaction);
+  const names = {
+    like: "点赞",
+    collect: "收藏",
+    follow: "关注",
+    comment: "评论",
+  };
+  const on = Object.keys(names).filter((k) => rules.some((r) => r[k]?.enabled));
+  const filled =
+    typeof project.business === "string"
+      ? Boolean(project.business)
+      : Boolean(project.business?.product);
+  const profile = project.profile;
+  const missing = rows(profile?.general_interests).filter(
+    (word) =>
+      accounts.length &&
+      accounts.some((a) => !rows(a.interest_pool?.general).includes(word)),
+  );
+  const noteId = `profile-sync:${project.id}:${missing.join("|")}`;
+  const pendingSync =
+    profile?.confirmed_at &&
+    missing.length > 0 &&
+    !rows(data.dismissed_alerts).includes(noteId);
+  const adjust = rows(data.plan_suggestions).length + (pendingSync ? 1 : 0);
+  const steps = [
+    ["客户信息", filled, filled ? "业务与受众已填" : "待填写"],
+    [
+      "目标画像",
+      Boolean(profile?.confirmed_at),
+      profile?.confirmed_at ? "已确认" : profile ? "待确认" : "未生成",
+    ],
+    [
+      "账号人设",
+      accounts.length > 0,
+      `${candidates.length} 候选 · ${accounts.length} 采用`,
+    ],
+    [
+      "基础资料",
+      accounts.length > 0 && verified.length === accounts.length,
+      `${verified.length} / ${accounts.length} 已核验`,
+    ],
+    [
+      "兴趣池",
+      accounts.length > 0 && pooled.length === accounts.length,
+      `${pooled.length} 个账号已保存`,
+    ],
+    ["当日任务", days.length > 0, `今天 ${days.length} 份计划`],
+    [
+      "浏览执行",
+      days.length > 0 && !running.length,
+      running.length ? `${running.length} 个执行中` : "没有执行中的任务",
+    ],
+    [
+      "少量互动",
+      accounts.length > 0,
+      on.length
+        ? `${on.map((k) => names[k]).join("、")}开 · 其余关`
+        : "全部关闭",
+    ],
+    [
+      "结果记录",
+      recorded.size > 0,
+      recorded.size ? `近 7 天有 ${recorded.size} 天记录` : "还没有记录",
+    ],
+    [
+      "下一轮调整",
+      adjust === 0,
+      adjust ? `${adjust} 条建议待处理` : "没有待处理的建议",
+    ],
+  ];
+  return h(
+    Card,
+    {
+      title: `项目流程 · ${project.name}`,
+      icon: "项目流程 · 星河 · 秋冬通勤",
+      tip: "从客户信息到下一轮调整的十步；每一步的状态来自已有记录。",
+      style: { gridColumn: "1 / -1" },
+    },
+    h(
+      "div",
+      {
+        className: "xhs-steps",
+        style: { gridTemplateColumns: "repeat(5, minmax(0, 1fr))" },
+      },
+      steps.map(([label, done, sub], index) =>
+        h(
+          "div",
+          { key: label, className: "xhs-step" },
+          h(
+            "span",
+            { className: `xhs-step-n${done ? " done" : ""}` },
+            done ? "✓" : index + 1,
+          ),
+          h(
+            "div",
+            null,
+            h("div", null, label),
+            h("div", { className: "xhs-meta" }, sub),
+          ),
+        ),
+      ),
+    ),
+    pendingSync &&
+      h(
+        Row,
+        {
+          title: "画像有一处修改还没同步",
+          sub: `已确认的画像里，泛兴趣“${missing.join(
+            "、",
+          )}”还不在所有账号的兴趣池里。同步会影响 ${
+            accounts.length
+          } 个账号的泛兴趣池和之后生成的养号关键词`,
+        },
+        h(
+          Button,
+          {
+            primary: true,
+            disabled: readOnly,
+            onClick: async () => {
+              await send(host, "profile.sync_personas", {
+                project_id: project.id,
+                version: project.version,
+                confirmed: true,
+              });
+              toast("已同步到人设");
+              await refresh();
+            },
+          },
+          "确认并同步到人设",
+        ),
+        h(
+          Button,
+          {
+            disabled: readOnly,
+            onClick: async () => {
+              await send(host, "alert.dismiss", { id: noteId });
+              await refresh();
+            },
+          },
+          "只用于新生成的人设",
+        ),
+      ),
+  );
+}
+
 function ProjectPanel({
   snapshot,
   host,
@@ -657,6 +878,16 @@ function ProjectPanel({
   return h(
     "div",
     { className: "xhs-grid" },
+    projects.map((project) =>
+      h(ProjectFlow, {
+        key: "flow-" + project.id,
+        snapshot,
+        host,
+        project,
+        readOnly: readOnly || !canOperate,
+        refresh,
+      }),
+    ),
     h(
       "div",
       { className: "xhs-card" },
@@ -1003,6 +1234,173 @@ function PersonaEditor({
   );
 }
 
+// How the candidates sit against the confirmed audience profile, and how alike they are to each other.
+function PersonaChecks({
+  project,
+  candidates,
+  accounts,
+  host,
+  readOnly,
+  refresh,
+  modelRef,
+}) {
+  const profile = project.profile || {};
+  const people = [
+    ...candidates.map((c) => ({ ...c, candidate: true })),
+    ...accounts.map((a) => ({ ...a, label: a.label || a.name })),
+  ];
+  if (!candidates.length) return null;
+  const tally = (key) => {
+    const counts = new Map();
+    for (const p of candidates) {
+      const value = String(p.persona?.[key] || "").trim() || "未填";
+      counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    return counts;
+  };
+  const text = (counts, unit = " 人") =>
+    Array.from(counts, ([v, n]) => `${v} ${n}${unit}`).join(" · ");
+  const range = String(profile.base?.age_range || "").match(/(\d+)\D+(\d+)/);
+  const outside = range
+    ? candidates.filter((p) => {
+        const age = Number(String(p.persona?.age || "").match(/\d+/)?.[0]);
+        return age && (age < Number(range[1]) || age > Number(range[2]));
+      }).length
+    : 0;
+  const regions = rows(profile.base?.regions);
+  const elsewhere = candidates.filter(
+    (p) =>
+      regions.length &&
+      !regions.some((r) => String(p.persona?.region || "").includes(r)),
+  ).length;
+  const vertical = rows(profile.vertical_interests);
+  const covered = candidates.filter((p) =>
+    [...rows(p.persona_tags?.vertical), ...rows(p.interest_pool?.core)].some(
+      (word) => vertical.some((v) => word.includes(v) || v.includes(word)),
+    ),
+  ).length;
+  const verdict = (ok, warn) =>
+    pill(ok ? "✓ 一致" : "! " + warn, ok ? "ok" : "warn");
+  const pool = (p) => [
+    ...rows(p.interest_pool?.core),
+    ...rows(p.interest_pool?.general),
+  ];
+  const pairs = [];
+  for (let i = 0; i < people.length; i += 1)
+    for (let j = i + 1; j < people.length; j += 1) {
+      const a = people[i];
+      const b = people[j];
+      if (!a.candidate && !b.candidate) continue;
+      const mine = pool(a);
+      const same = mine.filter((word) => pool(b).includes(word)).length;
+      const total = Math.max(1, Math.min(mine.length, pool(b).length));
+      const sameName =
+        a.label && b.label && similarity(a.label, b.label) >= 0.4;
+      pairs.push({
+        a,
+        b,
+        same,
+        total,
+        sameName,
+        score: same / total + (sameName ? 1 : 0),
+      });
+    }
+  pairs.sort((x, y) => y.score - x.score);
+  const shown = pairs.slice(0, 3);
+  const worst = shown.find((p) => p.sameName || p.same / p.total >= 0.6);
+  const duplicate = worst && (worst.a.candidate ? worst.a : worst.b);
+  return h(
+    Card,
+    {
+      title: "分布与差异度检查",
+      tip: "只做提示，不替你决定；是否采用仍由你确认。",
+      style: { gridColumn: "1 / -1" },
+    },
+    h(
+      "div",
+      { className: "xhs-2" },
+      h(
+        "div",
+        null,
+        h("h4", null, "与目标画像对比"),
+        h(Table, {
+          head: ["维度", "目标画像", `候选 ${candidates.length} 人`, "结论"],
+          body: [
+            [
+              "年龄",
+              profile.base?.age_range || "—",
+              text(tally("age")),
+              verdict(!outside, `${outside} 人不在范围内`),
+            ],
+            [
+              "性别",
+              profile.base?.gender_ratio || "—",
+              text(tally("gender")),
+              pill("请对照比例核对"),
+            ],
+            [
+              "地区",
+              regions.join("、") || "—",
+              text(tally("region"), ""),
+              verdict(!elsewhere, `${elsewhere} 人在其他地区`),
+            ],
+            [
+              "垂直兴趣",
+              vertical.join("、") || "—",
+              `${covered} 人覆盖其中一项`,
+              verdict(
+                covered === candidates.length,
+                `${candidates.length - covered} 人没有覆盖`,
+              ),
+            ],
+          ],
+        }),
+      ),
+      h(
+        "div",
+        null,
+        h("h4", null, "人设之间的相似度"),
+        h(Table, {
+          head: ["人设", "对比", "重合", "结论"],
+          body: shown.map((p) => [
+            p.a.label,
+            p.b.label,
+            `${p.sameName ? "昵称相近 · " : ""}兴趣 ${p.same} / ${
+              p.total
+            } 相同`,
+            p.sameName || p.same / p.total >= 0.6
+              ? pill("✕ 重复度过高", "bad")
+              : p.same / p.total >= 0.4
+              ? pill("! 建议换一个泛兴趣", "warn")
+              : pill("✓ 差异足够", "ok"),
+          ]),
+          empty: "只有一个人设，无需比较",
+        }),
+        h(
+          "div",
+          { className: "xhs-actions" },
+          h(
+            Button,
+            {
+              disabled: readOnly || !duplicate,
+              onClick: async () => {
+                await send(host, "persona.regenerate_one", {
+                  project_id: project.id,
+                  version: project.version,
+                  candidate_id: duplicate.id,
+                  ...(modelRef ? { model_ref: modelRef } : {}),
+                });
+                await refresh();
+              },
+            },
+            "重新生成重复的这一个",
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 function PersonaPanel({ snapshot, host, readOnly, refresh, modelRef }) {
   const projects = rows(snapshot.data.projects);
   const [projectId, setProjectId] = useState("");
@@ -1189,6 +1587,16 @@ function PersonaPanel({ snapshot, host, readOnly, refresh, modelRef }) {
           ),
         ),
     ),
+    project &&
+      h(PersonaChecks, {
+        project,
+        candidates: candidates.filter((c) => c.status !== "stale"),
+        accounts,
+        host,
+        readOnly,
+        refresh,
+        modelRef,
+      }),
     project &&
       h(
         "div",
@@ -1585,6 +1993,101 @@ function PrivateImage({ host, image, alt, className, style }) {
     : h("span", { className: "xhs-meta" }, "正在读取图片…");
 }
 
+// The seven steps of setting up a new account, read from what is already recorded.
+function OnboardingFlow({ account, host, readOnly, refresh }) {
+  const draft = account.profile_draft || {};
+  const identity = Boolean(
+    account.profile_identity || account.platform_account_id,
+  );
+  const texts = ["nickname", "bio", "gender", "birthday"].filter(
+    (k) => draft[k],
+  );
+  const images = [draft.avatar_filename, draft.cover_filename].filter(Boolean);
+  const tags = [
+    ...rows(draft.interest_tags),
+    ...rows(account.interest_pool?.core),
+    ...rows(account.interest_pool?.general),
+  ].filter((v, i, list) => v && list.indexOf(v) === i);
+  const steps = [
+    [
+      "注册与登录",
+      Boolean(account.device_id),
+      account.device_id ? "本人在手机完成" : "还没有绑定手机",
+    ],
+    ["身份核对", identity, identity ? "小红薯号已锁定" : "待只读核对"],
+    [
+      "兴趣标签选择",
+      Boolean(account.interest_tags_selected_at),
+      account.interest_tags_selected_at ? "已在手机勾选" : "按建议在手机勾选",
+    ],
+    ["文字资料", texts.length === 4, "昵称 · 简介 · 性别 · 年龄"],
+    [
+      "头像与背景图",
+      images.length === 2 && Boolean(draft.applied_at),
+      images.length === 2 ? "已选候选，待应用" : `已选 ${images.length} / 2`,
+    ],
+    ["逐项应用", Boolean(draft.applied_at), "一次只改一项"],
+    ["人工核验", Boolean(draft.verified_at), "对照手机确认"],
+  ];
+  return h(
+    Card,
+    {
+      title: `建号流程 · ${account.name || account.id}`,
+      icon: "建号流程 · 小个子通勤党",
+      tip: "注册、登录和首次勾选兴趣标签由本人在手机上完成；这里只记录进度。",
+      style: { marginTop: 12 },
+    },
+    h(
+      "div",
+      {
+        className: "xhs-steps",
+        style: { gridTemplateColumns: "repeat(7, minmax(0, 1fr))" },
+      },
+      steps.map(([label, done, sub], index) =>
+        h(
+          "div",
+          { key: label, className: "xhs-step" },
+          h(
+            "span",
+            { className: `xhs-step-n${done ? " done" : ""}` },
+            done ? "✓" : index + 1,
+          ),
+          h(
+            "div",
+            null,
+            h("div", null, label),
+            h("div", { className: "xhs-meta" }, sub),
+          ),
+        ),
+      ),
+    ),
+    !account.interest_tags_selected_at &&
+      h(
+        Row,
+        {
+          title: "兴趣标签选择",
+          sub: "首次打开小红薯时勾选，建议按兴趣池选这几个",
+        },
+        tags
+          .slice(0, 6)
+          .map((t) => h("span", { key: t, className: "xhs-pill" }, t)),
+        h(
+          Button,
+          {
+            disabled: readOnly,
+            onClick: async () => {
+              await send(host, "onboarding.tags_done", {
+                account_id: account.id,
+              });
+              await refresh();
+            },
+          },
+          "我已在手机上选好",
+        ),
+      ),
+  );
+}
+
 function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
   const accounts = rows(snapshot.data?.accounts).filter(
     (account) => account.entry_mode === "new",
@@ -1839,6 +2342,7 @@ function ProfilePanel({ snapshot, host, readOnly, refresh, modelRef }) {
               "有未保存的资料，请先保存再检查或审核。",
             ),
           h(Button, { onClick: () => open(account) }, "重新载入资料"),
+          h(OnboardingFlow, { account, host, readOnly, refresh }),
           h("h3", { style: { marginTop: 18 } }, "手机准备与身份"),
           h(
             "div",
@@ -3285,6 +3789,77 @@ function OperationsPanel({ snapshot, host, readOnly, refresh }) {
               h("p", { className: "xhs-meta" }, "预算有未保存的修改。"),
           ),
           h(
+            Card,
+            {
+              title: "目标完成量与异常处理",
+              tip: "这些是停止规则。遇到异常就停下并记录，不补刷、不换设备、不绕过平台提示。",
+            },
+            h(
+              "div",
+              { className: "xhs-3" },
+              h(Field, {
+                label: "本次目标完成量",
+                disabled: true,
+                onChange: () => undefined,
+                value: (() => {
+                  const total = Math.round(
+                    settings.browse.daily_target_posts /
+                      Math.max(1, settings.browse.daily_segments),
+                  );
+                  const search = Math.round(
+                    (total * settings.browse.search_ratio_percent) / 100,
+                  );
+                  return `每段约 ${total} 篇（搜索 ${search} + 首页 ${
+                    total - search
+                  }）`;
+                })(),
+              }),
+              h(Field, {
+                label: "完成不足时",
+                disabled: true,
+                onChange: () => undefined,
+                value: "记为未完成，不补刷",
+              }),
+              h(Field, {
+                label: "分段出现异常",
+                disabled: true,
+                onChange: () => undefined,
+                value: "停止这一段，等你对账",
+              }),
+            ),
+            h(Table, {
+              head: ["异常", "系统怎么处理", "之后"],
+              body: [
+                [
+                  "账号受限或平台提示",
+                  h(
+                    "span",
+                    null,
+                    h(Lock),
+                    " 立即停止，暂停该账号全部自动任务至少 72 小时",
+                  ),
+                  "本人查看平台通知，人工确认后恢复；不重试、不换设备",
+                ],
+                [
+                  "需要登录或验证码",
+                  h("span", null, h(Lock), " 立即停止，暂停这台手机的队列"),
+                  "本人在手机处理后重新核对身份",
+                ],
+                [
+                  "搜索无结果",
+                  "跳过这个关键词，继续下一个",
+                  "复盘里提示替换关键词",
+                ],
+                ["内容不匹配", "跳过这一篇，不互动", "复盘里提示调整兴趣池"],
+                [
+                  "执行中断",
+                  "不重放已完成的块，结果不明先对账",
+                  "对账后继续未派发的部分",
+                ],
+              ],
+            }),
+          ),
+          h(
             "label",
             { className: "xhs-field" },
             "日常计划",
@@ -3593,7 +4168,24 @@ function ReportNote({ runId, note, host, readOnly, refresh }) {
     ),
   );
 }
-function ReportPanel({ snapshot, host, readOnly, refresh }) {
+const ANOMALY_LABELS = {
+  no_results: "搜索无结果",
+  phone_required: "需要在手机上处理",
+  load_failed: "页面加载失败",
+  content_mismatch: "内容不匹配",
+  interrupted: "执行中断",
+  login_required: "需要登录",
+  account_restricted: "账号受限",
+  rate_limited: "频率限制",
+};
+const ANOMALY_HANDLING = {
+  no_results: "已跳过这个关键词",
+  load_failed: "重试一次，仍失败则跳过",
+  content_mismatch: "已跳过，不互动",
+  interrupted: "停止分段，对账后未补跑",
+  rate_limited: "停下，等下一个时段",
+};
+function ReportPanel({ snapshot, host, readOnly, refresh, go }) {
   const source = snapshot.data?.reports;
   const [days, setDays] = useState(7);
   const [projectId, setProjectId] = useState("");
@@ -3977,22 +4569,128 @@ function ReportPanel({ snapshot, host, readOnly, refresh }) {
             ),
           )
         : h("p", { className: "xhs-meta" }, "此范围暂无搜索回执。"),
-      h("h3", null, "首页与异常"),
+      h("h3", { style: { marginTop: 14 } }, "首页与异常"),
       h(
-        "p",
-        null,
-        "首页回执浏览 " +
-          report.home.browsed +
-          " 篇 · 回执互动 " +
-          report.home.interactions +
-          " · 有效观察 " +
-          report.home.observations,
-      ),
-      rows(report.anomalies).map((item) =>
+        Row,
+        { title: "首页回执浏览" },
         h(
-          "p",
-          { key: item.type },
-          statusLabel(item.type) + " · " + item.count + " 次",
+          "span",
+          { className: "xhs-meta" },
+          `${report.home.browsed} 篇 · 回执互动 ${report.home.interactions} · 有效观察 ${report.home.observations} 次`,
+        ),
+      ),
+      ["login_required", "rate_limited"].map((type) => {
+        const item = rows(report.anomalies).find((a) => a.type === type);
+        return h(
+          Row,
+          {
+            key: type,
+            title: type === "login_required" ? "登录失效" : "频率限制",
+          },
+          h(
+            "span",
+            { className: "xhs-meta" },
+            item
+              ? `${item.count} 次 · ${String(item.latest?.date || "").slice(
+                  5,
+                )} ${accountName(item.latest?.account_id)}`
+              : "0 次",
+          ),
+        );
+      }),
+    ),
+    h(
+      Card,
+      {
+        title: `异常记录 · 近 ${days} 天`,
+        icon: "异常记录 · 近 7 天",
+        style: { marginTop: 12 },
+      },
+      h(Table, {
+        head: ["异常", "次数", "账号", "处理结果"],
+        body: rows(report.anomalies).map((item) => [
+          ANOMALY_LABELS[item.type] || statusLabel(item.type),
+          item.count,
+          item.latest?.account_id ? accountName(item.latest.account_id) : "—",
+          ["login_required", "account_restricted"].includes(item.type)
+            ? pill("已暂停，待本人处理", "bad", true)
+            : ANOMALY_HANDLING[item.type] || "已记录，未自动处理",
+        ]),
+        empty: "这段时间没有异常记录",
+      }),
+    ),
+    h(
+      Card,
+      {
+        title: "根据记录调整下一轮",
+        tip: "这里只给出依据和入口；改兴趣池、改画像和新建下一轮都由你确认。",
+        style: { marginTop: 12 },
+      },
+      rows(report.keywords)
+        .filter(
+          (k) =>
+            k.verdict === "adjust" &&
+            !rows(snapshot.data.dismissed_alerts).includes("kw:" + k.keyword),
+        )
+        .map((k) =>
+          h(
+            Row,
+            {
+              key: k.keyword,
+              title: `关键词“${k.keyword}”回执偏少`,
+              sub: `计划 ${k.planned} 篇 · 回执 ${k.browsed} 篇 · 互动 ${k.interactions} 次`,
+            },
+            h(
+              Button,
+              { primary: true, onClick: () => go("build", "profile") },
+              "换一个关键词",
+            ),
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "alert.dismiss", { id: "kw:" + k.keyword });
+                  await refresh();
+                },
+              },
+              "保留",
+            ),
+          ),
+        ),
+      snapshot.data.coldstart_observation &&
+        h(
+          Row,
+          {
+            title: snapshot.data.coldstart_observation.note || "运营观察",
+            sub: `${
+              {
+                closer: "推荐更接近目标",
+                slightly: "略有接近",
+                same: "没有变化",
+                away: "偏离目标",
+              }[snapshot.data.coldstart_observation.drift] || ""
+            } · 运营观察`,
+          },
+          h(Button, { onClick: () => go("build", "profile") }, "调整兴趣池"),
+        ),
+      h(
+        Row,
+        {
+          title: "目标画像",
+          sub: rows(report.keywords).some((k) => k.verdict === "adjust")
+            ? "有关键词回执偏少，可以检查画像里的垂直兴趣"
+            : `近 ${days} 天没有需要修改的信号`,
+        },
+        h(Button, { onClick: () => go("build", "projects") }, "编辑画像"),
+      ),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          { primary: true, onClick: () => go("nurture", "operations") },
+          "应用调整并新建下一轮",
         ),
       ),
     ),
@@ -5008,6 +5706,234 @@ function CommentsPanel({ snapshot, host, readOnly, refresh, modelRef }) {
   );
 }
 
+const TAKEOVER_FIELD_LABELS = {
+  nickname: "昵称",
+  bio: "简介",
+  avatar: "头像",
+  background: "背景图",
+  gender: "性别",
+  birthday: "生日",
+  region: "地区",
+  occupation: "职业",
+  school: "学校",
+};
+// One diagnosis: the profile changes it proposes, decided item by item, and its content advice.
+function DiagnosisCard({ d, account, cmd, host, readOnly, refresh, modelRef }) {
+  const editable = ["draft", "reviewing"].includes(d.status);
+  const saved =
+    d.decisions && typeof d.decisions === "object" ? d.decisions : {};
+  const proposals = rows(d.proposals).filter((p) => p && typeof p === "object");
+  const keyOf = (p) => String(p.id || p.field || "");
+  const [choice, setChoice] = useState(() =>
+    Object.fromEntries(
+      proposals.map((p) => {
+        const value = saved[keyOf(p)] ?? saved[p.field];
+        return [
+          keyOf(p),
+          typeof value === "object" && value
+            ? { decision: value.decision || "", edited: value.edited ?? "" }
+            : { decision: String(value || ""), edited: "" },
+        ];
+      }),
+    ),
+  );
+  const [checked, setChecked] = useState(false);
+  const set = (p, patch) =>
+    setChoice({ ...choice, [keyOf(p)]: { ...choice[keyOf(p)], ...patch } });
+  const decided = proposals.every((p) => choice[keyOf(p)]?.decision);
+  const payload = () => ({
+    ...(saved.note ? { note: saved.note } : {}),
+    ...Object.fromEntries(
+      proposals.map((p) => {
+        const c = choice[keyOf(p)] || {};
+        return [
+          keyOf(p),
+          c.decision === "edit"
+            ? { decision: "edit", edited: c.edited }
+            : { decision: c.decision || "skip" },
+        ];
+      }),
+    ),
+  });
+  return h(
+    "div",
+    { style: { marginTop: 12 } },
+    h(
+      Row,
+      { title: text(d.summary), sub: rows(d.findings).join("；") },
+      h(Badge, { value: d.status }),
+      h(
+        Button,
+        {
+          onClick: () =>
+            cmd("diagnosis.regenerate", {
+              id: d.id,
+              confirmed: true,
+              ...(modelRef ? { model_ref: modelRef } : {}),
+            }),
+          disabled: readOnly || d.status === "superseded",
+        },
+        "重新生成",
+      ),
+    ),
+    h(
+      Card,
+      {
+        title: "资料变更提案",
+        tip: "逐项决定。确认方案后，采纳和修改的项目会生成变更单，仍要逐张预检和确认才会在手机上执行。",
+      },
+      h(Table, {
+        head: ["字段", "建议改为", "风险与节奏", "你的决定"],
+        body: proposals.map((p) => {
+          const c = choice[keyOf(p)] || {};
+          return [
+            TAKEOVER_FIELD_LABELS[p.field] || p.field,
+            c.decision === "edit"
+              ? h("input", {
+                  className: "xhs-input",
+                  style: { marginTop: 0 },
+                  "aria-label": `修改${
+                    TAKEOVER_FIELD_LABELS[p.field] || p.field
+                  }`,
+                  value: c.edited,
+                  disabled: readOnly || !editable,
+                  onChange: (e) => set(p, { edited: e.target.value }),
+                })
+              : text(p.after),
+            text(p.risk),
+            h(
+              "div",
+              { style: { display: "flex", gap: 6 } },
+              [
+                ["adopt", "采纳"],
+                ["edit", "修改"],
+                ["skip", "不采纳"],
+              ].map(([k, l]) =>
+                h(
+                  "button",
+                  {
+                    key: k,
+                    type: "button",
+                    className: `xhs-btn${c.decision === k ? " is-active" : ""}`,
+                    "aria-pressed": c.decision === k,
+                    disabled: readOnly || !editable,
+                    onClick: () =>
+                      set(p, {
+                        decision: k,
+                        edited:
+                          k === "edit"
+                            ? c.edited || String(p.after ?? "")
+                            : c.edited,
+                      }),
+                  },
+                  l,
+                ),
+              ),
+            ),
+          ];
+        }),
+        empty: "这次诊断没有提出资料变更",
+      }),
+      editable &&
+        h(Check, {
+          label: "我已逐项核对提案，理解每项的观察期",
+          checked,
+          onChange: setChecked,
+          disabled: readOnly,
+        }),
+      h(
+        "div",
+        { className: "xhs-actions" },
+        h(
+          Button,
+          {
+            disabled: readOnly || !editable || !proposals.length,
+            onClick: () =>
+              cmd("diagnosis.decisions", {
+                id: d.id,
+                decisions: payload(),
+                confirmed: true,
+              }),
+          },
+          "记录采纳意见",
+        ),
+        h(
+          Button,
+          {
+            primary: true,
+            onClick: async () => {
+              if (editable && proposals.length)
+                await cmd("diagnosis.decisions", {
+                  id: d.id,
+                  decisions: payload(),
+                  confirmed: true,
+                });
+              await cmd("diagnosis.confirm", { id: d.id, confirmed: true });
+            },
+            disabled:
+              readOnly ||
+              d.status === "confirmed" ||
+              d.status === "superseded" ||
+              (proposals.length > 0 && (!decided || !checked)),
+          },
+          "确认方案",
+        ),
+        account?.plan_confirmed &&
+          h(
+            Button,
+            {
+              danger: true,
+              onClick: async () => {
+                if (!window.confirm("撤销接管方案并作废尚未开始的变更单？"))
+                  return;
+                await cmd("takeover.plan.revert", {
+                  account_id: account.id,
+                  account_version: account.version,
+                  confirmed: true,
+                });
+              },
+              disabled: readOnly,
+            },
+            "撤销方案",
+          ),
+      ),
+    ),
+    rows(d.recommendations).length > 0 &&
+      h(
+        Card,
+        {
+          title: "内容与运营建议",
+          tip: "建议只进内容计划的待制作，不会自动生成或发布。",
+          style: { marginTop: 12 },
+        },
+        rows(d.recommendations).map((item, index) =>
+          h(
+            Row,
+            { key: index, title: text(item) },
+            h(
+              Button,
+              {
+                disabled: readOnly,
+                onClick: async () => {
+                  await send(host, "task.add", {
+                    title: String(item).slice(0, 40),
+                    account_id: d.account_id,
+                    nature: "knowledge",
+                    source: "ai",
+                    reason: "老号接管诊断建议",
+                  });
+                  toast("已加入内容计划");
+                  await refresh();
+                },
+              },
+              "采纳到内容计划",
+            ),
+          ),
+        ),
+      ),
+  );
+}
+
 function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
   const accounts = rows(snapshot.data.accounts);
   const audits = rows(snapshot.data.audits);
@@ -5218,77 +6144,16 @@ function AuditPanel({ snapshot, host, readOnly, refresh, modelRef }) {
           ),
         ),
       diagnoses.map((d) =>
-        h(
-          "div",
-          { className: "xhs-row", key: d.id },
-          h(
-            "div",
-            null,
-            h("strong", null, text(d.summary)),
-            h(Badge, { value: d.status }),
-          ),
-          h(
-            Button,
-            {
-              onClick: () =>
-                cmd("diagnosis.confirm", { id: d.id, confirmed: true }),
-              disabled: readOnly || d.status === "confirmed",
-            },
-            "确认方案",
-          ),
-          (() => {
-            const account = accounts.find((item) => item.id === d.account_id);
-            return account?.plan_confirmed
-              ? h(
-                  Button,
-                  {
-                    onClick: async () => {
-                      if (
-                        !window.confirm("撤销接管方案并作废尚未开始的变更单？")
-                      )
-                        return;
-                      await cmd("takeover.plan.revert", {
-                        account_id: account.id,
-                        account_version: account.version,
-                        confirmed: true,
-                      });
-                    },
-                    disabled: readOnly,
-                  },
-                  "撤销方案",
-                )
-              : null;
-          })(),
-          h(
-            Button,
-            {
-              onClick: () =>
-                cmd("diagnosis.decisions", {
-                  id: d.id,
-                  decisions: {
-                    note: window.prompt("请输入本次诊断采纳/保留说明") || "",
-                  },
-                  confirmed: true,
-                }),
-              disabled:
-                readOnly || ["confirmed", "superseded"].includes(d.status),
-            },
-            "记录采纳意见",
-          ),
-          h(
-            Button,
-            {
-              onClick: () =>
-                cmd("diagnosis.regenerate", {
-                  id: d.id,
-                  confirmed: true,
-                  ...(modelRef ? { model_ref: modelRef } : {}),
-                }),
-              disabled: readOnly || d.status === "superseded",
-            },
-            "重新生成",
-          ),
-        ),
+        h(DiagnosisCard, {
+          key: d.id,
+          d,
+          account: accounts.find((item) => item.id === d.account_id),
+          cmd,
+          host,
+          readOnly,
+          refresh,
+          modelRef,
+        }),
       ),
     ),
     h(
