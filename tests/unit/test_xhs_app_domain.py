@@ -236,7 +236,8 @@ def base_doc() -> dict[str, Any]:
 @pytest.mark.asyncio
 async def test_account_save_accepts_source_shape_and_timestamp_cas() -> None:
     ctx = FakeContext(base_doc())
-    stamp = domain.now()
+    # A fixed past stamp: on Windows two now() calls can fall in the same clock tick.
+    stamp = "2026-01-01T00:00:00+00:00"
     ctx.doc["accounts"][0]["updated_at"] = stamp
     await domain.command(
         ctx,
@@ -600,7 +601,8 @@ async def test_change_order_image_upload_is_versioned_and_resets_precheck() -> N
         },
     )
     order = ctx.doc["change_orders"][0]
-    stamp = order["updated_at"]
+    # A fixed past stamp: on Windows two now() calls can fall in the same clock tick.
+    stamp = order["updated_at"] = "2026-01-01T00:00:00+00:00"
     old_asset_id = order["fields"]["avatar"]["asset_id"]
     replacement = base64.b64encode(b"\x89PNG\r\n\x1a\nsecond").decode()
     await domain.command(

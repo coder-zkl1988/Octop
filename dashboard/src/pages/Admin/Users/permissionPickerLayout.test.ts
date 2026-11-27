@@ -99,9 +99,46 @@ describe("buildPermissionPickerGroups", () => {
         blocks: [
           {
             kind: "chips",
-            keys: ["chat", "experts", "tasks", "token_usage"],
+            keys: ["chat", "experts", "tasks"],
             fixed: ["chat"],
           },
+        ],
+      },
+      {
+        id: "resources",
+        label: "nav.resources",
+        blocks: [
+          {
+            kind: "page",
+            id: "knowledge-bases",
+            title: "nav.knowledgeBases",
+            keys: ["knowledge_bases", "knowledge_settings"],
+          },
+          { kind: "chips", keys: ["skill_packages"] },
+          {
+            kind: "page",
+            id: "connectors",
+            title: "nav.connectors",
+            keys: [
+              "connector_enabled",
+              "connector_builtin",
+              "connector_custom",
+            ],
+          },
+        ],
+      },
+      {
+        id: "control",
+        label: "nav.control",
+        blocks: [
+          {
+            kind: "page",
+            id: "workbench",
+            title: "nav.workbench",
+            keys: ["terminal", "browser", "cloud"],
+          },
+          // Remote desktop and Phone each hold one permission: shown as chips.
+          { kind: "chips", keys: ["desktop", "mobile"] },
         ],
       },
       {
@@ -120,46 +157,10 @@ describe("buildPermissionPickerGroups", () => {
               "mbti",
               "memory",
               "channels",
+              "bridge",
+              "token_usage",
             ],
           },
-          {
-            kind: "page",
-            id: "connectors",
-            title: "nav.connectors",
-            keys: [
-              "connector_enabled",
-              "connector_builtin",
-              "connector_custom",
-            ],
-          },
-          {
-            kind: "chips",
-            keys: ["skill_packages"],
-          },
-          {
-            kind: "page",
-            id: "knowledge-bases",
-            title: "nav.knowledgeBases",
-            keys: ["knowledge_bases", "knowledge_settings"],
-          },
-          {
-            kind: "chips",
-            keys: ["bridge"],
-          },
-        ],
-      },
-      {
-        id: "control",
-        label: "nav.control",
-        blocks: [
-          {
-            kind: "page",
-            id: "workbench",
-            title: "nav.workbench",
-            keys: ["terminal", "browser", "cloud"],
-          },
-          // Remote desktop and Phone each hold one permission: shown as chips.
-          { kind: "chips", keys: ["desktop", "mobile"] },
         ],
       },
       {
@@ -256,11 +257,13 @@ describe("buildPermissionPickerGroups", () => {
       ["admin", "系统"],
       ["settings", "nav.settings"],
       ["control", "nav.control"],
+      // An older saved layout has no resources group: it is added at the end.
+      ["resources", "nav.resources"],
     ]);
     expect(groups[0]?.blocks).toEqual([
       {
         kind: "chips",
-        keys: ["chat", "experts", "tasks", "token_usage"],
+        keys: ["chat", "experts", "tasks"],
         fixed: ["chat"],
       },
     ]);
@@ -284,6 +287,8 @@ describe("buildPermissionPickerGroups", () => {
         "agent_plugins",
         "mbti",
         "memory",
+        "bridge",
+        "token_usage",
       ],
     });
     expect(

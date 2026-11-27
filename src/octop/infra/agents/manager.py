@@ -1046,6 +1046,14 @@ class AgentManager:
                     require_present=True,
                 )
                 self._assert_model_ref(spec.user_id, spec.default_model)
+                from octop.infra.agents.plugins.plugin_scope import (  # noqa: PLC0415
+                    apply_to_new_expert,
+                )
+
+                apply_to_new_expert(self._repos.settings_repo, spec.user_id, config)
+                from octop.infra import cloud_files  # noqa: PLC0415
+
+                cloud_files.apply_to_new_expert(self._repos.settings_repo, config)
 
             # Create-time: user-assigned workspace_dir wins; otherwise default+encode.
             # After insert, resolve_workspace_dir reads the DB value as source of truth.
@@ -3391,6 +3399,27 @@ class AgentManager:
         await self.reload_all()
         return view
 
+    def _enterprise_denied_tools(self) -> set[str]:
+        from octop.infra.enterprise_plugins import denied_tools
+
+        return denied_tools(self._repos.settings_repo)
+
+    def refresh_plugin_tools(self) -> None:
+        """Re-apply tool denylists to every agent after the enterprise changed which plugin tools are allowed."""
+        for row in self.list_rows():
+            try:
+                self.sync_effective_tools_disabled(row.agent_id)
+            except Exception:
+                logger.exception("failed to sync tools for agent %s", row.agent_id)
+
+    def refresh_security(self) -> None:
+        """Push the effective security policy into running agents after the enterprise floor changed."""
+        if self._harness_manager is not None:
+            try:
+                self._harness_manager.set_security_policy(self._security.harness_policy())
+            except Exception:
+                logger.exception("failed to apply security policy to running harness agents")
+
     def save_security(self, policy: SecurityPolicy | dict[str, Any]) -> SecurityPolicy:
         """Persist security policy and push it into harness agents."""
         resolved = self._security.save(policy)
@@ -4104,10 +4133,13 @@ class AgentManager:
             self._plugin_manager.global_enabled_map() if self._plugin_manager is not None else {}
         )
         registered = [(reg.plugin_id, reg.name) for reg in PluginRegistry().all_tools()]
-        disabled = effective_tools_disabled(
-            cfg,
-            registered_plugin_tools=registered,
-            global_plugins=global_plugins,
+        disabled = (
+            effective_tools_disabled(
+                cfg,
+                registered_plugin_tools=registered,
+                global_plugins=global_plugins,
+            )
+            | self._enterprise_denied_tools()
         )
         if is_team_agent(self.get_row(agent_id)):
             disabled = set(host_tools_disabled(disabled))
@@ -5084,6 +5116,9 @@ class AgentManager:
 
         from octop.infra.agents.middleware.binary_read_guard import BinaryReadGuardMiddleware
         from octop.infra.agents.middleware.browser_profile import BrowserProfileMiddleware
+        from octop.infra.agents.middleware.enterprise_command_guard import (
+            EnterpriseCommandGuardMiddleware,
+        )
         from octop.infra.agents.middleware.mcp_output_schema import (
             McpOutputSchemaMiddleware,
             harness_handles_mcp_tool_errors,
@@ -5116,6 +5151,7 @@ class AgentManager:
             KnowledgeSearchHintMiddleware(),
             BrowserProfileMiddleware(),
             BinaryReadGuardMiddleware(),
+            EnterpriseCommandGuardMiddleware(settings_repo=self._repos.settings_repo),
             *(() if harness_handles_mcp_tool_errors() else (McpOutputSchemaMiddleware(),)),
             WorkspaceImageMaterializeMiddleware(workspace=ws),
             ThreadArtifactsMiddleware(
@@ -5296,10 +5332,13 @@ class AgentManager:
             from octop.infra.agents.settings.tool_catalog import effective_tools_disabled
             from octop.infra.agents.teams import host_tools_disabled
 
-            disabled = effective_tools_disabled(
-                cfg,
-                registered_plugin_tools=registered,
-                global_plugins=global_plugins,
+            disabled = (
+                effective_tools_disabled(
+                    cfg,
+                    registered_plugin_tools=registered,
+                    global_plugins=global_plugins,
+                )
+                | self._enterprise_denied_tools()
             )
             if team_host:
                 disabled = set(host_tools_disabled(disabled))

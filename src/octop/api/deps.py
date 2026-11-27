@@ -66,6 +66,7 @@ _JWT_EXEMPT_EXACT = (
     "/api/memory-mcp/codex-config",  # Authenticated through the live Memory space token.
     "/api/auth/login",
     "/api/auth/enterprise/login",
+    "/api/auth/enterprise/captcha",
     "/api/auth/enterprise/mfa",
     "/api/auth/enterprise/register",
     "/api/auth/enterprise/register/validate",

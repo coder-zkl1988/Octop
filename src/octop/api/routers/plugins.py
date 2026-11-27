@@ -94,6 +94,31 @@ class AgentPluginsPatch(BaseModel):
     plugins: dict[str, AgentPluginEnabledPatch]
 
 
+def _enterprise_gate(server: OctopServer, reason: str | None) -> None:
+    if reason:
+        raise OctopError(ErrorCode.FORBIDDEN, reason, status=403)
+
+
+def _enterprise_policy(server: OctopServer) -> dict[str, Any]:
+    from octop.infra.enterprise_plugins import load_policy
+
+    services = getattr(server, "services", None)
+    settings = getattr(services, "settings_repo", None)
+    return (
+        load_policy(settings)
+        if settings is not None
+        else {"enforced": False, "items": [], "stopped": []}
+    )
+
+
+def _bundled_ids() -> set[str]:
+    from octop.infra.agents.plugins.bundled import default_bundled_plugins_root
+
+    return {
+        p.name for p in default_bundled_plugins_root().iterdir() if (p / "plugin.yaml").is_file()
+    }
+
+
 def _plugin_manager(server: OctopServer) -> PluginManager:
     mgr = server.plugin_manager
     if mgr is None:
@@ -146,6 +171,9 @@ async def install_plugin(
     server: OctopServer = Depends(get_server),
     _user: Any = Depends(require_permission("plugins")),
 ) -> dict[str, Any]:
+    from octop.infra.enterprise_plugins import install_blocked_reason
+
+    _enterprise_gate(server, install_blocked_reason(_enterprise_policy(server), None))
     mgr = _plugin_manager(server)
     try:
         loaded = await mgr.install_async("install_url", body.url, force=body.force)
@@ -180,6 +208,9 @@ async def upload_plugin(
 
     ``force=True`` overwrites an already-installed plugin with the same id.
     """
+    from octop.infra.enterprise_plugins import install_blocked_reason
+
+    _enterprise_gate(server, install_blocked_reason(_enterprise_policy(server), None))
     mgr = _plugin_manager(server)
     max_bytes = (
         int(server.services.config.max_upload_bytes)
@@ -255,6 +286,9 @@ async def install_market_plugin(
     _user: Any = Depends(require_permission("plugin_market")),
 ) -> dict[str, Any]:
     """Download one catalog release into ``~/.octop/plugins``."""
+    from octop.infra.enterprise_plugins import install_blocked_reason
+
+    _enterprise_gate(server, install_blocked_reason(_enterprise_policy(server), plugin_id))
     mgr = _plugin_manager(server)
     try:
         loaded = await mgr.install_async(
@@ -346,6 +380,15 @@ async def patch_plugin(
     mgr = _plugin_manager(server)
     item: dict[str, Any] | None = None
     if body.enabled is not None:
+        from octop.infra.enterprise_plugins import enable_blocked_reason, removal_blocked_reason
+
+        policy = _enterprise_policy(server)
+        _enterprise_gate(
+            server,
+            enable_blocked_reason(policy, plugin_id, _bundled_ids())
+            if body.enabled
+            else removal_blocked_reason(policy, plugin_id),
+        )
         item = mgr.set_enabled(plugin_id, body.enabled)
         if server.app_runtime is not None:
             await server.refresh_plugin_channels()
@@ -375,8 +418,10 @@ async def uninstall_plugin(
     server: OctopServer = Depends(get_server),
     _user: Any = Depends(require_permission("plugins")),
 ) -> dict[str, str]:
+    from octop.infra.enterprise_plugins import removal_blocked_reason
     from octop.infra.users.groups import RESOURCE_PLUGIN
 
+    _enterprise_gate(server, removal_blocked_reason(_enterprise_policy(server), plugin_id))
     _plugin_manager(server).uninstall(plugin_id)
     _plugin_group_access(server).clear(RESOURCE_PLUGIN, plugin_id)
     if server.app_runtime is not None:

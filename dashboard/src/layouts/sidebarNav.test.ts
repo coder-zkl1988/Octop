@@ -53,7 +53,7 @@ describe("sidebarNav", () => {
       new Set(
         enterpriseMode
           ? SIDEBAR_NAV_KEYS.filter((key) => !key.startsWith("admin-"))
-          : SIDEBAR_NAV_KEYS,
+          : SIDEBAR_NAV_KEYS.filter((key) => key !== "local-settings"),
       ),
     );
     const grouped = buildNavSections(adminUser, { mobileEnabled: true }).filter(
@@ -61,15 +61,28 @@ describe("sidebarNav", () => {
     );
     expect(grouped.map((section) => section.id)).toEqual(
       enterpriseMode
-        ? ["settings", "control"]
-        : ["settings", "control", "admin"],
+        ? ["resources", "control", "settings"]
+        : ["resources", "control", "settings", "admin"],
     );
-    if (enterpriseMode) {
-      expect(grouped[0]?.items.map((item) => item.key).slice(0, 2)).toEqual([
-        "personalization",
-        "models",
-      ]);
-    }
+    const settings = grouped.find((section) => section.id === "settings");
+    expect(settings?.items.map((item) => item.key)).toEqual(
+      enterpriseMode
+        ? [
+            "personalization",
+            "models",
+            "channels",
+            "bridge",
+            "token-usage",
+            "local-settings",
+          ]
+        : ["personalization", "models", "channels", "bridge", "token-usage"],
+    );
+    expect(grouped[0]?.items.map((item) => item.key)).toEqual([
+      "knowledge-bases",
+      "skill-packages",
+      "connectors",
+      "apps",
+    ]);
   });
 
   it("opens Memory through Personalization for users with memory access", () => {

@@ -753,6 +753,12 @@ class OctopServer:
                 await bridge_mgr.resume_auto_connections()
 
         asyncio.create_task(_resume_bridges(), name="bridge-auto-resume")
+        if self.config is not None and self.config.enterprise_backend_url:
+            from octop.infra.cloud_files import sync_loop  # noqa: PLC0415
+
+            self._cloud_files_task: asyncio.Task[None] | None = asyncio.create_task(
+                sync_loop(self), name="enterprise-cloud-files"
+            )
 
         from octop.infra.setup.completion import seal_setup_wizard_if_installed  # noqa: PLC0415
 
@@ -872,6 +878,9 @@ class OctopServer:
     async def _teardown_runtime(self) -> None:
         """Stop extensions and the runtime, close the DB, and clear both handles."""
         try:
+            cloud_task = getattr(self, "_cloud_files_task", None)
+            if cloud_task is not None:
+                cloud_task.cancel()
             started, self._started_extensions = self._started_extensions, ()
             if started:
                 from octop.infra.extensions import run_shutdown_hooks  # noqa: PLC0415

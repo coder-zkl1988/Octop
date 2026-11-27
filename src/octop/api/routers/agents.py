@@ -15,7 +15,10 @@ from octop.api.common.agent import (
     assert_agent_owner,
 )
 from octop.api.common.agent_runtime import AgentRuntimeFields, persisted_agent_settings
-from octop.api.common.validators import assert_user_backend_root_dirs
+from octop.api.common.validators import (
+    assert_enterprise_workspace_dir,
+    assert_user_backend_root_dirs,
+)
 from octop.api.common.workspace import require_agent_workspace
 from octop.api.deps import current_user, get_server, require_permission
 from octop.infra.agents.experts.avatar import (
@@ -359,6 +362,7 @@ async def create_agent(
             body.config.get("backend"),
             policy_repo=server.services.user_policy_repo,
         )
+        assert_enterprise_workspace_dir(server, body.config.get("workspace_dir"))
     knowledge_ids = (
         server.app_runtime.agent_registry.validate_knowledge_base_ids(
             user.id, body.knowledge_base_ids
@@ -472,6 +476,7 @@ async def patch_agent(
             body.config.get("backend"),
             policy_repo=server.services.user_policy_repo,
         )
+        assert_enterprise_workspace_dir(server, body.config.get("workspace_dir"))
     updates = {
         key: value
         for key, value in body.model_dump(exclude_unset=True).items()

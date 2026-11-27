@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import React, { type ComponentType } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { openXhsTab } from "./xhsNav";
 import type { OctopPluginUIHost, PluginPageProps } from "./types";
 
 const source = readFileSync(
@@ -196,7 +197,7 @@ function fixture(features = ["xhs.ops"], readOnly = false) {
   return { snapshot, posts, request, host, unmount: view.unmount };
 }
 async function openOperations() {
-  fireEvent.click(await screen.findByRole("button", { name: "日常运营" }));
+  await openXhsTab("日常运营");
   fireEvent.change(screen.getByLabelText("运营账号"), {
     target: { value: "a1" },
   });
@@ -237,7 +238,7 @@ describe("XHS daily operations through the registered workbench", () => {
     snapshot.data.operation_days[0].version = 99;
     fireEvent.click(
       screen.getByRole("checkbox", {
-        name: "我已核对目标小红书号、手机、每段计划与互动预算",
+        name: "我已核对目标小红薯号、手机、每段计划与互动预算",
       }),
     );
     fireEvent.click(start);
@@ -262,7 +263,7 @@ describe("XHS daily operations through the registered workbench", () => {
     await screen.findByRole("button", { name: "确认启动日常运营" });
     fireEvent.click(
       screen.getByRole("checkbox", {
-        name: "我已核对目标小红书号、手机、每段计划与互动预算",
+        name: "我已核对目标小红薯号、手机、每段计划与互动预算",
       }),
     );
     fireEvent.change(screen.getByLabelText("第1段关键词1篇数"), {
@@ -401,6 +402,7 @@ describe("XHS daily operations through the registered workbench", () => {
       accepted: 1,
       skipped: { device_busy: 2 },
     };
+    await openXhsTab("项目");
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     try {
       const checkbox = await screen.findByRole("checkbox", {
@@ -494,7 +496,7 @@ describe("XHS evidence reports", () => {
       },
     };
     snapshot.data.runs = [{ id: "r1", kind: "nurture", status: "unknown" }];
-    fireEvent.click(await screen.findByRole("button", { name: "复盘报表" }));
+    await openXhsTab("复盘报表");
     expect(await screen.findByText("近七日词")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "最近14天" }));
     expect(screen.getByText("近十四日词")).toBeInTheDocument();

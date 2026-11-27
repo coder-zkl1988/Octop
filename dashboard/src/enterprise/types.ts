@@ -81,7 +81,11 @@ export interface SyncQueueRow {
   kind: SyncKind;
   pending: number;
   synced: number;
-  lastSyncedAt: string;
+  /** Bytes kept in the cloud; the 文件 row only. */
+  bytes?: number;
+  /** 企业云端存储 state; the 文件 row only. */
+  cloud?: CloudFilesState;
+  lastSyncedAt: string | null;
   /** Present while a file upload is in flight. */
   upload?: { pct: number; doneMb: number; totalMb: number };
 }
@@ -148,6 +152,12 @@ export interface EnterprisePolicy {
   /** Days the desktop keeps working without refreshing policy. */
   offlineGraceDays: number;
   capabilities: CapabilityPolicy[];
+  /** Folders a workspace may be in; empty means any. */
+  fsRoots?: string[];
+  /** Folders experts may never read or write. */
+  fsDenyRoots?: string[];
+  /** Shell command patterns the experts may not run. */
+  denyCommands?: string[];
 }
 
 export type ModelCapability = "text" | "image" | "reasoning";
@@ -181,6 +191,22 @@ export interface SessionLock {
   deviceOnline: boolean;
 }
 
+/** 企业云端存储: on, off, read-only after the enterprise closed it, or not in the plan. */
+export type CloudFilesState = "on" | "off" | "read_only" | "unavailable";
+
+export interface CloudFilesSummary {
+  state: CloudFilesState;
+  /** Members pick 本机文件夹 or 企业云端; false means 企业云端 only. */
+  expertChoice: boolean;
+  maxFileBytes: number;
+  experts: number;
+  files: number;
+  bytes: number;
+  pending: number;
+  skipped: number;
+  lastSyncedAt: number | null;
+}
+
 export interface EnterpriseSnapshot {
   tenant: EnterpriseTenant;
   member: EnterpriseMember;
@@ -190,6 +216,8 @@ export interface EnterpriseSnapshot {
   devices: EnterpriseDevice[];
   usage: { month: string; rows: ModelUsageRow[]; local: LocalUsageSummary };
   sync: SyncStatus;
+  /** Absent in the simulation and on older desktops. */
+  cloudFiles?: CloudFilesSummary;
   cloudModels: CloudModel[];
   localModels: LocalModel[];
 }

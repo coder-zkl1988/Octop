@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from octop.infra import enterprise_security
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.resource_policy import raise_if_backend_outside_user_root
 from octop.infra.utils.host_dirs import assert_backend_root_dirs_allowed
@@ -33,6 +34,26 @@ def assert_user_backend_root_dirs(
         assert_backend_root_dirs_allowed(backend, restrict_to_home=False)
     except ValueError as exc:
         raise OctopError(ErrorCode.WORKSPACE_OP_UNSUPPORTED, str(exc)) from exc
+
+
+def assert_enterprise_workspace_dir(server: Any, workspace_dir: Any) -> None:
+    """Reject an explicit workspace folder outside the enterprise's allowed folders."""
+    if not isinstance(workspace_dir, str) or not workspace_dir.strip():
+        return
+    settings = getattr(getattr(server, "services", None), "settings_repo", None)
+    if settings is None:
+        return
+    security = enterprise_security.load(settings)
+    if enterprise_security.workspace_dir_allowed(security, workspace_dir):
+        return
+    raise OctopError(
+        ErrorCode.WORKSPACE_ROOT_RESTRICTED,
+        "workspace folder is outside the folders the enterprise allows",
+        details={
+            "workspace_dir": workspace_dir,
+            "allowed": list(security.get("fs_roots") or []),
+        },
+    )
 
 
 async def validate_chat_mcp_servers(

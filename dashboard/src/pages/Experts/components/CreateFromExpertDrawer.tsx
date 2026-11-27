@@ -1,10 +1,16 @@
 // dashboard/src/pages/Experts/components/CreateFromExpertDrawer.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Button, Drawer, Form, Input, Select, Spin } from "antd";
+import { Alert, Button, Drawer, Form, Input, Radio, Select, Spin } from "antd";
 import { message } from "@/utils/antdMessage";
 
 import { request } from "../../../api/request";
+import {
+  cloudFilesApi,
+  defaultStorageLocation,
+  type StorageLocation,
+} from "../../../api/modules/cloudFiles";
+import { useEnterprise } from "../../../enterprise/EnterpriseContext";
 import { octopAgentsApi } from "../../../api/modules/octopAgents";
 import {
   expertMarketApi,
@@ -246,6 +252,12 @@ export default function CreateFromExpertDrawer({
   const createBackendChoice = defaultCreateBackendChoice(
     allowedBackendTypes,
     currentUser?.default_backend_type,
+  );
+  const { snapshot: enterpriseSnapshot } = useEnterprise();
+  const cloudFiles = enterpriseSnapshot?.cloudFiles;
+  const cloudOn = cloudFiles?.state === "on";
+  const [storageLocation, setStorageLocation] = useState<StorageLocation>(() =>
+    defaultStorageLocation(),
   );
   const [form] = Form.useForm<
     {
@@ -599,6 +611,13 @@ export default function CreateFromExpertDrawer({
       if (source.kind !== "market") {
         message.success(t("experts.agentCreated", { name: body.name }));
       }
+      if (cloudOn && cloudFiles?.expertChoice && storageLocation === "cloud") {
+        try {
+          await cloudFilesApi.setLocation(body.agent_id, "cloud");
+        } catch {
+          message.warning(t("experts.storageLocation.later"));
+        }
+      }
       warnComposerPartial(body, t);
       if (avatarFile) {
         try {
@@ -892,6 +911,28 @@ export default function CreateFromExpertDrawer({
           >
             <Input.TextArea autoSize={{ minRows: 2 }} />
           </ExpertTextAssistField>
+          {cloudOn ? (
+            <Form.Item
+              label={t("experts.storageLocation.label")}
+              extra={
+                cloudFiles?.expertChoice
+                  ? t("experts.storageLocation.hint")
+                  : t("experts.storageLocation.forced")
+              }
+            >
+              <Radio.Group
+                value={cloudFiles?.expertChoice ? storageLocation : "cloud"}
+                disabled={!cloudFiles?.expertChoice}
+                onChange={(e) =>
+                  setStorageLocation(e.target.value as StorageLocation)
+                }
+                options={[
+                  { value: "local", label: t("experts.storageLocation.local") },
+                  { value: "cloud", label: t("experts.storageLocation.cloud") },
+                ]}
+              />
+            </Form.Item>
+          ) : null}
           <AgentBackendFields
             backends={backends}
             backendsLoading={backendsLoading}

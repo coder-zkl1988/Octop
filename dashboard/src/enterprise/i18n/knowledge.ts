@@ -2,16 +2,16 @@
 export const zh = {
   subtitle:
     "个人知识库存在本机、离线可用；企业公共知识库由云端托管，按权限检索。个人库可申请发布到企业空间",
-  groupLocal: "个人知识库 · 本地",
+  groupLocal: "我的知识库",
   groupLocalNote: "仅存于本机，离线可用",
-  groupCloud: "企业公共知识库 · 云端",
+  groupCloud: "企业知识库",
   localOwner: "本机 · {{name}}",
   accessRead: "只读",
   accessEdit: "可编辑",
   cloudNote:
-    "企业公共知识库由云端托管，在对话中按权限检索；文档由所属部门在企业空间维护。",
-  publish: "发布到企业空间",
-  pending: "审批中",
+    "企业知识库由管理员在后台维护，云端托管；检索结果按你的部门与角色过滤。",
+  publish: "发布到企业",
+  pending: "发布审核中",
   pendingMeta: "发布到企业空间 · {{date}}",
   strip:
     "已申请发布到企业空间，共享给 <b>{{scope}}</b>；管理员审批通过后由云端建立共享副本，本地库照常可用。",

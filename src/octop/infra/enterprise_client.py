@@ -78,6 +78,40 @@ async def request(
     body: dict[str, Any] | None = None,
     timeout: float = 15.0,
 ) -> dict[str, Any]:
+    response = await _send(server, user_id, method, path, body=body, timeout=timeout)
+    try:
+        value = response.json() if response.status_code != 204 else {}
+    except ValueError as exc:
+        raise OctopError(ErrorCode.AUTH_FAILED, "invalid enterprise response", status=502) from exc
+    if not isinstance(value, dict):
+        raise OctopError(ErrorCode.AUTH_FAILED, "invalid enterprise response", status=502)
+    return cast(dict[str, Any], value)
+
+
+async def request_bytes(
+    server: Any,
+    user_id: int,
+    method: str,
+    path: str,
+    *,
+    content: bytes | None = None,
+    timeout: float = 120.0,
+) -> bytes:
+    """Like :func:`request`, for raw bodies (file contents) in either direction."""
+    response = await _send(server, user_id, method, path, content=content, timeout=timeout)
+    return response.content
+
+
+async def _send(
+    server: Any,
+    user_id: int,
+    method: str,
+    path: str,
+    *,
+    body: dict[str, Any] | None = None,
+    content: bytes | None = None,
+    timeout: float,
+) -> httpx.Response:
     entry = session_entry(server, user_id)
     url = server.services.config.enterprise_backend_url
     if not url:
@@ -90,7 +124,11 @@ async def request(
     try:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
             response = await client.request(
-                method, str(url).rstrip("/") + path, headers=headers, json=body
+                method,
+                str(url).rstrip("/") + path,
+                headers=headers,
+                json=body,
+                content=content,
             )
     except httpx.HTTPError as exc:
         raise OctopError(
@@ -131,6 +169,20 @@ async def request(
                 "billing_unavailable",
                 "invalid_gateway_response",
                 "upstream_error",
+                "tenant_quota_exceeded",
+                "member_quota_exceeded",
+                "license_required",
+                "transfer_to_self",
+                "transfer_target_not_eligible",
+                "transfer_package_too_large",
+                "too_many_open_transfers",
+                "transfer_already_open",
+                "transfer_already_decided",
+                "transfer_not_open",
+                "transfer_package_missing",
+                "cloud_storage_unavailable",
+                "storage_full",
+                "not_found",
             }:
                 reason = candidate
         except ValueError:
@@ -141,10 +193,4 @@ async def request(
             status=response.status_code,
             details={"reason": reason} if reason else {},
         )
-    try:
-        value = response.json() if response.status_code != 204 else {}
-    except ValueError as exc:
-        raise OctopError(ErrorCode.AUTH_FAILED, "invalid enterprise response", status=502) from exc
-    if not isinstance(value, dict):
-        raise OctopError(ErrorCode.AUTH_FAILED, "invalid enterprise response", status=502)
-    return cast(dict[str, Any], value)
+    return response

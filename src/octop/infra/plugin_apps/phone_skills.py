@@ -18,7 +18,7 @@ def build_bundle(path: Path) -> dict[str, Any]:
     try:
         bundle_bytes = bundle_path.read_bytes()
         bundle = json.loads(bundle_bytes)
-        manifest = json.loads(manifest_path.read_text())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise PluginAppError("phone_skill_bundle_invalid") from exc
     if not isinstance(bundle, dict) or not isinstance(manifest, dict):

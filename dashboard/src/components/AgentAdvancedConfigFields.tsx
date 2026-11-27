@@ -165,11 +165,20 @@ function RetryBudgetFields({
 export function AgentAdvancedConfigFields({
   requireLimits = false,
   grouped = false,
+  only = "all",
 }: {
   /** When true, ``max_iters`` and ``max_input_length`` are required. */
   requireLimits?: boolean;
   grouped?: boolean;
+  /**
+   * ``basic``: the four model parameters the 运行配置 page shows first;
+   * ``advanced``: everything else (compaction switch excluded, it lives with
+   * the run behaviour toggles); ``all``: the full set, as in the drawers.
+   */
+  only?: "all" | "basic" | "advanced";
 }) {
+  const basic = only !== "advanced";
+  const advanced = only !== "basic";
   const { t } = useTranslation();
   const compactionEnabled = Form.useWatch(["compaction", "enabled"]);
   const toolCallLimitEnabled = Form.useWatch("tool_call_limit_enabled");
@@ -180,192 +189,217 @@ export function AgentAdvancedConfigFields({
         grouped={grouped}
         title={t("agentConfig.runtimeGroups.modelLimits")}
       >
-        <Form.Item
-          label={t("agentConfig.maxIters")}
-          name="max_iters"
-          rules={
-            requireLimits
-              ? [
-                  {
-                    required: true,
-                    message: t("agentConfig.maxItersRequired"),
-                  },
-                  {
-                    type: "number",
-                    min: 1,
-                    message: t("agentConfig.maxItersMin"),
-                  },
-                ]
-              : undefined
-          }
-          tooltip={t("agentConfig.maxItersTooltip")}
-        >
-          <InputNumber
-            style={{ width: "100%" }}
-            min={1}
-            placeholder={t("agentConfig.maxItersPlaceholder")}
-          />
-        </Form.Item>
+        {basic && (
+          <Form.Item
+            label={t("agentConfig.maxIters")}
+            name="max_iters"
+            rules={
+              requireLimits
+                ? [
+                    {
+                      required: true,
+                      message: t("agentConfig.maxItersRequired"),
+                    },
+                    {
+                      type: "number",
+                      min: 1,
+                      message: t("agentConfig.maxItersMin"),
+                    },
+                  ]
+                : undefined
+            }
+            tooltip={t("agentConfig.maxItersTooltip")}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={1}
+              placeholder={t("agentConfig.maxItersPlaceholder")}
+            />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("agentConfig.maxInputLength")}
-          name="max_input_length"
-          rules={
-            requireLimits
-              ? [
-                  {
-                    required: true,
-                    message: t("agentConfig.maxInputLengthRequired"),
-                  },
-                  {
-                    type: "number",
-                    min: 1000,
-                    message: t("agentConfig.maxInputLengthMin"),
-                  },
-                ]
-              : undefined
-          }
-          tooltip={t("agentConfig.maxInputLengthTooltip")}
-        >
-          <InputNumber
-            style={{ width: "100%" }}
-            min={1000}
-            step={1024}
-            placeholder={t("agentConfig.maxInputLengthPlaceholder")}
-          />
-        </Form.Item>
+        {basic && (
+          <Form.Item
+            label={t("agentConfig.maxInputLength")}
+            name="max_input_length"
+            rules={
+              requireLimits
+                ? [
+                    {
+                      required: true,
+                      message: t("agentConfig.maxInputLengthRequired"),
+                    },
+                    {
+                      type: "number",
+                      min: 1000,
+                      message: t("agentConfig.maxInputLengthMin"),
+                    },
+                  ]
+                : undefined
+            }
+            tooltip={t("agentConfig.maxInputLengthTooltip")}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={1000}
+              step={1024}
+              placeholder={t("agentConfig.maxInputLengthPlaceholder")}
+            />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("experts.temperature")}
-          name="temperature"
-          tooltip={t("experts.temperatureTooltip")}
-        >
-          <InputNumber style={{ width: "100%" }} min={0} max={2} step={0.1} />
-        </Form.Item>
+        {basic && (
+          <Form.Item
+            label={t("experts.temperature")}
+            name="temperature"
+            tooltip={t("experts.temperatureTooltip")}
+          >
+            <InputNumber style={{ width: "100%" }} min={0} max={2} step={0.1} />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("experts.topP")}
-          name="top_p"
-          tooltip={t("experts.topPTooltip")}
-        >
-          <InputNumber style={{ width: "100%" }} min={0} max={1} step={0.05} />
-        </Form.Item>
+        {advanced && (
+          <Form.Item
+            label={t("experts.topP")}
+            name="top_p"
+            tooltip={t("experts.topPTooltip")}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={0}
+              max={1}
+              step={0.05}
+            />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("experts.maxTokens")}
-          name="max_tokens"
-          tooltip={t("experts.maxTokensTooltip")}
-        >
-          <InputNumber style={{ width: "100%" }} min={1} step={256} />
-        </Form.Item>
+        {basic && (
+          <Form.Item
+            label={t("experts.maxTokens")}
+            name="max_tokens"
+            tooltip={t("experts.maxTokensTooltip")}
+          >
+            <InputNumber style={{ width: "100%" }} min={1} step={256} />
+          </Form.Item>
+        )}
       </RuntimeGroup>
-      <RuntimeGroup
-        grouped={grouped}
-        title={t("agentConfig.runtimeGroups.toolCallLimit")}
-      >
-        <Form.Item
-          label={t("agentConfig.toolCallLimit.enabled")}
-          name="tool_call_limit_enabled"
-          valuePropName="checked"
-          initialValue={true}
-          tooltip={t("agentConfig.toolCallLimit.enabledTooltip")}
+      {advanced && (
+        <RuntimeGroup
+          grouped={grouped}
+          title={t("agentConfig.runtimeGroups.toolCallLimit")}
         >
-          <Switch />
-        </Form.Item>
+          <Form.Item
+            label={t("agentConfig.toolCallLimit.enabled")}
+            name="tool_call_limit_enabled"
+            valuePropName="checked"
+            initialValue={true}
+            tooltip={t("agentConfig.toolCallLimit.enabledTooltip")}
+          >
+            <Switch />
+          </Form.Item>
 
-        <Form.Item
-          label={t("agentConfig.toolCallLimit.runLimit")}
-          name="tool_call_run_limit"
-          tooltip={t("agentConfig.toolCallLimit.runLimitTooltip")}
-        >
-          <InputNumber
-            style={{ width: "100%" }}
-            min={1}
-            step={1}
-            disabled={toolCallLimitEnabled === false}
-            placeholder={t("agentConfig.toolCallLimit.runLimitPlaceholder")}
-          />
-        </Form.Item>
-      </RuntimeGroup>
-      <RetryBudgetFields grouped={grouped} group="modelRetry" />
-      <RetryBudgetFields grouped={grouped} group="toolRetry" />
+          <Form.Item
+            label={t("agentConfig.toolCallLimit.runLimit")}
+            name="tool_call_run_limit"
+            tooltip={t("agentConfig.toolCallLimit.runLimitTooltip")}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={1}
+              step={1}
+              disabled={toolCallLimitEnabled === false}
+              placeholder={t("agentConfig.toolCallLimit.runLimitPlaceholder")}
+            />
+          </Form.Item>
+        </RuntimeGroup>
+      )}
+      {advanced && <RetryBudgetFields grouped={grouped} group="modelRetry" />}
+      {advanced && <RetryBudgetFields grouped={grouped} group="toolRetry" />}
 
       <RuntimeGroup
         grouped={grouped}
         title={t("agentConfig.runtimeGroups.compaction")}
       >
-        <Form.Item
-          label={t("agentConfig.compaction.enabled")}
-          name={["compaction", "enabled"]}
-          valuePropName="checked"
-          initialValue={true}
-          tooltip={t("agentConfig.compaction.enabledTooltip")}
-        >
-          <Switch />
-        </Form.Item>
+        {only === "all" && (
+          <Form.Item
+            label={t("agentConfig.compaction.enabled")}
+            name={["compaction", "enabled"]}
+            valuePropName="checked"
+            initialValue={true}
+            tooltip={t("agentConfig.compaction.enabledTooltip")}
+          >
+            <Switch />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("agentConfig.compaction.trigger")}
-          name={["compaction", "trigger_fraction"]}
-          tooltip={t("agentConfig.compaction.triggerTooltip")}
-        >
-          <InputNumber
-            style={{ width: "100%" }}
-            min={0.01}
-            max={1}
-            step={0.05}
-            disabled={compactionEnabled === false}
-            placeholder={t("agentConfig.compaction.triggerPlaceholder")}
-          />
-        </Form.Item>
+        {advanced && (
+          <Form.Item
+            label={t("agentConfig.compaction.trigger")}
+            name={["compaction", "trigger_fraction"]}
+            tooltip={t("agentConfig.compaction.triggerTooltip")}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={0.01}
+              max={1}
+              step={0.05}
+              disabled={compactionEnabled === false}
+              placeholder={t("agentConfig.compaction.triggerPlaceholder")}
+            />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("agentConfig.compaction.keep")}
-          name={["compaction", "keep_fraction"]}
-          dependencies={[["compaction", "trigger_fraction"]]}
-          tooltip={t("agentConfig.compaction.keepTooltip")}
-          rules={[
-            ({ getFieldValue }) => ({
-              validator(_, value: unknown) {
-                if (typeof value !== "number") return Promise.resolve();
-                const trigger = getFieldValue([
-                  "compaction",
-                  "trigger_fraction",
-                ]);
-                const limit = typeof trigger === "number" ? trigger : 0.85;
-                if (value >= limit) {
-                  return Promise.reject(
-                    new Error(t("agentConfig.compaction.keepBelowTrigger")),
-                  );
-                }
-                return Promise.resolve();
-              },
-            }),
-          ]}
-        >
-          <InputNumber
-            style={{ width: "100%" }}
-            min={0.01}
-            max={0.99}
-            step={0.05}
-            disabled={compactionEnabled === false}
-            placeholder={t("agentConfig.compaction.keepPlaceholder")}
-          />
-        </Form.Item>
+        {advanced && (
+          <Form.Item
+            label={t("agentConfig.compaction.keep")}
+            name={["compaction", "keep_fraction"]}
+            dependencies={[["compaction", "trigger_fraction"]]}
+            tooltip={t("agentConfig.compaction.keepTooltip")}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value: unknown) {
+                  if (typeof value !== "number") return Promise.resolve();
+                  const trigger = getFieldValue([
+                    "compaction",
+                    "trigger_fraction",
+                  ]);
+                  const limit = typeof trigger === "number" ? trigger : 0.85;
+                  if (value >= limit) {
+                    return Promise.reject(
+                      new Error(t("agentConfig.compaction.keepBelowTrigger")),
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={0.01}
+              max={0.99}
+              step={0.05}
+              disabled={compactionEnabled === false}
+              placeholder={t("agentConfig.compaction.keepPlaceholder")}
+            />
+          </Form.Item>
+        )}
 
-        <Form.Item
-          label={t("agentConfig.compaction.trim")}
-          name={["compaction", "trim_tokens"]}
-          tooltip={t("agentConfig.compaction.trimTooltip")}
-        >
-          <InputNumber
-            style={{ width: "100%" }}
-            min={1000}
-            step={1000}
-            disabled={compactionEnabled === false}
-            placeholder={t("agentConfig.compaction.trimPlaceholder")}
-          />
-        </Form.Item>
+        {advanced && (
+          <Form.Item
+            label={t("agentConfig.compaction.trim")}
+            name={["compaction", "trim_tokens"]}
+            tooltip={t("agentConfig.compaction.trimTooltip")}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={1000}
+              step={1000}
+              disabled={compactionEnabled === false}
+              placeholder={t("agentConfig.compaction.trimPlaceholder")}
+            />
+          </Form.Item>
+        )}
       </RuntimeGroup>
     </>
   );

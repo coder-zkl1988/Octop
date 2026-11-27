@@ -229,8 +229,10 @@ def build_app(server: OctopServer) -> FastAPI:
         workspace_git,
         xhs_ops,
     )
+    from octop.api.routers.cloud_files import router as cloud_files_router
     from octop.api.routers.decision import router as decision_router
     from octop.api.routers.filesystem import router as filesystem_router
+    from octop.api.routers.local_settings import router as local_settings_router
     from octop.api.routers.memory_defaults import router as memory_defaults_router
     from octop.api.routers.observability import router as observability_router
     from octop.api.routers.providers import admin_router as admin_providers_router
@@ -298,6 +300,8 @@ def build_app(server: OctopServer) -> FastAPI:
                 storage_backends_user_router, "/api/storage-backends", ["storage-backends"]
             ),
             _RouterMount(filesystem_router, "/api/filesystem", ["filesystem"]),
+            _RouterMount(local_settings_router, "/api/local-settings", ["local-settings"]),
+            _RouterMount(cloud_files_router, "/api/enterprise/files", ["local-settings"]),
             _RouterMount(mbti.router, "/api", ["mbti"]),
             _RouterMount(experts.router, "/api", ["experts"]),
             _RouterMount(teams.router, "/api", ["teams"]),

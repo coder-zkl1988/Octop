@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  chromeTopBandPx,
-  WINDOW_CONTROLS_INSET,
-  type DesktopChromeStyle,
-} from "../../utils/desktopChrome";
+import { type DesktopChromeStyle } from "../../utils/desktopChrome";
 
 const state = vi.hoisted(() => ({
   pathname: "/tasks",
@@ -60,7 +56,8 @@ vi.mock("../../components/RequirePermission", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
 
-vi.mock("../../utils/permissions", () => ({
+vi.mock("../../utils/permissions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../utils/permissions")>()),
   routeNeedsPermission: () => false,
 }));
 
@@ -187,23 +184,11 @@ describe("MainLayout 共享顶栏", () => {
     expect(container.querySelector(".octop-shell-drag-band")).toBeNull();
   });
 
-  it("macOS 拖拽区域限制在顶栏且避开交通灯", () => {
+  it("macOS 拖拽条由全局 DesktopWindowDragBand 挂载，不在布局里重复", () => {
+    // App mounts DesktopWindowDragBand once (see DesktopWindowDragBand.test.tsx).
     state.desktopChrome = "mac";
     const { container } = render(<MainLayout />);
-    const bands = container.querySelectorAll(".octop-shell-drag-band");
-
-    expect(bands).toHaveLength(1);
-    expect(bands[0]).toHaveClass("octop-desktop-drag");
-    expect(bands[0]).toHaveAttribute("aria-hidden", "true");
-    expect(bands[0].parentElement).toBe(getShell(container));
-    expect(bands[0]).toHaveStyle({
-      position: "absolute",
-      top: "0px",
-      height: `${chromeTopBandPx("mac")}px`,
-      left: `${WINDOW_CONTROLS_INSET.mac}px`,
-      right: "0px",
-      pointerEvents: "none",
-    });
+    expect(container.querySelector(".octop-shell-drag-band")).toBeNull();
   });
 
   it("Windows 页面里没有拖拽条", () => {
@@ -239,13 +224,8 @@ describe("MainLayout 共享顶栏", () => {
         const shellStyle = shell.getAttribute("style");
         const rightColumnStyle = rightColumn.getAttribute("style");
         const pageElement = screen.getByTestId(page);
-        if (chrome === "windows") {
-          expect(container.querySelector(".octop-shell-drag-band")).toBeNull();
-        } else {
-          expect(
-            container.querySelector(".octop-shell-drag-band"),
-          ).not.toBeNull();
-        }
+        // The drag strip lives in App's DesktopWindowDragBand, never in the layout.
+        expect(container.querySelector(".octop-shell-drag-band")).toBeNull();
 
         state.windowFullscreen = true;
         rerender(<MainLayout />);
@@ -263,13 +243,8 @@ describe("MainLayout 共享顶栏", () => {
 
         state.windowFullscreen = false;
         rerender(<MainLayout />);
-        if (chrome === "windows") {
-          expect(container.querySelector(".octop-shell-drag-band")).toBeNull();
-        } else {
-          expect(
-            container.querySelector(".octop-shell-drag-band"),
-          ).not.toBeNull();
-        }
+        // The drag strip lives in App's DesktopWindowDragBand, never in the layout.
+        expect(container.querySelector(".octop-shell-drag-band")).toBeNull();
         expect(shell).toHaveAttribute("style", shellStyle);
       },
     );

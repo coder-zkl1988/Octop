@@ -56,7 +56,10 @@ describe("AgentConfigPage", () => {
   });
 
   it("does not refresh when saving fails", async () => {
-    vi.mocked(request).mockRejectedValueOnce(new Error("save failed"));
+    vi.mocked(request).mockImplementation(async (_path, init) => {
+      if (init?.method === "PATCH") throw new Error("save failed");
+      return {} as never;
+    });
     render(<AgentConfigPage />);
 
     await waitFor(() => {

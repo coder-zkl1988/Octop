@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -94,36 +95,29 @@ class CronJob:
         raise_on_error: bool = False,
         lease_token: str | None = None,
         disable_after: bool = False,
+        timeout_seconds: float | None = None,
+        timeout_error: str = "",
     ) -> bool:
-        """Run the delivery. Return False when ``lease_token`` was lost before recording."""
+        """Run the delivery. Return False when ``lease_token`` was lost before recording.
+
+        With ``timeout_seconds`` the run is stopped after that long and recorded
+        as failed with ``timeout_error``.
+        """
         from octop.infra.metrics import METRICS  # noqa: PLC0415
 
         METRICS.inc("cron_runs_total")
         ts = int(time.time())
 
+        deadline = asyncio.timeout(timeout_seconds)
         try:
-            await self._delivery_service.deliver(
-                CronDeliveryCommand(
-                    cron_id=self._cron_id,
-                    cron_name=self._name,
-                    agent_id=self._agent_id,
-                    user_id=self._user_id,
-                    session_key=self._session_key,
-                    prompt=self._prompt,
-                    fresh_thread=self._fresh_thread,
-                    task_type=self._task_type,
-                    model=self._model,
-                    mcp_servers=tuple(self._mcp_servers),
-                    allow_all=self._allow_all,
-                    script_lang=self._script_lang,
-                    script_source=self._script_source,
-                    script_path=self._script_path,
-                )
-            )
+            async with deadline:
+                await self._deliver()
         except Exception as exc:
             METRICS.inc("cron_errors_total")
-            logger.exception("cron job %s failed", self._cron_id)
-            err = str(exc)
+            expired = isinstance(exc, TimeoutError) and deadline.expired()
+            if not expired:
+                logger.exception("cron job %s failed", self._cron_id)
+            err = (timeout_error or "timed out") if expired else str(exc)
             recorded = self._record(
                 ts,
                 "error",
@@ -159,6 +153,26 @@ class CronJob:
             target=self._cron_id,
         )
         return True
+
+    async def _deliver(self) -> None:
+        await self._delivery_service.deliver(
+            CronDeliveryCommand(
+                cron_id=self._cron_id,
+                cron_name=self._name,
+                agent_id=self._agent_id,
+                user_id=self._user_id,
+                session_key=self._session_key,
+                prompt=self._prompt,
+                fresh_thread=self._fresh_thread,
+                task_type=self._task_type,
+                model=self._model,
+                mcp_servers=tuple(self._mcp_servers),
+                allow_all=self._allow_all,
+                script_lang=self._script_lang,
+                script_source=self._script_source,
+                script_path=self._script_path,
+            )
+        )
 
     def _record(
         self,

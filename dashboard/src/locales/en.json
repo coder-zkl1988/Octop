@@ -198,6 +198,8 @@
     "BRIDGE_PEER_CONNECTION_OWNED": "The peer already registered this cloud collab link to another user, so this account cannot take it over. Ask that user to delete it, or sign in with the same peer account. If the address actually points at this Tabby, use the peer's real address instead.",
     "CRON_TRIGGER_INVALID": "Invalid cron trigger.",
     "CRON_ALREADY_RUNNING": "This task is already running on another instance.",
+    "EXPORT_BUSY": "An export is already running. Wait for it to finish.",
+    "CRON_TASK_LIMIT": "The enterprise limit on automation tasks running at once has been reached.",
     "SLASH_UNKNOWN": "Unknown slash command.",
     "SLASH_BAD_ARGS": "Invalid arguments.",
     "ATTACHMENT_UNSUPPORTED_TYPE": "This file type is not supported.",
@@ -323,6 +325,7 @@
     "agent": "Agent",
     "skills": "Skills",
     "agentConfig": "Configuration",
+    "resources": "Resources",
     "settings": "Settings",
     "voice": "Voice",
     "observability": "Observability",
@@ -385,7 +388,8 @@
     "saveFailed": "Could not save the navigation layout",
     "dragToReorder": "Drag to reorder",
     "chatHistory": "Session list",
-    "passkeys": "Passkeys"
+    "passkeys": "Passkeys",
+    "localSettings": "This device"
   },
   "skillPackages": {
     "title": "Skill Packages",
@@ -1421,6 +1425,16 @@
       "yolo": "YOLO",
       "yoloHint": "New chats skip approval. The underlying agent runs actions directly, including file edits and commands. A chat can still switch back to asking every time.",
       "sessionModeHint": "Modes come from the managed agent. New chats start here, and a chat can still switch."
+    },
+    "storageLocation": {
+      "label": "Storage location",
+      "local": "This computer",
+      "cloud": "Enterprise cloud",
+      "hint": "With Enterprise cloud, the expert's workspace files sync to your enterprise cloud and come back on another computer.",
+      "forced": "Your enterprise keeps every expert's files in the enterprise cloud.",
+      "later": "The expert was created; you can change its storage location later",
+      "saved": "Storage location changed",
+      "failed": "Could not change the storage location"
     }
   },
   "subagents": {
@@ -2855,6 +2869,7 @@
     "lastStatusOk": "Succeeded",
     "lastStatusError": "Failed",
     "lastStatusMissed": "Missed",
+    "lastStatusSkipped": "Skipped",
     "oneShotEnableBlocked": "That time has already passed. Pick a future time before enabling it again.",
     "form": {
       "sectionBasic": "Basic Info",
@@ -4575,6 +4590,13 @@
       "toolRetry": "Tool retries",
       "compaction": "Context compaction"
     },
+    "currentAgent": "Current expert: {{name}}",
+    "sectionModel": "Model parameters",
+    "sectionBehavior": "Run behavior",
+    "sectionAdvanced": "Advanced (tool calls, retries, compaction)",
+    "enableTrajectoryDesc": "Conversations are recorded as run trajectories you can view in chat.",
+    "heartbeat": "Heartbeat",
+    "heartbeatDesc": "Check pending work on schedule while idle",
     "title": "Configuration",
     "description": "Configure agent runtime parameters",
     "maxIters": "Max Iterations",
@@ -4582,7 +4604,7 @@
     "maxItersPlaceholder": "Enter max iterations",
     "maxItersRequired": "Max iterations is required",
     "maxItersMin": "Max iterations must be at least 1",
-    "maxInputLength": "Max Input Length",
+    "maxInputLength": "Context window (tokens)",
     "maxInputLengthTooltip": "Maximum input length (tokens) for the model context window",
     "maxInputLengthPlaceholder": "Enter max input length",
     "maxInputLengthRequired": "Max input length is required",
@@ -4628,6 +4650,7 @@
       "maxDelayPlaceholder": "60"
     },
     "compaction": {
+      "enabledDesc": "Summarize older messages near the context limit",
       "enabled": "Automatic context compaction",
       "enabledTooltip": "When a chat nears the context window, older messages are summarized and moved out of the window. Turn this off to stop automatic compaction. Saving reloads this expert.",
       "trigger": "Trigger fraction",
@@ -6461,9 +6484,9 @@
     "back": "Back",
     "sessionExpired": "Wizard session expired. Please verify the bootstrap password again.",
     "stepDatabase": "Choose database",
-    "stepPassword": "Verify wizard password",
+    "stepPassword": "Verify setup password",
     "stepAdmin": "Create administrator",
-    "stepModel": "Configure a model (optional)",
+    "stepModel": "Configure models",
     "stepFinish": "Finish",
     "steps": {
       "database": "Database",
@@ -6512,8 +6535,8 @@
       "continue": "Save and continue"
     },
     "password": {
-      "label": "Bootstrap password",
-      "hint": "On first start, Tabby prints a one-time bootstrap password in the server terminal and writes it to the file below.",
+      "label": "Setup password",
+      "hint": "On first start the terminal prints a one-time setup password. Use it to confirm you administer this machine.",
       "whereTitle": "Where is the password?",
       "wherePath": "On the server, open {{path}} or check the yellow banner printed when Tabby starts.",
       "whereDefault": "On the server, open ~/.octop/octop-login.txt or check the yellow banner printed when Tabby starts.",
@@ -6536,11 +6559,11 @@
       "submitFailed": "Could not create administrator.",
       "continue": "Continue",
       "alreadyCreated": "Administrator \"{{username}}\" has been created.",
-      "intro": "Create the first administrator account.",
+      "intro": "The first account has full permissions. You can add other users later under User management.",
       "introNoPassword": "Name the account on this device. No password is needed."
     },
     "model": {
-      "intro": "Configure one model provider so the assistant can reply. You can skip this step and configure it later.",
+      "intro": "Configure at least one chat model provider, or skip and set it up later under Model settings.",
       "skip": "Skip",
       "presetTab": "Preset provider",
       "customTab": "Custom provider",
@@ -8748,5 +8771,67 @@
     "skipRulesHint": "For example: one-off queries, casual small talk, temporary drafts, or noisy debugging output.",
     "skipRulesPlaceholder": "Describe what should be skipped during extraction (leave blank for built-in defaults)",
     "saveHint": "Saving applies immediately to experts set to \"Inherit global\" without affecting experts with custom overrides."
+  },
+  "localSettings": {
+    "title": "This device",
+    "subtitle": "Settings that only concern this computer. Parts your organization manages are read-only.",
+    "tabs": {
+      "workspace": "Workspace & storage",
+      "approval": "Tool approval"
+    },
+    "workspace": {
+      "title": "Workspace folders",
+      "desc": "Experts can only read, write and run commands inside these folders.",
+      "manage": "Change in Experts",
+      "empty": "No expert uses a workspace folder yet",
+      "colDir": "Folder",
+      "colAccess": "Access",
+      "colExperts": "Used by",
+      "readWrite": "Read & write",
+      "colSize": "Size",
+      "reveal": "Show in folder",
+      "revealFailed": "Could not open this folder",
+      "missing": "Folder not found"
+    },
+    "approval": {
+      "title": "Tool approval",
+      "desc": "Before running a tool that needs confirmation, the expert pauses until you confirm in the chat.",
+      "enterprise": "Organization requires",
+      "every": "Every time",
+      "first": "First time",
+      "auto": "Auto-approve",
+      "forced": "cannot be relaxed here",
+      "perChat": "Each chat can tighten or open tool approval from the composer, but never below the organization's rule."
+    },
+    "passkeys": {
+      "desc": "Sign in to Tabby on this computer with fingerprint, face or your screen-lock password.",
+      "manage": "Manage passkeys"
+    },
+    "limits": {
+      "title": "Enterprise limits",
+      "desc": "Set by your enterprise admin in the role policy. Read-only here.",
+      "roots": "Allowed folders",
+      "rootsHint": "Other locations cannot be used as a workspace.",
+      "denyRoots": "Always denied folders",
+      "denyCommands": "Blocked commands"
+    },
+    "export": {
+      "title": "Export my data",
+      "desc": "Download this computer's conversations, memory and files as one archive. Cloud copies follow your enterprise's retention.",
+      "action": "Export my data",
+      "start": "Start export",
+      "confirm": "Your conversations, memory and workspace files on this computer are packed into one zip file in the Downloads folder.",
+      "confirmEnterprise": "Your conversations, memory and workspace files on this computer are packed into one zip file in the Downloads folder. The export is recorded in the enterprise operation log.",
+      "done": "Exported to {{path}} ({{size}})",
+      "failed": "Export failed"
+    },
+    "storage": {
+      "title": "Storage",
+      "default": "Default storage location for new experts",
+      "hint": "You can also choose when creating an expert.",
+      "local": "This computer",
+      "cloud": "Enterprise cloud",
+      "forced": "Your enterprise keeps every expert's files in the enterprise cloud."
+    }
   }
 }

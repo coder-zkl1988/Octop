@@ -142,21 +142,19 @@ const NAV_PERMISSION_CHIPS: readonly {
   },
 ];
 
-const DEFAULT_UNGROUPED = ["chat", "experts", "tasks", "token-usage"] as const;
+const DEFAULT_UNGROUPED = ["chat", "experts", "tasks"] as const;
 
+// Mirrors the sidebar: 资源 → 控制 → 设置 → 管理.
 const DEFAULT_GROUPS: readonly { id: string; items: readonly string[] }[] = [
   {
-    id: "settings",
-    items: [
-      "personalization",
-      "channels",
-      "connectors",
-      "skill-packages",
-      "knowledge-bases",
-      "bridge",
-    ],
+    id: "resources",
+    items: ["knowledge-bases", "skill-packages", "connectors"],
   },
   { id: "control", items: ["workbench", "remote-desktop", "phone"] },
+  {
+    id: "settings",
+    items: ["personalization", "channels", "bridge", "token-usage"],
+  },
   {
     id: "admin",
     items: [

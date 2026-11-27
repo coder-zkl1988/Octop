@@ -383,7 +383,8 @@ async def test_snapshot_filters_paid_collections_and_phone_evidence(paid_app: An
         )
     )
     data = (await client.get("/api/plugin-apps/xhs-ops/snapshot", headers=auth)).json()["data"]
-    assert set(data) == {"version", "runs", "reports", "run_notes"}
+    # Analytics members also read their own member settings (stats checkpoints).
+    assert set(data) == {"version", "runs", "reports", "run_notes", "member_settings"}
     assert data["run_notes"] == []
     assert data["runs"] == [{"id": "r", "kind": "publish", "status": "unknown"}]
     assert data["reports"]["totals"]["runs"] == 0
