@@ -17,6 +17,7 @@ from octop.infra.agents.providers.reasoning import (
     reasoning_capability,
     reasoning_request_parameters,
 )
+from octop.infra.enterprise_memory_sharing import assert_memory_sharing_remembered
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.groups import RESOURCE_MODEL, GroupAccess
 from octop.infra.users.permissions import user_has_permission
@@ -196,6 +197,7 @@ def review_turn(
         user = server.user_manager.get_by_id(saved["user_id"])
         if user is None or not user_has_permission(user, "memory"):
             raise OctopError(ErrorCode.FORBIDDEN, "Model selection is no longer authorized")
+        assert_memory_sharing_remembered(server, int(user.id))
         ref = saved["model"]
         check_model(server, user, ref)
         # Re-delivery can follow a lost HTTP response. Retain only the outcome, never the transcript.

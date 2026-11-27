@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+# Tenant role-policy module that allows 共享记忆 (shared Memory spaces and tokens).
+MEMORY_SHARING_MODULE = "memory_sharing"
+
 
 def _object(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
