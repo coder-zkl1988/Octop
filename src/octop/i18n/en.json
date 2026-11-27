@@ -471,6 +471,8 @@
     "BRIDGE_PEER_CONNECTION_OWNED": "The peer already registered this cloud collab link to another user, so this account cannot take it over. Ask that user to delete it, or sign in with the same peer account. If the address actually points at this Octop, use the peer's real address instead.",
     "CRON_TRIGGER_INVALID": "Invalid cron trigger.",
     "CRON_ALREADY_RUNNING": "This task is already running on another instance.",
+    "EXPORT_BUSY": "An export is already running. Wait for it to finish.",
+    "CRON_TASK_LIMIT": "The enterprise limit on automation tasks running at once has been reached.",
     "SLASH_UNKNOWN": "Unknown slash command.",
     "SLASH_BAD_ARGS": "Invalid arguments.",
     "ATTACHMENT_UNSUPPORTED_TYPE": "This file type is not supported.",
@@ -794,6 +796,10 @@
       "timeout": "The script ran longer than {seconds} seconds.",
       "failed": "Script failed (exit {code}): {detail}",
       "unreadable": "Could not read workspace script {path}."
+    },
+    "limits": {
+      "concurrent": "Skipped: the enterprise limit of {limit} tasks running at once was reached.",
+      "timeout": "Stopped after the enterprise limit of {minutes} minutes."
     }
   },
   "agents": {

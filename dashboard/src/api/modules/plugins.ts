@@ -114,14 +114,16 @@ export const enterprisePluginsApi = {
   list(): Promise<{ enforced: boolean; items: EnterprisePlugin[] }> {
     return request("/enterprise/plugins");
   },
+  /** ``onlyAgent``: turn it on for that expert only; other and later experts start with it off. */
   install(
     pluginId: string,
     enable = true,
+    onlyAgent?: string,
   ): Promise<{ status: string; id: string }> {
+    const query = new URLSearchParams({ enable: String(enable) });
+    if (onlyAgent) query.set("only_agent", onlyAgent);
     return request(
-      `/enterprise/plugins/${encodeURIComponent(
-        pluginId,
-      )}/install?enable=${enable}`,
+      `/enterprise/plugins/${encodeURIComponent(pluginId)}/install?${query}`,
       { method: "POST" },
     );
   },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Button, Card, Empty, Table, Tag } from "antd";
+import { Button, Card, Empty, Modal, Table, Tag } from "antd";
 import {
   FolderOpen,
   KeyRound,
@@ -9,13 +9,20 @@ import {
   ShieldCheck,
   Variable,
 } from "lucide-react";
-import { request } from "../../../api/request";
+import {
+  localSettingsApi,
+  type LocalWorkspaceFolder,
+  type LocalWorkspaceFolders,
+} from "../../../api/modules/localSettings";
 import TabBar, { type TabBarItem } from "../../../components/TabLabel/TabBar";
 import AccountSecurityDrawer from "../../../components/AccountSecurityDrawer";
 import PageShell from "../../../layouts/PageShell";
 import { useEnterprise } from "../../../enterprise/EnterpriseContext";
 import { useGatedSearchTabs } from "../../../hooks/useGatedSearchTabs";
 import { PERM } from "../../../utils/permissions";
+import { apiErrorMessage } from "../../../utils/apiError";
+import { formatBytes } from "../../../utils/embeddingDownload";
+import { message } from "@/utils/antdMessage";
 import EnvironmentsPage from "../Environments";
 import UpdateConfig from "../AdvancedSettings/UpdateConfig";
 import tabStyles from "../AdvancedSettings/tabContent.module.less";
@@ -91,26 +98,54 @@ export default function LocalSettingsPage() {
   );
 }
 
-interface AgentRow {
-  agent_id: string;
-  name: string;
-  config?: { workspace_dir?: string };
-}
-
 function WorkspacePanel() {
   const { t } = useTranslation();
-  const [agents, setAgents] = useState<AgentRow[] | null>(null);
+  const { snapshot } = useEnterprise();
+  const [data, setData] = useState<LocalWorkspaceFolders | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   useEffect(() => {
-    request<AgentRow[]>("/agents")
-      .then(setAgents)
-      .catch(() => setAgents([]));
+    localSettingsApi
+      .workspaces()
+      .then(setData)
+      .catch(() => setData({ items: [], can_reveal: false }));
   }, []);
-  const dirs = new Map<string, string[]>();
-  for (const agent of agents ?? []) {
-    const dir = agent.config?.workspace_dir;
-    if (dir) dirs.set(dir, [...(dirs.get(dir) ?? []), agent.name]);
-  }
-  const rows = [...dirs.entries()].map(([dir, names]) => ({ dir, names }));
+
+  const reveal = async (path: string) => {
+    try {
+      await localSettingsApi.reveal(path);
+    } catch (err) {
+      message.error(
+        apiErrorMessage(err, t("localSettings.workspace.revealFailed"), t),
+      );
+    }
+  };
+
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      const result = await localSettingsApi.exportMyData();
+      setExportOpen(false);
+      message.success(
+        t("localSettings.export.done", {
+          path: result.path,
+          size: formatBytes(result.size_bytes),
+        }),
+      );
+    } catch (err) {
+      message.error(apiErrorMessage(err, t("localSettings.export.failed"), t));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const policy = snapshot?.policy;
+  const roots = policy?.fsRoots ?? [];
+  const denyRoots = policy?.fsDenyRoots ?? [];
+  const denyCommands = policy?.denyCommands ?? [];
+  const hasLimits =
+    roots.length > 0 || denyRoots.length > 0 || denyCommands.length > 0;
+
   return (
     <div className={styles.stack}>
       <Card
@@ -118,12 +153,12 @@ function WorkspacePanel() {
         extra={<Link to="/experts">{t("localSettings.workspace.manage")}</Link>}
       >
         <p className={styles.desc}>{t("localSettings.workspace.desc")}</p>
-        <Table
+        <Table<LocalWorkspaceFolder>
           size="middle"
-          rowKey="dir"
-          loading={agents === null}
+          rowKey="path"
+          loading={data === null}
           pagination={false}
-          dataSource={rows}
+          dataSource={data?.items ?? []}
           locale={{
             emptyText: (
               <Empty description={t("localSettings.workspace.empty")} />
@@ -132,9 +167,16 @@ function WorkspacePanel() {
           columns={[
             {
               title: t("localSettings.workspace.colDir"),
-              dataIndex: "dir",
-              render: (dir: string) => (
-                <span className={styles.mono}>{dir}</span>
+              dataIndex: "path",
+              render: (path: string, row) => (
+                <span className={styles.mono}>
+                  {path}
+                  {row.missing ? (
+                    <Tag className={styles.inlineTag}>
+                      {t("localSettings.workspace.missing")}
+                    </Tag>
+                  ) : null}
+                </span>
               ),
             },
             {
@@ -143,12 +185,109 @@ function WorkspacePanel() {
             },
             {
               title: t("localSettings.workspace.colExperts"),
-              dataIndex: "names",
-              render: (names: string[]) => names.join("、"),
+              dataIndex: "experts",
+              render: (experts: LocalWorkspaceFolder["experts"]) =>
+                experts.map((expert) => expert.name).join("、"),
             },
+            {
+              title: t("localSettings.workspace.colSize"),
+              dataIndex: "size_bytes",
+              align: "right",
+              render: (size: number, row) =>
+                row.missing
+                  ? "—"
+                  : `${row.truncated ? "≥ " : ""}${formatBytes(size)}`,
+            },
+            ...(data?.can_reveal
+              ? [
+                  {
+                    key: "actions",
+                    align: "right" as const,
+                    render: (_: unknown, row: LocalWorkspaceFolder) =>
+                      row.missing ? null : (
+                        <Button
+                          size="small"
+                          type="link"
+                          onClick={() => void reveal(row.path)}
+                        >
+                          {t("localSettings.workspace.reveal")}
+                        </Button>
+                      ),
+                  },
+                ]
+              : []),
           ]}
         />
       </Card>
+      {hasLimits ? (
+        <Card title={t("localSettings.limits.title")}>
+          <p className={styles.desc}>{t("localSettings.limits.desc")}</p>
+          {roots.length > 0 ? (
+            <LimitRow
+              label={t("localSettings.limits.roots")}
+              items={roots}
+              hint={t("localSettings.limits.rootsHint")}
+            />
+          ) : null}
+          {denyRoots.length > 0 ? (
+            <LimitRow
+              label={t("localSettings.limits.denyRoots")}
+              items={denyRoots}
+            />
+          ) : null}
+          {denyCommands.length > 0 ? (
+            <LimitRow
+              label={t("localSettings.limits.denyCommands")}
+              items={denyCommands}
+            />
+          ) : null}
+        </Card>
+      ) : null}
+      <Card title={t("localSettings.export.title")}>
+        <p className={styles.desc}>{t("localSettings.export.desc")}</p>
+        <Button onClick={() => setExportOpen(true)}>
+          {t("localSettings.export.action")}
+        </Button>
+      </Card>
+      <Modal
+        open={exportOpen}
+        title={t("localSettings.export.title")}
+        okText={t("localSettings.export.start")}
+        cancelText={t("common.cancel")}
+        confirmLoading={exporting}
+        onOk={() => void runExport()}
+        onCancel={() => setExportOpen(false)}
+      >
+        <p>
+          {snapshot
+            ? t("localSettings.export.confirmEnterprise")
+            : t("localSettings.export.confirm")}
+        </p>
+      </Modal>
+    </div>
+  );
+}
+
+function LimitRow({
+  label,
+  items,
+  hint,
+}: {
+  label: string;
+  items: string[];
+  hint?: string;
+}) {
+  return (
+    <div className={styles.limitRow}>
+      <span className={styles.limitLabel}>{label}</span>
+      <span>
+        {items.map((item) => (
+          <Tag key={item} className={styles.mono}>
+            {item}
+          </Tag>
+        ))}
+        {hint ? <span className={styles.desc}>{hint}</span> : null}
+      </span>
     </div>
   );
 }

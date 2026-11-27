@@ -15,6 +15,7 @@ import {
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import PageShell from "../../layouts/PageShell";
+import { useAgent } from "../../context/AgentContext";
 import { pluginAppsApi, type PluginApp } from "../../api/modules/pluginApps";
 import {
   enterprisePluginsApi,
@@ -26,6 +27,8 @@ import {
 const { Paragraph, Text } = Typography;
 
 type Tab = "mine" | "market";
+/** Who gets a newly installed plugin. */
+type InstallTarget = "all" | "current" | "off";
 type Filter = "all" | "installable" | "installed";
 
 interface Row {
@@ -41,6 +44,12 @@ interface Row {
   /** Market only: what the enterprise allows for this plugin. */
   item?: EnterprisePlugin;
 }
+
+/** Operations plugins on the roadmap, shown so members know they are coming. */
+const COMING_SOON = [
+  { name: "抖音运营", kind: "短视频运营", initial: "抖", color: "#111" },
+  { name: "视频号运营", kind: "视频号运营", initial: "视", color: "#fa9d3b" },
+];
 
 const kindLabel = (kind: string) =>
   kind === "official" ? "官方" : kind === "third_party" ? "第三方" : "";
@@ -59,9 +68,10 @@ export default function AppsLanding() {
   const [busy, setBusy] = useState("");
   const [detail, setDetail] = useState<Row | null>(null);
   const [removing, setRemoving] = useState<Row | null>(null);
+  const { activeAgent } = useAgent();
   const [installing, setInstalling] = useState<{
     row: Row;
-    enable: boolean;
+    target: InstallTarget;
   } | null>(null);
   const [asking, setAsking] = useState<{ row: Row; reason: string } | null>(
     null,
@@ -154,12 +164,18 @@ export default function AppsLanding() {
     [allowed, installed, filter],
   );
 
-  const install = async (row: Row, enable: boolean) => {
+  const install = async (row: Row, target: InstallTarget) => {
     setBusy(row.id);
     try {
-      await enterprisePluginsApi.install(row.id, enable);
+      const onlyAgent =
+        target === "current" ? activeAgent?.agent_id ?? undefined : undefined;
+      await enterprisePluginsApi.install(row.id, target !== "off", onlyAgent);
       message.success(
-        enable ? `${row.name} 已安装并启用` : `${row.name} 已安装，还没有启用`,
+        target === "off"
+          ? `${row.name} 已安装，还没有启用`
+          : target === "current"
+          ? `${row.name} 已安装，只给 ${activeAgent?.name ?? "当前专家"} 启用`
+          : `${row.name} 已安装并启用`,
       );
       setInstalling(null);
       await load();
@@ -263,7 +279,7 @@ export default function AppsLanding() {
             size="small"
             type="primary"
             loading={busy === row.id}
-            onClick={() => setInstalling({ row, enable: true })}
+            onClick={() => setInstalling({ row, target: "all" })}
           >
             安装
           </Button>
@@ -361,6 +377,53 @@ export default function AppsLanding() {
             type="info"
             message="这里只显示企业允许安装的插件。没有看到需要的插件？请联系企业管理员把它加入允许清单。"
           />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: 16,
+              marginTop: 16,
+            }}
+          >
+            {COMING_SOON.map((item) => (
+              <Card
+                key={item.name}
+                size="small"
+                style={{ opacity: 0.7 }}
+                aria-label={`${item.name}，即将接入`}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      display: "grid",
+                      placeItems: "center",
+                      background: item.color,
+                      color: "#fff",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {item.initial}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text strong>{item.name}</Text>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {item.kind}
+                      </Text>
+                    </div>
+                  </div>
+                  <Tag>即将接入</Tag>
+                </div>
+                <Paragraph type="secondary" style={{ margin: "8px 0 0" }}>
+                  上线后由企业管理员开通并分配。
+                </Paragraph>
+              </Card>
+            ))}
+          </div>
         </>
       )}
 
@@ -388,7 +451,7 @@ export default function AppsLanding() {
                 <Button
                   type="primary"
                   onClick={() => {
-                    setInstalling({ row: detail, enable: true });
+                    setInstalling({ row: detail, target: "all" });
                     setDetail(null);
                   }}
                 >
@@ -445,26 +508,40 @@ export default function AppsLanding() {
         okButtonProps={{ loading: busy === installing?.row.id }}
         onCancel={() => setInstalling(null)}
         onOk={() =>
-          installing && void install(installing.row, installing.enable)
+          installing && void install(installing.row, installing.target)
         }
       >
         {installing?.row.item && (
           <>
             <PluginFacts item={installing.row.item} />
             <div style={{ marginTop: 12 }}>
-              <Text>安装后</Text>
+              <Text>安装后启用到</Text>
               <div style={{ marginTop: 6 }}>
-                <Segmented<"on" | "off">
-                  value={installing.enable ? "on" : "off"}
-                  onChange={(v) =>
-                    setInstalling({ ...installing, enable: v === "on" })
+                <Segmented<InstallTarget>
+                  value={installing.target}
+                  onChange={(target) =>
+                    setInstalling({ ...installing, target })
                   }
                   options={[
-                    { value: "on", label: "启用到所有专家" },
+                    { value: "all", label: "所有专家" },
+                    {
+                      value: "current",
+                      label: "只给当前专家",
+                      disabled: !activeAgent,
+                    },
                     { value: "off", label: "先不启用" },
                   ]}
                 />
               </div>
+              {installing.target === "current" && activeAgent && (
+                <Paragraph
+                  type="secondary"
+                  style={{ fontSize: 12, marginTop: 8 }}
+                >
+                  只有「{activeAgent.name}
+                  」能用它。你的其他专家和之后新建的专家默认不启用，可以在专家的「工具」里单独打开。
+                </Paragraph>
+              )}
             </div>
           </>
         )}

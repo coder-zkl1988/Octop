@@ -214,7 +214,7 @@ export function CronJobCard({
       </div>
 
       {/* Error row */}
-      {lastStatus === "error" && lastError && (
+      {(lastStatus === "error" || lastStatus === "skipped") && lastError && (
         <div className={styles.cronCardErrorWrap}>
           <Tooltip
             title={lastError}

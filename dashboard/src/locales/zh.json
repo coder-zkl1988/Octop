@@ -197,6 +197,8 @@
     "BRIDGE_PEER_CONNECTION_OWNED": "对端已把这条云端协同登记在另一个用户名下，当前账号无法接管。请让原用户删除那条连接，或改用同一个对端账号。如果填写的地址其实指向本机，请改成对端的真实地址。",
     "CRON_TRIGGER_INVALID": "无效的定时触发器。",
     "CRON_ALREADY_RUNNING": "该任务已在其他实例上运行。",
+    "EXPORT_BUSY": "已经有一个导出在进行，请等它完成。",
+    "CRON_TASK_LIMIT": "同时运行的自动化任务已达到企业设置的上限。",
     "SLASH_UNKNOWN": "未知的斜杠指令。",
     "SLASH_BAD_ARGS": "参数无效。",
     "ATTACHMENT_UNSUPPORTED_TYPE": "不支持此文件类型。",
@@ -2820,6 +2822,7 @@
     "lastStatusOk": "成功",
     "lastStatusError": "失败",
     "lastStatusMissed": "已错过",
+    "lastStatusSkipped": "已跳过",
     "oneShotEnableBlocked": "执行时间已过，请改到将来的时间后再启用",
     "form": {
       "sectionBasic": "基础信息",
@@ -8401,7 +8404,11 @@
       "colDir": "目录",
       "colAccess": "权限",
       "colExperts": "使用它的专家",
-      "readWrite": "读写"
+      "readWrite": "读写",
+      "colSize": "大小",
+      "reveal": "在文件夹中显示",
+      "revealFailed": "打不开这个文件夹",
+      "missing": "目录不存在"
     },
     "approval": {
       "title": "工具审批",
@@ -8416,6 +8423,24 @@
     "passkeys": {
       "desc": "用指纹、面容或系统锁屏密码登录这台电脑上的 Tabby。",
       "manage": "管理通行密钥"
+    },
+    "limits": {
+      "title": "企业限制",
+      "desc": "由企业管理员在角色策略里设置，这里只读。",
+      "roots": "企业允许的目录",
+      "rootsHint": "其他位置不能用作工作区。",
+      "denyRoots": "始终禁止的目录",
+      "denyCommands": "企业禁止的命令"
+    },
+    "export": {
+      "title": "导出我的数据",
+      "desc": "把本机的会话、记忆和文件打包下载。云端副本由企业按保留期管理。",
+      "action": "导出我的数据",
+      "start": "开始导出",
+      "confirm": "把本机上的会话、记忆与工作区文件打包为一个压缩包，保存到「下载」文件夹。",
+      "confirmEnterprise": "把本机上的会话、记忆与工作区文件打包为一个压缩包，保存到「下载」文件夹。导出动作会记入企业操作日志。",
+      "done": "已导出到 {{path}}（{{size}}）",
+      "failed": "导出失败"
     }
   }
 }

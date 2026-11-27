@@ -11,7 +11,7 @@ from http.cookies import SimpleCookie
 from typing import Any, Literal, cast
 
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -22,14 +22,21 @@ from octop.infra import (
     enterprise_sandbox,
     enterprise_security,
 )
+from octop.infra.agents.plugins import plugin_scope
 from octop.infra.agents.plugins.bundled import default_bundled_plugins_root
+from octop.infra.agents.plugins.plugin_tool_defaults import merge_plugins_enabled_settings
 from octop.infra.enterprise_client import clear_persisted_session
 from octop.infra.enterprise_client import session_entry as load_session_entry
 from octop.infra.enterprise_device import headers as device_headers
 from octop.infra.enterprise_device import is_registered, mark_registered, registration_body
 from octop.infra.enterprise_policy import enterprise_policy_permissions
 from octop.infra.errors import ErrorCode, OctopError
-from octop.infra.users.resource_policy import POLICY_MAX_AGENTS
+from octop.infra.users.resource_policy import (
+    POLICY_MAX_AGENTS,
+    POLICY_MAX_CONCURRENT_TASKS,
+    POLICY_TASK_TIMEOUT_MINUTES,
+    active_policy_value,
+)
 from octop.infra.utils.env_file import env_file_path, load_env_file
 
 logger = logging.getLogger(__name__)
@@ -260,20 +267,31 @@ async def _sync_enterprise_plugins(
 
 
 def _apply_expert_limit(server: Any, user_id: int, policy_raw: dict[str, Any]) -> None:
-    """Set how many experts this member may create from the role policy. Absent on older control planes."""
+    """Apply the role policy's limits to this member. Absent on older control planes.
+
+    How many experts the member may create, how many automation tasks may run
+    at once, and how many minutes one task may run.
+    """
     body = policy_raw.get("policy")
     limits = body.get("limits") if isinstance(body, dict) else None
     repo = getattr(getattr(server, "services", None), "user_policy_repo", None)
-    if not isinstance(limits, dict) or "max_experts" not in limits or repo is None:
+    if not isinstance(limits, dict) or repo is None:
         return
-    limit = limits["max_experts"]
-    wanted = (
-        str(limit)
-        if isinstance(limit, int) and not isinstance(limit, bool) and limit >= 0
-        else None
-    )
-    if repo.get(user_id, POLICY_MAX_AGENTS) != wanted:
-        repo.merge(user_id, {POLICY_MAX_AGENTS: wanted})
+    for limit_key, policy_key in (
+        ("max_experts", POLICY_MAX_AGENTS),
+        ("max_concurrent_tasks", POLICY_MAX_CONCURRENT_TASKS),
+        ("task_timeout_minutes", POLICY_TASK_TIMEOUT_MINUTES),
+    ):
+        if limit_key not in limits:
+            continue
+        limit = limits[limit_key]
+        wanted = (
+            str(limit)
+            if isinstance(limit, int) and not isinstance(limit, bool) and limit >= 0
+            else None
+        )
+        if active_policy_value(repo.get(user_id, policy_key)) != wanted:
+            repo.merge(user_id, {policy_key: wanted})
 
 
 async def _sync_enterprise_sandbox(server: Any, user_id: int) -> None:
@@ -318,7 +336,12 @@ async def _sync_enterprise_security(server: Any, user_id: int, policy_raw: dict[
         return
     body = policy_raw.get("policy")
     security = body.get("security") if isinstance(body, dict) else None
-    if enterprise_security.store(settings, security if isinstance(security, dict) else None):
+    caps = body.get("caps") if isinstance(body, dict) else None
+    rules = enterprise_security.with_caps(
+        security if isinstance(security, dict) else None,
+        caps if isinstance(caps, dict) else {},
+    )
+    if enterprise_security.store(settings, rules):
         runtime = getattr(server, "app_runtime", None)
         if runtime is not None:
             runtime.agent_registry.refresh_security()
@@ -347,6 +370,12 @@ def _next_month() -> str:
     now = datetime.now(UTC)
     year, month = now.year + (1 if now.month == 12 else 0), 1 if now.month == 12 else now.month + 1
     return datetime(year, month, 1, tzinfo=UTC).isoformat()
+
+
+def _strings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
 
 
 def _policy_payload(raw: dict[str, Any], *, updated_at: str) -> dict[str, Any]:
@@ -393,6 +422,9 @@ def _policy_payload(raw: dict[str, Any], *, updated_at: str) -> dict[str, Any]:
             if f"model.{purpose}.enabled" in resources
         },
         "offlineGraceDays": int(resources.get("offline_grace_days", 7) or 7),
+        "fsRoots": _strings(_object(caps.get("cap.fs")).get("roots")),
+        "fsDenyRoots": _strings(_object(caps.get("cap.fs")).get("deny_roots")),
+        "denyCommands": _strings(_object(caps.get("cap.shell")).get("deny_commands")),
         "capabilities": [
             {"key": "shell", "allowed": allow("terminal", "cap.shell")},
             {"key": "files", "allowed": allow("terminal", "cap.fs")},
@@ -967,10 +999,19 @@ async def enterprise_plugin_list(
 async def enterprise_plugin_install(
     plugin_id: str,
     enable: bool = True,
+    only_agent: str | None = Query(
+        None,
+        description="Turn the plugin on for this expert only; the member's other experts, "
+        "and the ones they create later, start with it off",
+    ),
     user: Any = Depends(current_user),
     server: Any = Depends(get_server),
 ) -> dict[str, Any]:
     """Install a plugin from the enterprise list. ``enable=false`` installs it switched off."""
+    registry = server.app_runtime.agent_registry if server.app_runtime is not None else None
+    own_rows = list(registry.list_agents(user.id)) if registry is not None else []
+    if only_agent is not None and not any(row.agent_id == only_agent for row in own_rows):
+        raise OctopError(ErrorCode.AGENT_NOT_FOUND, f"agent {only_agent!r} not found")
     policy = enterprise_plugins.load_policy(server.services.settings_repo)
     item = next((i for i in policy["items"] if i["id"] == plugin_id), None)
     if item is None or item.get("builtin"):
@@ -995,6 +1036,15 @@ async def enterprise_plugin_install(
             details={"reason": str(exc)},
         ) from exc
     mgr.set_enabled(plugin_id, enable)
+    single = enable and only_agent is not None
+    plugin_scope.set_single_expert(server.services.settings_repo, int(user.id), plugin_id, single)
+    if registry is not None and single:
+        for row in own_rows:
+            merged = merge_plugins_enabled_settings(
+                registry.get_config(row.agent_id).get("plugins"),
+                {plugin_id: row.agent_id == only_agent},
+            )
+            await registry.persist_plugin_tools_config(row.agent_id, merged)
     if server.app_runtime is not None:
         await server.refresh_plugin_channels()
         await server.app_runtime.agent_registry.reload_all()

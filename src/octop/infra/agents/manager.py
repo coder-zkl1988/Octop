@@ -951,6 +951,11 @@ class AgentManager:
                     require_present=True,
                 )
                 self._assert_model_ref(spec.user_id, spec.default_model)
+                from octop.infra.agents.plugins.plugin_scope import (  # noqa: PLC0415
+                    apply_to_new_expert,
+                )
+
+                apply_to_new_expert(self._repos.settings_repo, spec.user_id, config)
 
             # Create-time: user-assigned workspace_dir wins; otherwise default+encode.
             # After insert, resolve_workspace_dir reads the DB value as source of truth.
@@ -4706,6 +4711,9 @@ class AgentManager:
 
         from octop.infra.agents.middleware.binary_read_guard import BinaryReadGuardMiddleware
         from octop.infra.agents.middleware.browser_profile import BrowserProfileMiddleware
+        from octop.infra.agents.middleware.enterprise_command_guard import (
+            EnterpriseCommandGuardMiddleware,
+        )
         from octop.infra.agents.middleware.mcp_output_schema import (
             McpOutputSchemaMiddleware,
             harness_handles_mcp_tool_errors,
@@ -4738,6 +4746,7 @@ class AgentManager:
             KnowledgeSearchHintMiddleware(),
             BrowserProfileMiddleware(),
             BinaryReadGuardMiddleware(),
+            EnterpriseCommandGuardMiddleware(settings_repo=self._repos.settings_repo),
             *(() if harness_handles_mcp_tool_errors() else (McpOutputSchemaMiddleware(),)),
             WorkspaceImageMaterializeMiddleware(workspace=ws),
             ThreadArtifactsMiddleware(

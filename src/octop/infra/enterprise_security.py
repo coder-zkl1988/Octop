@@ -8,8 +8,11 @@ may be stricter than these rules, never looser.
 
 from __future__ import annotations
 
+import fnmatch
 import json
+import os
 import re
+from pathlib import Path
 from typing import Any
 
 from octop_harness.security.models import DEFAULT_HITL_TOOLS, SecurityPolicy
@@ -37,6 +40,96 @@ _BUILTIN: dict[str, re.Pattern[str]] = {
         r"(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36}|-----BEGIN [A-Z ]*PRIVATE KEY-----)"
     ),
 }
+
+
+def with_caps(security: dict[str, Any] | None, caps: dict[str, Any]) -> dict[str, Any]:
+    """Add the directory and command limits of the role policy to the security rules.
+
+    ``cap.fs.roots`` are the folders a workspace may live in (empty means any),
+    ``cap.fs.deny_roots`` are always refused, and ``cap.shell.deny_commands``
+    are command patterns the shell tools refuse.
+    """
+    fs_raw, shell_raw = caps.get("cap.fs"), caps.get("cap.shell")
+    fs: dict[str, Any] = fs_raw if isinstance(fs_raw, dict) else {}
+    shell: dict[str, Any] = shell_raw if isinstance(shell_raw, dict) else {}
+
+    def strings(value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()]
+
+    out = dict(security or {})
+    for key, value in (
+        ("fs_roots", strings(fs.get("roots"))),
+        ("fs_deny_roots", strings(fs.get("deny_roots"))),
+        ("deny_commands", strings(shell.get("deny_commands"))),
+    ):
+        if value:
+            out[key] = value
+        else:
+            out.pop(key, None)
+    return out
+
+
+def _expand_root(raw: str) -> str:
+    """``~/workspace`` → absolute path, keeping any glob characters."""
+    text = raw.strip().replace("\\", "/")
+    if text.startswith("~"):
+        text = os.path.expanduser(text)
+    return text.rstrip("/") or "/"
+
+
+def _deny_globs(raw: str) -> list[str]:
+    root = _expand_root(raw)
+    if any(char in root for char in "*?["):
+        return [root]
+    return [root, f"{root}/**"]
+
+
+def workspace_dir_allowed(security: dict[str, Any], workspace_dir: str) -> bool:
+    """True when ``workspace_dir`` is inside an enterprise root and not under a denied one."""
+    try:
+        target = Path(os.path.expanduser(workspace_dir.strip())).resolve()
+    except (OSError, ValueError):
+        return False
+    text = target.as_posix()
+
+    def under(raw: str) -> bool:
+        base = _expand_root(raw).removesuffix("/**").removesuffix("/*").rstrip("/") or "/"
+        if any(char in base for char in "*?["):
+            candidates = [text, *(parent.as_posix() for parent in target.parents)]
+            return any(fnmatch.fnmatchcase(candidate, base) for candidate in candidates)
+        try:
+            resolved = Path(base).resolve().as_posix()
+        except (OSError, ValueError):
+            return False
+        return text == resolved or text.startswith(resolved.rstrip("/") + "/")
+
+    if any(under(raw) for raw in security.get("fs_deny_roots") or []):
+        return False
+    roots = security.get("fs_roots") or []
+    return not roots or any(under(raw) for raw in roots)
+
+
+_COMMAND_SPLIT = re.compile(r"\s*(?:&&|\|\||;|\n)\s*")
+
+
+def denied_command(command: str, security: dict[str, Any]) -> str | None:
+    """Return the enterprise pattern that ``command`` matches, if any.
+
+    Each pattern is a shell-style wildcard (``git push --force*``). The whole
+    command and each part joined by ``&&``, ``||``, ``;`` or a newline are checked.
+    """
+    patterns = [str(p) for p in security.get("deny_commands") or [] if str(p).strip()]
+    if not patterns or not command.strip():
+        return None
+    normalized = " ".join(command.split())
+    parts = [normalized, *(" ".join(part.split()) for part in _COMMAND_SPLIT.split(command))]
+    for pattern in patterns:
+        wanted = " ".join(pattern.split())
+        if any(part and fnmatch.fnmatchcase(part, wanted) for part in parts):
+            return pattern
+    return None
 
 
 def store(settings: Any, security: dict[str, Any] | None) -> bool:
@@ -93,6 +186,17 @@ def apply_floor(policy: SecurityPolicy, security: dict[str, Any]) -> SecurityPol
     )
     if order[wanted] > order.get(data["skill_scan"]["mode"], 1):
         data["skill_scan"]["mode"] = wanted
+    deny_paths = [
+        glob for raw in security.get("fs_deny_roots") or [] for glob in _deny_globs(str(raw))
+    ]
+    if deny_paths:
+        # Rules are first-match: the enterprise denials go before the member's own rules.
+        filesystem = data["filesystem"]
+        filesystem["enabled"] = True
+        filesystem["rules"] = [
+            {"operations": ["read", "write"], "paths": deny_paths, "mode": "deny"},
+            *(filesystem.get("rules") or []),
+        ]
     return SecurityPolicy.from_dict(data)
 
 

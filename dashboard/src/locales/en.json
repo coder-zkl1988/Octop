@@ -197,6 +197,8 @@
     "BRIDGE_PEER_CONNECTION_OWNED": "The peer already registered this cloud collab link to another user, so this account cannot take it over. Ask that user to delete it, or sign in with the same peer account. If the address actually points at this Tabby, use the peer's real address instead.",
     "CRON_TRIGGER_INVALID": "Invalid cron trigger.",
     "CRON_ALREADY_RUNNING": "This task is already running on another instance.",
+    "EXPORT_BUSY": "An export is already running. Wait for it to finish.",
+    "CRON_TASK_LIMIT": "The enterprise limit on automation tasks running at once has been reached.",
     "SLASH_UNKNOWN": "Unknown slash command.",
     "SLASH_BAD_ARGS": "Invalid arguments.",
     "ATTACHMENT_UNSUPPORTED_TYPE": "This file type is not supported.",
@@ -2821,6 +2823,7 @@
     "lastStatusOk": "Succeeded",
     "lastStatusError": "Failed",
     "lastStatusMissed": "Missed",
+    "lastStatusSkipped": "Skipped",
     "oneShotEnableBlocked": "That time has already passed. Pick a future time before enabling it again.",
     "form": {
       "sectionBasic": "Basic Info",
@@ -8401,7 +8404,11 @@
       "colDir": "Folder",
       "colAccess": "Access",
       "colExperts": "Used by",
-      "readWrite": "Read & write"
+      "readWrite": "Read & write",
+      "colSize": "Size",
+      "reveal": "Show in folder",
+      "revealFailed": "Could not open this folder",
+      "missing": "Folder not found"
     },
     "approval": {
       "title": "Tool approval",
@@ -8416,6 +8423,24 @@
     "passkeys": {
       "desc": "Sign in to Tabby on this computer with fingerprint, face or your screen-lock password.",
       "manage": "Manage passkeys"
+    },
+    "limits": {
+      "title": "Enterprise limits",
+      "desc": "Set by your enterprise admin in the role policy. Read-only here.",
+      "roots": "Allowed folders",
+      "rootsHint": "Other locations cannot be used as a workspace.",
+      "denyRoots": "Always denied folders",
+      "denyCommands": "Blocked commands"
+    },
+    "export": {
+      "title": "Export my data",
+      "desc": "Download this computer's conversations, memory and files as one archive. Cloud copies follow your enterprise's retention.",
+      "action": "Export my data",
+      "start": "Start export",
+      "confirm": "Your conversations, memory and workspace files on this computer are packed into one zip file in the Downloads folder.",
+      "confirmEnterprise": "Your conversations, memory and workspace files on this computer are packed into one zip file in the Downloads folder. The export is recorded in the enterprise operation log.",
+      "done": "Exported to {{path}} ({{size}})",
+      "failed": "Export failed"
     }
   }
 }

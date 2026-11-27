@@ -148,6 +148,12 @@ export interface EnterprisePolicy {
   /** Days the desktop keeps working without refreshing policy. */
   offlineGraceDays: number;
   capabilities: CapabilityPolicy[];
+  /** Folders a workspace may be in; empty means any. */
+  fsRoots?: string[];
+  /** Folders experts may never read or write. */
+  fsDenyRoots?: string[];
+  /** Shell command patterns the experts may not run. */
+  denyCommands?: string[];
 }
 
 export type ModelCapability = "text" | "image" | "reasoning";
