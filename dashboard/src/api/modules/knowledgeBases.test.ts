@@ -55,6 +55,22 @@ describe("knowledgeBasesApi", () => {
     );
   });
 
+  it("saves chunking and retrieval settings without changing the feature toggle", () => {
+    const settings = {
+      chunk_size: 1000,
+      chunk_overlap: 0,
+      retrieval_k: 5,
+      context_char_budget: 4000,
+    };
+
+    knowledgeBasesApi.setAdvancedSettings(settings);
+
+    expect(request).toHaveBeenCalledWith("/knowledge-bases/advanced-settings", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    });
+  });
+
   it("requests the full ONNX catalog when expanding embedding options", () => {
     knowledgeBasesApi.getEmbeddingOptions();
     knowledgeBasesApi.getEmbeddingOptions({ allOnnx: true });

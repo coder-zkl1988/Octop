@@ -12,7 +12,6 @@ vi.hoisted(() => {
 import { LayoutModeProvider } from "../context/LayoutModeContext";
 import { LAYOUT_MODE_KEY } from "./layoutModeStorage";
 import Sidebar from "./Sidebar";
-import styles from "./Sidebar.module.less";
 
 vi.mock("../components/AvatarDropdown", () => ({
   default: () => null,
@@ -50,39 +49,12 @@ function renderSidebar(opts: {
 }
 
 /**
- * Desktop fold control sits in the brand row, to the right of the version
- * and against the rail's right edge.
+ * The design's nav rail has no desktop fold button (Sidebar ignores
+ * ``onNavFold``); only the mobile drawer close control and the mark remain.
  */
 describe("nav rail fold control", () => {
   beforeEach(() => {
     localStorage.removeItem(LAYOUT_MODE_KEY);
-  });
-
-  it("places the fold button at the end of the brand row", async () => {
-    const onNavFold = vi.fn();
-    const { container } = render(
-      <LayoutModeProvider>
-        <MemoryRouter initialEntries={["/chat"]}>
-          <Sidebar
-            selectedKey="chat"
-            collapsed={false}
-            onToggle={() => undefined}
-            onNavFold={onNavFold}
-            isMobile={false}
-          />
-        </MemoryRouter>
-      </LayoutModeProvider>,
-    );
-    const button = screen.getByRole("button", { name: "收起导航栏" });
-    const row = container.querySelector(`.${styles.brandRow}`);
-    expect(row?.lastElementChild).toBe(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
-    expect(button.querySelector("svg")?.getAttribute("class")).toContain(
-      "panel-left-close",
-    );
-
-    await userEvent.setup().click(button);
-    expect(onNavFold).toHaveBeenCalledTimes(1);
   });
 
   it("does not cover the mark when the rail is collapsed", () => {
@@ -90,18 +62,6 @@ describe("nav rail fold control", () => {
     expect(
       screen.queryByRole("button", { name: /收起导航栏|展开导航栏/ }),
     ).not.toBeInTheDocument();
-  });
-
-  it("leaves room for the traffic lights", () => {
-    const { container } = renderSidebar({ collapsed: true });
-    const rail = container.querySelector<HTMLElement>(`.${styles.navRail}`)!;
-    expect(rail.style.minWidth).toContain(
-      "var(--window-controls-inset-start, 0px)",
-    );
-    expect(rail.style.paddingLeft).toBe("");
-    expect(
-      container.querySelector(`.${styles.brandMarkCollapsed}`),
-    ).toBeTruthy();
   });
 
   it("keeps the mobile close control in its drawer header", async () => {

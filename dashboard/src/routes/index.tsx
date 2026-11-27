@@ -28,6 +28,7 @@ const AdvancedSettingsPage = lazy(
   () => import("../pages/Settings/AdvancedSettings"),
 );
 const AdminStoragePage = lazy(() => import("../pages/Admin/Storage"));
+const AdminMemoryPage = lazy(() => import("../pages/Admin/Memory"));
 const AdminPluginsPage = lazy(() => import("../pages/Admin/Plugins"));
 const AgentConfigPage = lazy(() => import("../pages/Agent/Config"));
 const LocalSettingsPage = lazy(() => import("../pages/Settings/LocalSettings"));
@@ -100,10 +101,12 @@ export const pathToKey: Record<string, string> = {
   "/subagents": "personalization",
   "/mbti": "personalization",
   "/memory": "personalization",
+  "/tokens": "personalization",
   // Admin
   "/admin/models": "models",
   // Admin
   "/admin/users": "admin-users",
+  "/admin/memory": "admin-memory",
   "/admin/backend": "admin-storage",
   "/admin/plugins": "admin-plugins",
   "/admin/advanced": "admin-advanced",
@@ -256,6 +259,10 @@ export const routeConfigs: RouteConfig[] = [
     path: "/memory",
     element: <RedirectPreserveSearch to="/personalization/memory" />,
   },
+  {
+    path: "/tokens",
+    element: <RedirectPreserveSearch to="/personalization/memory/mcp" />,
+  },
   { path: "/workspace", element: <Navigate to="/experts" replace /> },
 
   // Settings
@@ -272,6 +279,7 @@ export const routeConfigs: RouteConfig[] = [
     element: <Navigate to="/admin/models" replace />,
   },
   { path: "/models", element: <Navigate to="/admin/models" replace /> },
+  { path: "/admin/memory", element: <AdminMemoryPage /> },
   { path: "/admin/backend", element: <AdminStoragePage /> },
   {
     path: "/admin/audit",

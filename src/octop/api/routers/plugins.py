@@ -44,6 +44,10 @@ _UI_CONTENT_TYPES = {
 
 class PluginInstallBody(BaseModel):
     url: str = Field(..., description="HTTP(S) URL to a plugin ZIP archive")
+    force: bool = Field(
+        default=False,
+        description="Overwrite an already-installed plugin with the same id",
+    )
 
 
 class AgentPluginToolBody(BaseModel):
@@ -143,7 +147,8 @@ async def reload_plugins(
     disk install does not update the running server until reload or restart.
     """
     mgr = _plugin_manager(server)
-    loaded = mgr.load_installed(install_deps=True)
+    await mgr.prepare_reload()
+    loaded = mgr.load_installed(install_deps=False)
     if server.app_runtime is not None:
         await server.refresh_plugin_channels()
         await server.app_runtime.agent_registry.reload_all()
@@ -171,7 +176,7 @@ async def install_plugin(
     _enterprise_gate(server, install_blocked_reason(_enterprise_policy(server), None))
     mgr = _plugin_manager(server)
     try:
-        loaded = mgr.install_url(body.url)
+        loaded = await mgr.install_async("install_url", body.url, force=body.force)
     except OctopError:
         raise
     except Exception as exc:
@@ -224,7 +229,7 @@ async def upload_plugin(
             tmp.write(raw)
             tmp_path = Path(tmp.name)
         try:
-            loaded = mgr.install_archive(tmp_path, force=force)
+            loaded = await mgr.install_async("install_archive", tmp_path, force=force)
         finally:
             tmp_path.unlink(missing_ok=True)
     except OctopError:
@@ -285,11 +290,9 @@ async def install_market_plugin(
 
     _enterprise_gate(server, install_blocked_reason(_enterprise_policy(server), plugin_id))
     mgr = _plugin_manager(server)
-    loop = asyncio.get_running_loop()
     try:
-        loaded = await loop.run_in_executor(
-            None,
-            lambda: mgr.install_from_market(plugin_id, version=version, force=force),
+        loaded = await mgr.install_async(
+            "install_from_market", plugin_id, version=version, force=force
         )
     except OctopError:
         raise

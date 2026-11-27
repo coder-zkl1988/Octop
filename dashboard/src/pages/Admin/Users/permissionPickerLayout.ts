@@ -101,6 +101,11 @@ const NAV_PERMISSION_CHIPS: readonly {
     ],
   },
   {
+    key: "admin-memory",
+    labelKey: "nav.adminMemory",
+    permissions: ["memory_defaults"],
+  },
+  {
     key: "admin-storage",
     labelKey: "nav.adminStorage",
     permissions: ["storage_backends"],
@@ -155,6 +160,7 @@ const DEFAULT_GROUPS: readonly { id: string; items: readonly string[] }[] = [
     items: [
       "admin-users",
       "models",
+      "admin-memory",
       "admin-storage",
       "admin-plugins",
       "admin-security",

@@ -19,6 +19,7 @@ from octop.infra.auth.tokens import TokenExpired as TokenExpired
 from octop.infra.auth.tokens import decode_token as decode_token
 from octop.infra.auth.tokens import sign_token as sign_token
 from octop.infra.errors import ErrorCode, OctopError
+from octop.infra.extensions import extension_public_paths
 from octop.infra.users.permissions import PERMISSIONS, user_has_permission
 
 if TYPE_CHECKING:
@@ -56,9 +57,13 @@ _JWT_EXEMPT_PREFIXES = (
     "/api/mobile/companion/pair/",
     # Read-only conversation links: the unguessable token is the credential.
     "/api/shares/",
+    # External IM platform webhooks (verified by channel signature / verify_token).
+    "/api/channels/webhook/",
 )
 _JWT_EXEMPT_EXACT = (
     "/api/health",
+    "/api/memory-mcp/codex-review",  # Checks live Memory credential and per-token model grant.
+    "/api/memory-mcp/codex-config",  # Authenticated through the live Memory space token.
     "/api/auth/login",
     "/api/auth/enterprise/login",
     "/api/auth/enterprise/captcha",
@@ -91,7 +96,10 @@ _JWT_EXEMPT_EXACT = (
 
 
 def is_jwt_exempt_path(path: str) -> bool:
-    return path in _JWT_EXEMPT_EXACT or any(path.startswith(p) for p in _JWT_EXEMPT_PREFIXES)
+    if path in _JWT_EXEMPT_EXACT or any(path.startswith(p) for p in _JWT_EXEMPT_PREFIXES):
+        return True
+    ext = extension_public_paths()
+    return path in ext.exact or any(path.startswith(p) for p in ext.prefixes)
 
 
 def is_jwt_exempt_request(request: Request) -> bool:

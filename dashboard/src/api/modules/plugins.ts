@@ -163,10 +163,11 @@ export const pluginsApi = {
 
   install(
     url: string,
+    force = false,
   ): Promise<{ id: string; version: string; name: string; kind: string }> {
     return request("/plugins/install", {
       method: "POST",
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, force }),
     });
   },
 

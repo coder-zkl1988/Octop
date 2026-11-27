@@ -2,11 +2,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+// One stable ``t`` like real react-i18next. A new function per render changes
+// AccountSecurityDrawer's ``loadStatus`` callback on every render, so its load
+// effect re-runs forever and the drawer never leaves its spinner.
+const i18nMock = vi.hoisted(() => ({
+  t: (key: string) => key,
+  i18n: { language: "zh" },
+}));
+
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: { language: "zh" },
-  }),
+  useTranslation: () => i18nMock,
 }));
 
 vi.mock("react-router-dom", () => ({
@@ -107,21 +112,18 @@ describe("AvatarDropdown personal settings", () => {
     expect(screen.getByTestId("avatar-picker")).toBeInTheDocument();
   });
 
-  it("opens account security with the password form in one drawer", async () => {
+  it("opens the password form in a right drawer from the menu", async () => {
+    // 企业版头像菜单保留直达的「修改密码」入口（上游改为「账号安全」抽屉）。
     const view = userEvent.setup();
     render(<AvatarDropdown user={user} placement="sidebar" />);
 
     await view.click(screen.getByRole("button", { name: /Ada/ }));
-    expect(
-      screen.queryByRole("button", { name: "account.changePassword" }),
-    ).not.toBeInTheDocument();
-    await view.click(screen.getByRole("button", { name: "account.security" }));
+    await view.click(
+      screen.getByRole("button", { name: "account.changePassword" }),
+    );
 
     expect(
       await screen.findByText("account.currentPassword"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "account.changePassword" }),
     ).toBeInTheDocument();
     expect(
       document.querySelector(".ant-drawer-right, .octop-drawer-right"),

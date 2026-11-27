@@ -42,7 +42,8 @@ vi.mock("../../components/PwaInstallPrompt", () => ({
 vi.mock("../../components/RequirePermission", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
-vi.mock("../../utils/permissions", () => ({
+vi.mock("../../utils/permissions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../utils/permissions")>()),
   routeNeedsPermission: () => false,
 }));
 

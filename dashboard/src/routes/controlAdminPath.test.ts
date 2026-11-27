@@ -35,7 +35,8 @@ describe("pathPermissionKeys", () => {
       ...PERM.mobile,
     ]);
     expect(pathPermissionKeys("/remote-phone")).toEqual([...PERM.mobile]);
-    expect(pathPermissionKeys("/acp")).toBe("admin");
+    // ACP follows the enterprise ACP module permission, not the admin role.
+    expect(pathPermissionKeys("/acp")).toEqual(["acp"]);
   });
 
   it("keeps sso on users page, not advanced", () => {
@@ -111,6 +112,13 @@ describe("pathPermissionKeys", () => {
       ...PERM.knowledgeBasesPage,
     ]);
     expect([...PERM.advancedPage]).not.toContain("knowledge_settings");
+  });
+
+  it("keeps terminal access under Memory permissions and Personalization", () => {
+    for (const path of ["/personalization/memory/mcp", "/tokens"]) {
+      expect(pathPermissionKeys(path)).toEqual([...PERM.memory]);
+      expect(resolveSelectedKey(path)).toBe("personalization");
+    }
   });
 
   it("canAccessPath respects holder permissions", () => {
