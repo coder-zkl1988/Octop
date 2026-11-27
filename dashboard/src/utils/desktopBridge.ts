@@ -1,5 +1,5 @@
 /**
- * Typed access to the legacy desktop bridge injected by a desktop preload as
+ * Typed access to the Electron shell bridge injected by the desktop preload as
  * ``window.octopDesktop``. In a browser (server mode) this is absent, so the
  * Dashboard falls back to its existing Python self-update flow.
  */
@@ -135,7 +135,7 @@ export function isDesktopShell(): boolean {
 }
 
 /**
- * Legacy desktop shells on Linux. The page draws square caption buttons there; macOS and
+ * Electron on Linux. The page draws square caption buttons there; macOS and
  * Windows keep the native ones. A Linux browser has no shell bridge.
  */
 export function isLinuxDesktopShell(

@@ -107,7 +107,7 @@ build-frontend-enterprise:
 	@echo "[build-frontend-enterprise] Installing npm dependencies..."
 	cd $(DASHBOARD_DIR) && npm ci
 	@echo "[build-frontend-enterprise] Building enterprise dashboard (output: $(DASHBOARD_DEST))..."
-	cd $(DASHBOARD_DIR) && VITE_ENTERPRISE_MODE=1 NODE_ENV=production NODE_OPTIONS="--max-old-space-size=2048" npm run build
+	cd $(DASHBOARD_DIR) && VITE_ENTERPRISE_MODE=1 NODE_ENV=production NODE_OPTIONS="--max-old-space-size=4096" npm run build
 	@echo "[build-frontend-enterprise] Done."
 
 .PHONY: build-wheel

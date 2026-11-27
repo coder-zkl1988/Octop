@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "antd";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Power, RefreshCw, Sparkles } from "lucide-react";
 import { modal } from "../../../utils/antdModal";
 import {
   getDesktopBridge,
@@ -53,6 +53,18 @@ export default function DesktopUpdatePanel() {
       await refreshStatus(true);
     },
     [refreshStatus],
+  );
+
+  const handleStartupChange = useCallback(
+    async (
+      patch: Partial<
+        Pick<DesktopClientSettings, "launchAtLogin" | "closeBehavior">
+      >,
+    ) => {
+      const next = await getDesktopBridge()?.clientSettings.set(patch);
+      if (next) setSettings(next);
+    },
+    [],
   );
 
   const handleCheck = useCallback(async () => {
@@ -187,6 +199,57 @@ export default function DesktopUpdatePanel() {
               {t("advancedSettings.update.upgradeButton")}
             </button>
           )}
+        </div>
+      </section>
+
+      <section
+        className={`${styles.panel} ${styles.panelConstrained}`}
+        aria-label={t("advancedSettings.update.startupTitle")}
+      >
+        <div className={styles.panelTitleRow}>
+          <span className={styles.panelTitleIcon}>
+            <Power size={16} />
+          </span>
+          <h3 className={styles.panelTitle}>
+            {t("advancedSettings.update.startupTitle")}
+          </h3>
+        </div>
+
+        <div className={styles.stableOnlyRow}>
+          <Switch
+            aria-label={t("advancedSettings.update.launchAtLogin")}
+            checked={settings?.launchAtLogin === true}
+            onChange={(checked) =>
+              void handleStartupChange({ launchAtLogin: checked })
+            }
+            disabled={!settings}
+          />
+          <div className={styles.stableOnlyCopy}>
+            <p className={styles.stableOnlyLabel}>
+              {t("advancedSettings.update.launchAtLogin")}
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.stableOnlyRow}>
+          <Switch
+            aria-label={t("advancedSettings.update.keepRunning")}
+            checked={settings?.closeBehavior !== "quit"}
+            onChange={(checked) =>
+              void handleStartupChange({
+                closeBehavior: checked ? "tray" : "quit",
+              })
+            }
+            disabled={!settings}
+          />
+          <div className={styles.stableOnlyCopy}>
+            <p className={styles.stableOnlyLabel}>
+              {t("advancedSettings.update.keepRunning")}
+            </p>
+            <p className={styles.stableOnlyHint}>
+              {t("advancedSettings.update.keepRunningHint")}
+            </p>
+          </div>
         </div>
       </section>
     </div>

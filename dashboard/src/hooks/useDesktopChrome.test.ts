@@ -1,10 +1,10 @@
 import { renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useDesktopChrome } from "./useDesktopChrome";
 
 describe("useDesktopChrome", () => {
   afterEach(() => {
-    delete (window as Window & { _wails?: unknown })._wails;
+    vi.restoreAllMocks();
     delete window.octopDesktop;
     delete document.documentElement.dataset.octopDesktopChrome;
     document.documentElement.style.removeProperty(
@@ -15,10 +15,13 @@ describe("useDesktopChrome", () => {
     );
   });
 
-  it("activates the page chrome for the Wails desktop bridge", () => {
-    Object.defineProperty(window, "_wails", {
+  it("activates the page chrome inside the Electron shell", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Electron/45.0.0",
+    );
+    Object.defineProperty(window, "octopDesktop", {
       configurable: true,
-      value: { invoke: () => undefined },
+      value: {},
     });
 
     const { result } = renderHook(() => useDesktopChrome());

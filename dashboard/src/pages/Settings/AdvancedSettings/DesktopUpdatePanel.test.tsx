@@ -90,4 +90,35 @@ describe("<DesktopUpdatePanel />", () => {
     expect(installUpdate).toHaveBeenCalledOnce();
     expect(installUpdate).toHaveBeenCalledWith();
   });
+
+  it("saves the startup and background switches through the shell", async () => {
+    const user = userEvent.setup();
+    const set = window.octopDesktop!.clientSettings.set as ReturnType<
+      typeof vi.fn
+    >;
+    set.mockImplementation(async (patch: object) => ({
+      launchAtLogin: false,
+      closeBehavior: "quit",
+      themeBackground: "system",
+      stableOnly: true,
+      ...patch,
+    }));
+    render(<DesktopUpdatePanel />);
+
+    const launch = await screen.findByRole("switch", {
+      name: "advancedSettings.update.launchAtLogin",
+    });
+    const keepRunning = screen.getByRole("switch", {
+      name: "advancedSettings.update.keepRunning",
+    });
+    await vi.waitFor(() => expect(launch).not.toBeDisabled());
+    expect(launch).not.toBeChecked();
+    expect(keepRunning).not.toBeChecked();
+
+    await user.click(launch);
+    expect(set).toHaveBeenCalledWith({ launchAtLogin: true });
+    await user.click(keepRunning);
+    expect(set).toHaveBeenCalledWith({ closeBehavior: "tray" });
+    await vi.waitFor(() => expect(keepRunning).toBeChecked());
+  });
 });
