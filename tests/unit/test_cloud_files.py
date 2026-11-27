@@ -72,6 +72,8 @@ async def test_sync_uploads_missing_contents_and_restore_writes_them_back(
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.md").write_bytes(b"hello")
+    (workspace / "inbound").mkdir()
+    (workspace / "inbound" / "pic.png").write_bytes(b"png")
     settings = Settings()
     server = SimpleNamespace(
         services=SimpleNamespace(settings_repo=settings, paths=SimpleNamespace(root=tmp_path))
@@ -81,6 +83,7 @@ async def test_sync_uploads_missing_contents_and_restore_writes_them_back(
     )
     monkeypatch.setattr(cloud_files.local_data, "local_workspace", lambda _row, _paths: workspace)
     cloud: dict[str, bytes] = {}
+    kinds: list[tuple[str, str]] = []
     manifests: dict[str, list[dict[str, Any]]] = {}
 
     async def request(
@@ -88,15 +91,24 @@ async def test_sync_uploads_missing_contents_and_restore_writes_them_back(
     ) -> dict[str, Any]:
         if path == "/desktop/v1/files/manifest":
             manifests[body["expert_id"]] = body["files"]
-            return {"missing": [f["sha256"] for f in body["files"] if f["sha256"] not in cloud]}
+            missing = [f["sha256"] for f in body["files"] if f["sha256"] not in cloud]
+            att = [f["sha256"] for f in body["files"] if f["path"].startswith("inbound/")]
+            return {"missing": missing, "attachments": att}
         if path.endswith("/manifest"):
-            return {"files": manifests[path.split("/")[-2]]}
+            return {
+                "files": [
+                    {**f, "kind": "att" if f["path"].startswith("inbound/") else "files"}
+                    for f in manifests[path.split("/")[-2]]
+                ]
+            }
         raise AssertionError(path)
 
     async def request_bytes(
         _server: Any, _uid: int, method: str, path: str, *, content: bytes | None = None, **_: Any
     ) -> bytes:
-        sha = path.rsplit("/", 1)[-1]
+        name, _, query = path.rsplit("/", 1)[-1].partition("?")
+        sha = name
+        kinds.append((method, query))
         if method == "PUT":
             assert content is not None
             cloud[sha] = content
@@ -106,12 +118,14 @@ async def test_sync_uploads_missing_contents_and_restore_writes_them_back(
     monkeypatch.setattr(cloud_files.enterprise_client, "request", request)
     monkeypatch.setattr(cloud_files.enterprise_client, "request_bytes", request_bytes)
     entry = await cloud_files.sync_expert(server, 1, row, {"ignore": [], "max_file_bytes": 100})
-    assert entry["files"] == 1 and entry["uploaded"] == 1 and entry["pending"] == 0
-    assert cloud_files.summary(settings, 1)["files"] == 1
+    assert entry["files"] == 2 and entry["uploaded"] == 2 and entry["pending"] == 0
+    assert sorted(kinds) == [("PUT", ""), ("PUT", "kind=att")]
+    assert cloud_files.summary(settings, 1)["files"] == 2
 
     elsewhere = tmp_path / "restored"
     result = await cloud_files.download_into(server, 1, "ag1", elsewhere)
-    assert result == {"written": 1, "kept": 0}
+    assert result == {"written": 2, "kept": 0}
     assert (elsewhere / "a.md").read_bytes() == b"hello"
+    assert (elsewhere / "inbound" / "pic.png").read_bytes() == b"png"
     again = await cloud_files.download_into(server, 1, "ag1", elsewhere)
-    assert again == {"written": 0, "kept": 1}
+    assert again == {"written": 0, "kept": 2}

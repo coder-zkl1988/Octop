@@ -5,6 +5,9 @@ mirrored to the control plane: the folder's file list (path, size, SHA-256)
 goes up, and the control plane asks for the contents it lacks. Restoring on
 another computer creates the expert again and downloads its files.
 
+Chat attachments live in the workspace (``inbound/``), so they travel with the
+expert; the control plane keeps them apart so they count as 会话附件.
+
 Hashes are cached by path, size and modification time, so an unchanged file is
 not read again. The enterprise's ignore list and per-file limit apply; skipped
 files are reported, never silently dropped.
@@ -255,6 +258,8 @@ async def sync_expert(
         body={"expert_id": expert_key, "name": row.name, "files": found.files},
     )
     missing = [str(sha) for sha in reply.get("missing") or []]
+    # Chat attachments (inbound/) are kept apart in the cloud so they count as 会话附件.
+    attachments = {str(sha) for sha in reply.get("attachments") or []}
     uploaded = 0
     error = ""
     for sha in missing:
@@ -263,8 +268,9 @@ async def sync_expert(
             continue
         try:
             content = await asyncio.to_thread(path.read_bytes)
+            kind = "?kind=att" if sha in attachments else ""
             await enterprise_client.request_bytes(
-                server, user_id, "PUT", f"/desktop/v1/files/blobs/{sha}", content=content
+                server, user_id, "PUT", f"/desktop/v1/files/blobs/{sha}{kind}", content=content
             )
             uploaded += 1
         except OSError:
@@ -335,8 +341,9 @@ async def download_into(
         if target.is_file() and await asyncio.to_thread(_sha256, target) == item["sha256"]:
             kept += 1
             continue
+        kind = "?kind=att" if item.get("kind") == "att" else ""
         content = await enterprise_client.request_bytes(
-            server, user_id, "GET", f"/desktop/v1/files/blobs/{item['sha256']}"
+            server, user_id, "GET", f"/desktop/v1/files/blobs/{item['sha256']}{kind}"
         )
         if hashlib.sha256(content).hexdigest() != item["sha256"]:
             continue
