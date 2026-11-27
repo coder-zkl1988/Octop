@@ -111,6 +111,9 @@ def _enterprise_transport(*, email: str, phone_policy: dict[str, str]) -> httpx.
         if request.method == "GET" and request.url.path == "/desktop/v1/env":
             return httpx.Response(200, json={"items": []})
 
+        if request.method == "GET" and request.url.path == "/desktop/v1/files/status":
+            return httpx.Response(200, json={"cloud": "off", "expert_choice": True})
+
         raise AssertionError(f"unexpected enterprise request: {request.method} {request.url}")
 
     return httpx.MockTransport(handler)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { Button, Card, Empty, Modal, Table, Tag } from "antd";
+import { Button, Card, Empty, Modal, Select, Table, Tag } from "antd";
 import {
   FolderOpen,
   KeyRound,
@@ -14,6 +14,11 @@ import {
   type LocalWorkspaceFolder,
   type LocalWorkspaceFolders,
 } from "../../../api/modules/localSettings";
+import {
+  defaultStorageLocation,
+  setDefaultStorageLocation,
+  type StorageLocation,
+} from "../../../api/modules/cloudFiles";
 import TabBar, { type TabBarItem } from "../../../components/TabLabel/TabBar";
 import AccountSecurityDrawer from "../../../components/AccountSecurityDrawer";
 import PageShell from "../../../layouts/PageShell";
@@ -243,6 +248,9 @@ function WorkspacePanel() {
           ) : null}
         </Card>
       ) : null}
+      {snapshot?.cloudFiles?.state === "on" ? (
+        <StorageCard expertChoice={snapshot.cloudFiles.expertChoice} />
+      ) : null}
       <Card title={t("localSettings.export.title")}>
         <p className={styles.desc}>{t("localSettings.export.desc")}</p>
         <Button onClick={() => setExportOpen(true)}>
@@ -265,6 +273,42 @@ function WorkspacePanel() {
         </p>
       </Modal>
     </div>
+  );
+}
+
+/** 新专家的默认存储位置, kept on this computer. */
+function StorageCard({ expertChoice }: { expertChoice: boolean }) {
+  const { t } = useTranslation();
+  const [location, setLocation] = useState<StorageLocation>(() =>
+    defaultStorageLocation(),
+  );
+  return (
+    <Card title={t("localSettings.storage.title")}>
+      <div className={styles.limitRow}>
+        <span className={styles.limitLabel}>
+          {t("localSettings.storage.default")}
+        </span>
+        <Select<StorageLocation>
+          style={{ width: 180 }}
+          aria-label={t("localSettings.storage.default")}
+          value={expertChoice ? location : "cloud"}
+          disabled={!expertChoice}
+          onChange={(value) => {
+            setLocation(value);
+            setDefaultStorageLocation(value);
+          }}
+          options={[
+            { value: "local", label: t("localSettings.storage.local") },
+            { value: "cloud", label: t("localSettings.storage.cloud") },
+          ]}
+        />
+      </div>
+      <p className={styles.desc}>
+        {expertChoice
+          ? t("localSettings.storage.hint")
+          : t("localSettings.storage.forced")}
+      </p>
+    </Card>
   );
 }
 

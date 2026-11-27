@@ -12,6 +12,7 @@ import {
   Form,
   Input,
   Modal,
+  Radio,
   Select,
   Spin,
   Switch,
@@ -27,6 +28,11 @@ import {
 } from "../../../api/modules/acp";
 import { useAcpSessionModes } from "../../../hooks/useAcpSessionModes";
 import { request } from "../../../api/request";
+import {
+  cloudFilesApi,
+  type StorageLocation,
+} from "../../../api/modules/cloudFiles";
+import { useEnterprise } from "../../../enterprise/EnterpriseContext";
 import { AgentAdvancedConfigFields } from "../../../components/AgentAdvancedConfigFields";
 import { TextAssistBar } from "../../../components/TextAssistBar";
 import {
@@ -279,6 +285,18 @@ function EditAgentDrawerBody({
     useAgentFormResources(true, agent.agent_id);
   const [pathMappings, setPathMappings] = useState<PathMapping[]>([]);
   const [agentConfig, setAgentConfig] = useState<Record<string, unknown>>({});
+  const cloudFiles = useEnterprise().snapshot?.cloudFiles;
+  const changeStorageLocation = async (location: StorageLocation) => {
+    try {
+      await cloudFilesApi.setLocation(agent.agent_id, location);
+      setAgentConfig((cfg) => ({ ...cfg, storage_location: location }));
+      message.success(t("experts.storageLocation.saved"));
+    } catch (err) {
+      message.error(
+        apiErrorMessage(err, t("experts.storageLocation.failed"), t),
+      );
+    }
+  };
   const [runners, setRunners] = useState<string[]>([]);
   const [runnersReady, setRunnersReady] = useState(false);
   const [skillPackages, setSkillPackages] = useState<
@@ -1098,18 +1116,54 @@ function EditAgentDrawerBody({
                   </Form.Item>
                 </>
               ) : (
-                <AgentBackendFields
-                  backends={backends}
-                  backendsLoading={backendsLoading}
-                  backendChoice={backendChoice}
-                  pathMappings={pathMappings}
-                  rootDirMode="edit"
-                  disabled
-                  skipHostFilesystem={remote}
-                  onAddPathMapping={addPathMapping}
-                  onRemovePathMapping={removePathMapping}
-                  onUpdatePathMapping={updatePathMapping}
-                />
+                <>
+                  <AgentBackendFields
+                    backends={backends}
+                    backendsLoading={backendsLoading}
+                    backendChoice={backendChoice}
+                    pathMappings={pathMappings}
+                    rootDirMode="edit"
+                    disabled
+                    skipHostFilesystem={remote}
+                    onAddPathMapping={addPathMapping}
+                    onRemovePathMapping={removePathMapping}
+                    onUpdatePathMapping={updatePathMapping}
+                  />
+                  {cloudFiles?.state === "on" && !remote ? (
+                    <Form.Item
+                      label={t("experts.storageLocation.label")}
+                      extra={
+                        cloudFiles.expertChoice
+                          ? t("experts.storageLocation.hint")
+                          : t("experts.storageLocation.forced")
+                      }
+                    >
+                      <Radio.Group
+                        value={
+                          agentConfig.storage_location === "cloud"
+                            ? "cloud"
+                            : "local"
+                        }
+                        disabled={!cloudFiles.expertChoice}
+                        onChange={(e) =>
+                          void changeStorageLocation(
+                            e.target.value as StorageLocation,
+                          )
+                        }
+                        options={[
+                          {
+                            value: "local",
+                            label: t("experts.storageLocation.local"),
+                          },
+                          {
+                            value: "cloud",
+                            label: t("experts.storageLocation.cloud"),
+                          },
+                        ]}
+                      />
+                    </Form.Item>
+                  ) : null}
+                </>
               )}
               {agent.kind === "managed" ? null : (
                 <>

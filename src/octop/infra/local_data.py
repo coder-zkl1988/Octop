@@ -44,7 +44,7 @@ class WorkspaceFolder:
     missing: bool = False
 
 
-def _config(row: Any) -> dict[str, Any]:
+def expert_config(row: Any) -> dict[str, Any]:
     try:
         data = json.loads(getattr(row, "config_json", None) or "{}")
     except (TypeError, ValueError):
@@ -52,7 +52,7 @@ def _config(row: Any) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _local_workspace(row: Any, paths: PathLayout) -> Path | None:
+def local_workspace(row: Any, paths: PathLayout) -> Path | None:
     try:
         return workspace_dir_from_config_json(
             getattr(row, "config_json", None),
@@ -94,7 +94,7 @@ def workspace_folders(rows: Iterable[Any], paths: PathLayout) -> list[WorkspaceF
     """The local workspace folders of ``rows`` (the member's own experts), with sizes."""
     folders: dict[Path, WorkspaceFolder] = {}
     for row in rows:
-        path = _local_workspace(row, paths)
+        path = local_workspace(row, paths)
         if path is None:
             continue
         folder = folders.setdefault(path, WorkspaceFolder(path=path))
@@ -223,11 +223,11 @@ def export_member_data(
                     )
                     threads += 1
                 for row in rows:
-                    workspace = _local_workspace(row, paths)
+                    workspace = local_workspace(row, paths)
                     if workspace is None or not workspace.is_dir():
                         continue
                     arc_root = f"experts/{_safe_name(str(row.name))}-{str(row.agent_id)[-6:]}"
-                    added, missed = _add_workspace(archive, workspace, _config(row), arc_root)
+                    added, missed = _add_workspace(archive, workspace, expert_config(row), arc_root)
                     files += added
                     skipped += missed
                 archive.writestr(
@@ -256,6 +256,8 @@ __all__ = [
     "ExportResult",
     "WorkspaceFolder",
     "directory_size",
+    "expert_config",
+    "local_workspace",
     "export_member_data",
     "reveal",
     "workspace_folders",

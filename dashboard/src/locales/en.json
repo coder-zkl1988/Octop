@@ -1390,6 +1390,16 @@
       "yolo": "YOLO",
       "yoloHint": "New chats skip approval. The underlying agent runs actions directly, including file edits and commands. A chat can still switch back to asking every time.",
       "sessionModeHint": "Modes come from the managed agent. New chats start here, and a chat can still switch."
+    },
+    "storageLocation": {
+      "label": "Storage location",
+      "local": "This computer",
+      "cloud": "Enterprise cloud",
+      "hint": "With Enterprise cloud, the expert's workspace files sync to your enterprise cloud and come back on another computer.",
+      "forced": "Your enterprise keeps every expert's files in the enterprise cloud.",
+      "later": "The expert was created; you can change its storage location later",
+      "saved": "Storage location changed",
+      "failed": "Could not change the storage location"
     }
   },
   "subagents": {
@@ -8441,6 +8451,14 @@
       "confirmEnterprise": "Your conversations, memory and workspace files on this computer are packed into one zip file in the Downloads folder. The export is recorded in the enterprise operation log.",
       "done": "Exported to {{path}} ({{size}})",
       "failed": "Export failed"
+    },
+    "storage": {
+      "title": "Storage",
+      "default": "Default storage location for new experts",
+      "hint": "You can also choose when creating an expert.",
+      "local": "This computer",
+      "cloud": "Enterprise cloud",
+      "forced": "Your enterprise keeps every expert's files in the enterprise cloud."
     }
   }
 }

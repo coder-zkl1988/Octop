@@ -956,6 +956,9 @@ class AgentManager:
                 )
 
                 apply_to_new_expert(self._repos.settings_repo, spec.user_id, config)
+                from octop.infra import cloud_files  # noqa: PLC0415
+
+                cloud_files.apply_to_new_expert(self._repos.settings_repo, config)
 
             # Create-time: user-assigned workspace_dir wins; otherwise default+encode.
             # After insert, resolve_workspace_dir reads the DB value as source of truth.

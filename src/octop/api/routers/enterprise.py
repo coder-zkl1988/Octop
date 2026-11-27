@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from octop.api.deps import current_user, get_server
 from octop.infra import (
+    cloud_files,
     enterprise_env,
     enterprise_plugins,
     enterprise_sandbox,
@@ -372,6 +373,19 @@ def _next_month() -> str:
     return datetime(year, month, 1, tzinfo=UTC).isoformat()
 
 
+def _files_queue_row(files: dict[str, Any], now: str) -> dict[str, Any]:
+    """The sync center's 文件 row from the real cloud file sync; ``off`` when the enterprise did not open it."""
+    last = files.get("last_synced_at")
+    return {
+        "kind": "files",
+        "pending": int(files.get("pending") or 0),
+        "synced": int(files.get("files") or 0),
+        "bytes": int(files.get("bytes") or 0),
+        "lastSyncedAt": datetime.fromtimestamp(float(last), UTC).isoformat() if last else None,
+        "cloud": files.get("cloud", "off"),
+    }
+
+
 def _strings(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -470,6 +484,8 @@ async def _snapshot(server: Any, user_id: int) -> dict[str, Any]:
         quota_points = max(balance, month_usage, 1.0)
     _apply_expert_limit(server, user_id, policy_raw)
     policy = _policy_payload(policy_raw, updated_at=updated_at)
+    files = cloud_files.summary(server.services.settings_repo, user_id)
+    files_policy = cloud_files.load_status(server.services.settings_repo)
     raw_policy = policy_raw.get("policy")
     policy_body = _object(raw_policy)
     policy_resources = _object(policy_body.get("resources"))
@@ -552,10 +568,23 @@ async def _snapshot(server: Any, user_id: int) -> dict[str, Any]:
             "syncedBytes": 0,
             "lastSyncedAt": now,
             "queue": [
-                {"kind": kind, "pending": 0, "synced": 0, "lastSyncedAt": now}
+                _files_queue_row(files, now)
+                if kind == "files"
+                else {"kind": kind, "pending": 0, "synced": 0, "lastSyncedAt": now}
                 for kind in ("threads", "traces", "memory", "files", "config")
             ],
             "conflicts": [],
+        },
+        "cloudFiles": {
+            "state": files["cloud"],
+            "expertChoice": bool(files_policy.get("expert_choice", True)),
+            "maxFileBytes": int(files_policy.get("max_file_bytes") or 0),
+            "experts": files["experts"],
+            "files": files["files"],
+            "bytes": files["bytes"],
+            "pending": files["pending"],
+            "skipped": files["skipped"],
+            "lastSyncedAt": files["last_synced_at"],
         },
         "cloudModels": cloud_models,
         "localModels": local_models,
@@ -594,7 +623,18 @@ async def _load_snapshot_inputs(
     await _sync_enterprise_security(server, user_id, policy)
     await _sync_enterprise_env(server, user_id)
     await _sync_enterprise_sandbox(server, user_id)
+    await _sync_cloud_files_status(server, user_id)
     return me, policy, resources, device_key, usage
+
+
+async def _sync_cloud_files_status(server: Any, user_id: int) -> None:
+    """Keep what the enterprise allows for 企业云端存储; an older control plane has no such endpoint."""
+    try:
+        await cloud_files.refresh_status(server, user_id)
+    except OctopError as exc:
+        if exc.status == 401:
+            raise
+        cloud_files.store_status(server.services.settings_repo, None)
 
 
 async def _load_devices(server: Any, user_id: int, current_id: str) -> list[dict[str, Any]]:
