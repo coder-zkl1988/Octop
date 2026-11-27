@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LayoutModeProvider } from "../context/LayoutModeContext";
-import { EXPAND_CHAT_RAIL_EVENT } from "../pages/Chat/components/ChatSidebarPanel";
+import { EXPAND_CHAT_RAIL_EVENT } from "../pages/Chat/chatRailEvents";
 import { useChatSidebarOpen } from "../pages/Chat/hooks/useChatSidebarState";
 import { LAYOUT_MODE_KEY } from "./layoutModeStorage";
 import Sidebar from "./Sidebar";

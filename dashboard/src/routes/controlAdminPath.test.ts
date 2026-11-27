@@ -35,7 +35,8 @@ describe("pathPermissionKeys", () => {
       ...PERM.mobile,
     ]);
     expect(pathPermissionKeys("/remote-phone")).toEqual([...PERM.mobile]);
-    expect(pathPermissionKeys("/acp")).toBe("admin");
+    // ACP follows the enterprise ACP module permission, not the admin role.
+    expect(pathPermissionKeys("/acp")).toEqual(["acp"]);
   });
 
   it("keeps sso on users page, not advanced", () => {

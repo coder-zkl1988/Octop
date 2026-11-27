@@ -386,7 +386,9 @@ describe("<McpAccess />", () => {
       },
       plaintext: "omcp_live_plaintext_value",
     });
-    const user = userEvent.setup();
+    // No pause between keystrokes: the default yields once per key and pushes
+    // this test past the 5 s limit on slow CI runners.
+    const user = userEvent.setup({ delay: null });
     render(<McpAccess />);
     await screen.findByText("codex@macbook");
 
