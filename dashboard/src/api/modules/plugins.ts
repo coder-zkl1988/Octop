@@ -89,6 +89,52 @@ export interface MarketPlugin {
   error?: string;
 }
 
+/** One plugin the enterprise allows on this device, joined with what is installed. */
+export interface EnterprisePlugin {
+  id: string;
+  name: string;
+  summary: string;
+  version: string;
+  kind: string;
+  builtin: boolean;
+  required: boolean;
+  installMode: "self" | "admin";
+  /** False for an admin-only plugin the admin has not pushed to this member yet. */
+  installable: boolean;
+  tools: string[];
+  toolsDenied: string[];
+  scan: "" | "pass" | "hint" | "high";
+  request: { status: "pending" | "rejected"; at: string; note: string } | null;
+  installed: boolean;
+  installedVersion: string;
+  enabled: boolean;
+}
+
+export const enterprisePluginsApi = {
+  list(): Promise<{ enforced: boolean; items: EnterprisePlugin[] }> {
+    return request("/enterprise/plugins");
+  },
+  /** ``onlyAgent``: turn it on for that expert only; other and later experts start with it off. */
+  install(
+    pluginId: string,
+    enable = true,
+    onlyAgent?: string,
+  ): Promise<{ status: string; id: string }> {
+    const query = new URLSearchParams({ enable: String(enable) });
+    if (onlyAgent) query.set("only_agent", onlyAgent);
+    return request(
+      `/enterprise/plugins/${encodeURIComponent(pluginId)}/install?${query}`,
+      { method: "POST" },
+    );
+  },
+  request(pluginId: string, reason: string): Promise<{ status: string }> {
+    return request(
+      `/enterprise/plugins/${encodeURIComponent(pluginId)}/request`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  },
+};
+
 export const pluginsApi = {
   list(): Promise<InstalledPlugin[]> {
     return request<InstalledPlugin[]>("/plugins");

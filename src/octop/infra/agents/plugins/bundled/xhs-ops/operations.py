@@ -106,6 +106,20 @@ class BrowseDefaults(Input):
     daily_segments: int = Field(
         default=2, ge=1, le=3, validation_alias=AliasChoices("daily_segments", "dailySegments")
     )
+    # How the home feed is read: the share of cards opened, and the pause between two opens.
+    home_open_percent: int = Field(default=35, ge=5, le=100)
+    open_gap_sec_min: int = Field(default=6, ge=2, le=60)
+    open_gap_sec_max: int = Field(default=20, ge=2, le=120)
+    # A segment that fell short is only recorded, or the next one tops the day up to 80% of plan.
+    shortfall: Literal["record", "topup"] = "record"
+    # Consecutive blocks with an anomaly before the rest of the segment is dropped.
+    anomaly_stop_after: Literal[2, 3] = 2
+
+    @model_validator(mode="after")
+    def ordered_gap(self) -> BrowseDefaults:
+        if self.open_gap_sec_max < self.open_gap_sec_min:
+            raise ValueError("open gap max below min")
+        return self
 
 
 class Keyword(Input):
@@ -280,7 +294,12 @@ def build_plans(
     }
     round_number = len(previous)
     if config.daily_segments <= 1:
-        return [_suggest(account, config, interaction, round_number, last, None)]
+        return _top_up(
+            [_suggest(account, config, interaction, round_number, last, None)],
+            config,
+            previous,
+            date,
+        )
     done = {
         (row.get("segment") or {}).get("index")
         for row in previous
@@ -303,7 +322,33 @@ def build_plans(
         suggestions.append(plan)
         round_number += 1
         last = {row["keyword"] for row in plan["keywords"]}
-    return suggestions
+    return _top_up(suggestions, config, previous, date)
+
+
+def _top_up(
+    plans: list[dict[str, Any]],
+    config: BrowseDefaults,
+    previous: list[dict[str, Any]],
+    date: str,
+) -> list[dict[str, Any]]:
+    """When asked to, the next segment makes up a shortfall — never past 80% of what was planned."""
+    if config.shortfall != "topup" or not plans:
+        return plans
+    done = [
+        row["summary"]
+        for row in previous
+        if row.get("date") == date and row.get("status") == "success" and row.get("summary")
+    ]
+    planned = sum(int(s.get("planned", 0)) for s in done)
+    missing = math.ceil(planned * 0.8) - sum(int(s.get("browsed", 0)) for s in done)
+    extra = min(missing, 12 - plans[0]["home_feed_count"])
+    if extra > 0:
+        plans[0]["home_feed_count"] += extra
+        plans[0]["rationale"] = [
+            *plans[0].get("rationale", []),
+            f"前面的分段少完成了一些，这一段首页多看 {extra} 篇（补到计划的 80% 为止）",
+        ]
+    return plans
 
 
 def compute_chunk_quota(

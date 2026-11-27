@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import React, { type ComponentType } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { openXhsTab } from "./xhsNav";
 import type { OctopPluginUIHost, PluginPageProps } from "./types";
 
 const source = readFileSync(
@@ -102,6 +103,7 @@ function fixture(features = ["xhs.content", "xhs.ops"]) {
 describe("XHS audience profile through the registered plugin page", () => {
   it("requires a human review and sends the frozen project version", async () => {
     const { snapshot, request } = fixture();
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑目标画像" }),
     );
@@ -133,6 +135,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("preserves legacy source fields during a project rename", async () => {
     const { request } = fixture();
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑客户资料" }),
     );
@@ -160,6 +163,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("disables profile commands when only content access is granted", async () => {
     const { request } = fixture(["xhs.content"]);
+    await openXhsTab("项目");
     expect(
       await screen.findByRole("button", { name: "编辑目标画像" }),
     ).toBeDisabled();
@@ -169,6 +173,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("preserves list separators while typing structured source fields", async () => {
     const { request } = fixture();
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑客户资料" }),
     );
@@ -195,6 +200,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("requires reviewing again after the operator changes profile content", async () => {
     fixture();
+    await openXhsTab("项目");
     fireEvent.click(
       await screen.findByRole("button", { name: "编辑目标画像" }),
     );
@@ -227,7 +233,7 @@ describe("XHS audience profile through the registered plugin page", () => {
         interest_pool: { core: ["穿搭"] },
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "人设规划" }));
+    await openXhsTab("人设规划");
     fireEvent.change(screen.getByLabelText("人设所属项目"), {
       target: { value: "p1" },
     });
@@ -267,7 +273,7 @@ describe("XHS audience profile through the registered plugin page", () => {
         entry_mode: "new",
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "人设规划" }));
+    await openXhsTab("人设规划");
     fireEvent.change(screen.getByLabelText("人设所属项目"), {
       target: { value: "p1" },
     });
@@ -310,6 +316,7 @@ describe("XHS audience profile through the registered plugin page", () => {
     Object.assign(snapshot, {
       license: { status: "active", version: 2, features: ["xhs.content"] },
     });
+    await openXhsTab("项目");
     expect(
       await screen.findByRole("button", { name: "生成目标画像" }),
     ).toBeDisabled();
@@ -318,6 +325,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("shows a quota explanation without exposing raw backend details", async () => {
     const { request } = fixture();
+    await openXhsTab("项目");
     const generate = await screen.findByRole("button", {
       name: "生成目标画像",
     });
@@ -337,6 +345,7 @@ describe("XHS audience profile through the registered plugin page", () => {
 
   it("passes the selected personal model to audience generation", async () => {
     const { request } = fixture();
+    await openXhsTab("项目");
     fireEvent.change(await screen.findByLabelText("生成模型"), {
       target: { value: "personal:provider/model" },
     });
@@ -373,7 +382,7 @@ describe("XHS audience profile through the registered plugin page", () => {
         platform_account_id: "",
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "账号与设备" }));
+    await openXhsTab("账号与设备");
     fireEvent.click(screen.getByRole("button", { name: "绑定手机" }));
     fireEvent.change(screen.getByLabelText("平台账号 ID"), {
       target: { value: "xhs123" },
@@ -433,7 +442,7 @@ describe("XHS content editor through the registered plugin page", () => {
       },
     ];
     try {
-      fireEvent.click(await screen.findByRole("button", { name: "内容草稿" }));
+      await openXhsTab("创作编辑器");
       fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
       await waitFor(() =>
         expect(screen.getByRole("img", { name: "预览第1张" })).toHaveAttribute(
@@ -478,7 +487,7 @@ describe("XHS content editor through the registered plugin page", () => {
         ],
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "内容草稿" }));
+    await openXhsTab("创作编辑器");
     fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
     expect(
       await screen.findByText("预览第1张 · 图片读取失败"),
@@ -509,7 +518,7 @@ describe("XHS content editor through the registered plugin page", () => {
         images: [image("封面.png"), image("第二张.png")],
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "内容草稿" }));
+    await openXhsTab("创作编辑器");
     fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
     fireEvent.change(screen.getByLabelText("标题（4/20）"), {
       target: { value: "双打训练" },
@@ -558,7 +567,7 @@ describe("XHS content editor through the registered plugin page", () => {
         images: [image("原图.png")],
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "内容草稿" }));
+    await openXhsTab("创作编辑器");
     fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
     fireEvent.change(screen.getByLabelText("内容主题与文案要求"), {
       target: { value: "双打步法" },
@@ -594,7 +603,7 @@ describe("XHS content editor through the registered plugin page", () => {
         images: [image("第一张.png"), image("第二张.png")],
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "内容草稿" }));
+    await openXhsTab("创作编辑器");
     fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
     fireEvent.click(screen.getByRole("button", { name: "移除第1张" }));
     expect(
@@ -642,7 +651,7 @@ describe("XHS batch publish confirmation", () => {
         precheck: { digest: "frozen-digest" },
       },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "批量发布" }));
+    await openXhsTab("批量发布");
     fireEvent.click(
       await screen.findByRole("button", { name: "预检发布批次" }),
     );
@@ -689,7 +698,7 @@ describe("XHS batch publish confirmation", () => {
 
   it("keeps batch publishing locked without the publish entitlement", async () => {
     const { request } = fixture(["xhs.content"]);
-    fireEvent.click(await screen.findByRole("button", { name: "批量发布" }));
+    await openXhsTab("批量发布");
     expect(
       screen.queryByRole("button", { name: "新建发布批次" }),
     ).not.toBeInTheDocument();
@@ -735,7 +744,7 @@ describe("XHS new-account public profile through the registered page", () => {
   it("requires an explicit human review and sends the frozen account version", async () => {
     const { snapshot, request } = fixture(["xhs.ops"]);
     snapshot.data.accounts = [newPublicAccount()];
-    fireEvent.click(await screen.findByRole("button", { name: "新号资料" }));
+    await openXhsTab("新号资料");
     const review = await screen.findByRole("button", {
       name: "确认公开资料审核",
     });
@@ -764,7 +773,7 @@ describe("XHS new-account public profile through the registered page", () => {
   it("preserves separators in internal interests and saves only editable fields", async () => {
     const { snapshot, request } = fixture(["xhs.ops"]);
     snapshot.data.accounts = [newPublicAccount()];
-    fireEvent.click(await screen.findByRole("button", { name: "新号资料" }));
+    await openXhsTab("新号资料");
     const interests = await screen.findByLabelText(
       "内部兴趣标签（不发送到手机）",
     );
@@ -801,7 +810,7 @@ describe("XHS new-account public profile through the registered page", () => {
     snapshot.data.accounts = [
       { ...newPublicAccount(), entry_mode: "existing" },
     ];
-    fireEvent.click(await screen.findByRole("button", { name: "新号资料" }));
+    await openXhsTab("新号资料");
     expect(
       await screen.findByText(/已有账号的资料修改请使用诊断与变更/),
     ).toBeInTheDocument();
@@ -829,9 +838,7 @@ describe("XHS independent profile evidence", () => {
       account_id: account.id,
     });
     try {
-      fireEvent.click(
-        await screen.findByRole("button", { name: "发布与历史" }),
-      );
+      await openXhsTab("发布与历史");
       fireEvent.click(
         await screen.findByRole("button", { name: "确认手机任务已停止" }),
       );
@@ -896,7 +903,7 @@ describe("XHS independent profile evidence", () => {
     });
     snapshot.data.accounts = [account];
     try {
-      fireEvent.click(await screen.findByRole("button", { name: "新号资料" }));
+      await openXhsTab("新号资料");
       const accept = await screen.findByRole("button", {
         name: "记录人工核验完成",
       });

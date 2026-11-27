@@ -245,7 +245,7 @@ export const createColumns = (
             {known ? handlers.t(known.labelKey) : status}
           </span>
         );
-        if (status === "error" && lastError) {
+        if ((status === "error" || status === "skipped") && lastError) {
           return <Tooltip title={lastError}>{tag}</Tooltip>;
         }
         return tag;

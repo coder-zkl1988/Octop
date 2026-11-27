@@ -1008,9 +1008,9 @@ def _identity_response(snapshot: dict[str, Any], account_id: str) -> dict[str, A
             "accountId": str((profile or {}).get("account_id") or ""),
             "taskId": task_id,
             "reason": (
-                "已读到手机上的小红书号，请对照截图确认"
+                "已读到手机上的小红薯号，请对照截图确认"
                 if status == "visible"
-                else "没有取到手机上的小红书号，请确认手机状态后重试"
+                else "没有取到手机上的小红薯号，请确认手机状态后重试"
             ),
         }
     if latest.get("status") in {"queued", "preparing", "running", "cancelling"}:

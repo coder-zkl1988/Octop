@@ -1,0 +1,2 @@
+# The phone skill bundle is verified by its SHA-256; a CRLF checkout on Windows would change it.
+src/octop/infra/agents/plugins/bundled/*/phone-skills/*.json -text

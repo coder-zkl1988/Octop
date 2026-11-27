@@ -23,7 +23,10 @@ from pydantic import BaseModel, Field
 
 from octop.api.common.agent import apply_agent_audience, require_agent_owner_row, user_owns_agent
 from octop.api.common.agent_runtime import AgentRuntimeFields, persisted_agent_settings
-from octop.api.common.validators import assert_user_backend_root_dirs
+from octop.api.common.validators import (
+    assert_enterprise_workspace_dir,
+    assert_user_backend_root_dirs,
+)
 from octop.api.deps import current_user, get_server, require_permission
 from octop.infra.agents.experts.avatar import (
     display_published_expert_icon_url,
@@ -771,6 +774,7 @@ async def install_published_expert(
         body.backend,
         policy_repo=server.services.user_policy_repo,
     )
+    assert_enterprise_workspace_dir(server, body.workspace_dir)
     kb_ids, servers = _validated_session_defaults(
         server.app_runtime.agent_registry,
         user.id,
@@ -912,6 +916,7 @@ async def install_expert_hub_item(
         body.backend,
         policy_repo=server.services.user_policy_repo,
     )
+    assert_enterprise_workspace_dir(server, body.workspace_dir)
     package_ids = (
         server.app_runtime.agent_registry.validate_skill_package_ids(body.skill_package_ids)
         if body.skill_package_ids is not None
@@ -1048,6 +1053,7 @@ async def create_agent_from_expert(
         body.backend,
         policy_repo=server.services.user_policy_repo,
     )
+    assert_enterprise_workspace_dir(server, body.workspace_dir)
     package_ids = (
         server.app_runtime.agent_registry.validate_skill_package_ids(body.skill_package_ids)
         if body.skill_package_ids is not None

@@ -15,9 +15,8 @@ export const zh = {
     contact: "需要调整策略，请联系企业管理员。",
   },
   models: {
-    title: "模型",
-    subtitle:
-      "云端模型由企业统一提供；本地模型在本机运行，仅限企业白名单内的模型",
+    title: "模型配置",
+    subtitle: "查看企业下发的云端模型和可用的本地模型，并选择自己的优先模型。",
     personalTitle: "个人模型设置",
     personalDesc:
       "企业云模型仍由管理员控制；你可以在下方使用原 Tabby 模型设置，为自己的设备配置 API Key、模型列表和 Ollama / ONNX 本地运行时。个人 provider 保存在本机，不会改变企业云模型白名单。",
@@ -25,11 +24,11 @@ export const zh = {
     managedTip:
       "企业云模型由管理员统一配置；本页的个人 provider 和 API Key 仅作用于当前设备。",
     cloud: {
-      title: "云端模型",
+      title: "企业云端模型",
       billed: "计费",
       meta: "由{{tenant}}提供 · 只读",
       availableCount: "{{count}} 个对我可用",
-      desc: "经企业模型网关调用，按厂商官方价格换算为点数扣费（1 美元 = 100 点）。星标为你的默认对话模型。",
+      desc: "由企业下发、经网关按点计费；价格由平台维护，可见范围与默认模型由企业管理员设置。星标为你的优先模型。",
       colAlias: "别名",
       colDesc: "说明",
       colCaps: "能力",
@@ -37,8 +36,8 @@ export const zh = {
       colPrice: "参考价 · 点 / 百万 tokens",
       colStatus: "状态",
       default: "默认",
-      starOn: "默认对话模型",
-      starOff: "设为默认",
+      starOn: "我的优先模型",
+      starOff: "设为优先",
       available: "对我可用",
       unavailable: "暂不可用",
       defaultSaved: "已将 {{model}} 设为默认对话模型",
@@ -55,7 +54,7 @@ export const zh = {
       meta: "Ollama / ONNX · 离线可用",
       ollamaRunning: "Ollama 运行中",
       ollamaStopped: "Ollama 未运行",
-      desc: "在本机运行，不经过网关、不扣点数；会话与 token 数照常同步到企业云端用于审计。只显示企业白名单内的模型。",
+      desc: "本地模型在本机运行，不经网关、不计费；只能下载企业白名单内的模型。会话与 token 数照常同步到企业云端用于审计。",
       policyTitle: "允许使用本地模型",
       colModel: "模型",
       colRuntime: "运行时",

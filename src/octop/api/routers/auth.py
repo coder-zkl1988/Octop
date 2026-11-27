@@ -85,6 +85,8 @@ class LoginBody(BaseModel):
 class EnterpriseLoginBody(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=200)
+    # The enterprise platform verifies this itself; the desktop only relays it.
+    captcha_token: str | None = Field(default=None, max_length=4096)
 
 
 class EnterpriseMfaBody(BaseModel):
@@ -105,6 +107,7 @@ class EnterpriseRegisterBody(EnterpriseInviteBody):
 
 class EnterpriseOpenRegisterCodeBody(BaseModel):
     email: str = Field(min_length=3, max_length=254)
+    captcha_token: str | None = Field(default=None, max_length=4096)
 
 
 class EnterpriseOpenRegisterBody(EnterpriseOpenRegisterCodeBody):
@@ -303,6 +306,41 @@ async def _enterprise_authenticated_response(
     }
 
 
+def _enterprise_captcha_error(error: dict[str, Any]) -> OctopError | None:
+    """The platform's captcha refusals keep their own codes so the login page can draw the widget."""
+    code = {
+        "captcha_required": ErrorCode.CAPTCHA_REQUIRED,
+        "captcha_failed": ErrorCode.CAPTCHA_FAILED,
+    }.get(str(error.get("code") or ""))
+    if code is None:
+        return None
+    return OctopError(code, str(error.get("message") or code.value), status=400)
+
+
+def _with_captcha(body: dict[str, Any], token: str | None) -> dict[str, Any]:
+    return {**body, "captcha": token} if token else body
+
+
+@router.get("/enterprise/captcha", summary="Enterprise login captcha config")
+async def enterprise_captcha(server: Any = Depends(get_server)) -> dict[str, Any]:
+    """Which captcha the enterprise platform wants on its login and registration. No secret."""
+    off = {"provider": "off", "site_key": "", "trigger": "after_failures", "after_failures": 2}
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
+            response = await client.get(_enterprise_url(server) + "/auth/v1/captcha")
+    except httpx.HTTPError:
+        return off
+    if response.status_code >= 400:
+        return off
+    payload = _enterprise_response_object(response, message="invalid enterprise response")
+    return {
+        "provider": str(payload.get("provider") or "off"),
+        "site_key": str(payload.get("site_key") or ""),
+        "trigger": str(payload.get("trigger") or "after_failures"),
+        "after_failures": int(payload.get("after_failures") or 2),
+    }
+
+
 @router.post("/enterprise/login", summary="Start enterprise login")
 async def enterprise_login(
     body: EnterpriseLoginBody, server: Any = Depends(get_server)
@@ -312,7 +350,9 @@ async def enterprise_login(
         try:
             response = await client.post(
                 _enterprise_url(server) + "/auth/v1/login",
-                json={"email": body.email, "password": body.password},
+                json=_with_captcha(
+                    {"email": body.email, "password": body.password}, body.captcha_token
+                ),
                 headers={"X-Tabby-Client": "desktop"},
             )
         except httpx.HTTPError as exc:
@@ -321,6 +361,9 @@ async def enterprise_login(
             ) from exc
     if response.status_code >= 400:
         payload = _enterprise_response_object(response, message="enterprise login failed")
+        captcha_error = _enterprise_captcha_error(_enterprise_object(payload.get("error")))
+        if captcha_error is not None:
+            raise captcha_error
         detail = _enterprise_object(payload.get("error")).get("message", "enterprise login failed")
         status = response.status_code if response.status_code < 500 else 502
         raise OctopError(ErrorCode.AUTH_FAILED, str(detail), status=status)
@@ -425,7 +468,7 @@ async def enterprise_open_register_code(
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
             response = await client.post(
                 _enterprise_url(server) + "/auth/v1/register/email/code",
-                json=body.model_dump(),
+                json=_with_captcha({"email": body.email}, body.captcha_token),
                 headers={"X-Tabby-Client": "desktop"},
             )
     except httpx.HTTPError as exc:
@@ -435,6 +478,9 @@ async def enterprise_open_register_code(
     if response.status_code >= 400:
         payload = _enterprise_response_object(response, message="email registration code failed")
         error = _enterprise_object(payload.get("error"))
+        captcha_error = _enterprise_captcha_error(error)
+        if captcha_error is not None:
+            raise captcha_error
         raise OctopError(
             ErrorCode.AUTH_FAILED,
             str(error.get("message", "email registration code failed")),
@@ -455,7 +501,7 @@ async def enterprise_open_register(
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
             response = await client.post(
                 _enterprise_url(server) + "/auth/v1/register/email",
-                json=body.model_dump(),
+                json=body.model_dump(exclude={"captcha_token"}),
                 headers={"X-Tabby-Client": "desktop"},
             )
     except httpx.HTTPError as exc:

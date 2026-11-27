@@ -120,5 +120,7 @@ export function lastRunStatusTag(
     return { color: "error", labelKey: "cronJobs.lastStatusError" };
   if (status === "missed")
     return { color: "warning", labelKey: "cronJobs.lastStatusMissed" };
+  if (status === "skipped")
+    return { color: "warning", labelKey: "cronJobs.lastStatusSkipped" };
   return null;
 }

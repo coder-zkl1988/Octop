@@ -35,6 +35,11 @@ from octop.infra.db.lease import LEASE_SECONDS, RECONCILE_SECONDS, RENEW_SECONDS
 from octop.infra.db.repos.audit import ACTOR_SYSTEM
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.gateway.threads import ThreadRegistry
+from octop.infra.users.resource_policy import (
+    POLICY_MAX_CONCURRENT_TASKS,
+    POLICY_TASK_TIMEOUT_MINUTES,
+    policy_int,
+)
 from octop.infra.utils.locale import resolve_user_locale
 
 if TYPE_CHECKING:
@@ -103,6 +108,8 @@ class CronManager:
         self._serve_background = True
         # mailbox instance_id -> (monotonic probe time, authorized)
         self._mail_auth_cache: dict[str, tuple[float, bool]] = {}
+        # user_id -> automation runs in progress on this instance (role-policy limit)
+        self._running: dict[int, int] = {}
 
     def replace_repos(self, repos: RepoBundle) -> None:
         """Point cron persistence at a rebound control-plane pool."""
@@ -415,6 +422,18 @@ class CronManager:
         else:
             asyncio.ensure_future(self._run_user_job(cron_id, force=True))
 
+    def _task_limits(self, user_id: int) -> tuple[int | None, int | None]:
+        """The member's role-policy limits: tasks running at once, and minutes per run."""
+        repo = self._repos.user_policy_repo
+        return (
+            policy_int(repo.get(user_id, POLICY_MAX_CONCURRENT_TASKS)),
+            policy_int(repo.get(user_id, POLICY_TASK_TIMEOUT_MINUTES)),
+        )
+
+    def _limit_text(self, user_id: int, key: str, **values: Any) -> str:
+        locale = resolve_user_locale(user_repo=self._repos.user_repo, user_id=user_id)
+        return tr(f"cron.limits.{key}", locale, **values)
+
     async def _run_user_job(
         self,
         cron_id: str,
@@ -422,6 +441,22 @@ class CronManager:
         raise_on_error: bool = False,
         force: bool = False,
     ) -> None:
+        row = self._repos.cron_repo.get(cron_id)
+        user_id = int(row.user_id) if row is not None else 0
+        max_running, timeout_minutes = self._task_limits(user_id) if user_id else (None, None)
+        if max_running is not None and self._running.get(user_id, 0) >= max_running:
+            reason = self._limit_text(user_id, "concurrent", limit=max_running)
+            self._repos.cron_repo.set_run_status(
+                cron_id, ts=int(time.time()), status="skipped", error=reason
+            )
+            logger.info("CronJob %s skipped; concurrent task limit %s", cron_id, max_running)
+            if raise_on_error:
+                raise OctopError(
+                    ErrorCode.CRON_TASK_LIMIT,
+                    "concurrent task limit reached",
+                    details={"limit": max_running},
+                )
+            return
         claimed = self._repos.cron_repo.claim_run(
             cron_id,
             owner=self._instance_id,
@@ -436,12 +471,30 @@ class CronManager:
                 )
             logger.info("CronJob %s skipped; another instance holds the run lease", cron_id)
             return
+        self._running[user_id] = self._running.get(user_id, 0) + 1
         try:
-            await self._execute_claimed(claimed, raise_on_error=raise_on_error)
+            await self._execute_claimed(
+                claimed,
+                raise_on_error=raise_on_error,
+                timeout_seconds=timeout_minutes * 60 if timeout_minutes else None,
+                timeout_error=(
+                    self._limit_text(user_id, "timeout", minutes=timeout_minutes)
+                    if timeout_minutes
+                    else ""
+                ),
+            )
         finally:
+            self._running[user_id] -= 1
             await self._finish_one_shot(cron_id)
 
-    async def _execute_claimed(self, row: Any, *, raise_on_error: bool) -> None:
+    async def _execute_claimed(
+        self,
+        row: Any,
+        *,
+        raise_on_error: bool,
+        timeout_seconds: float | None = None,
+        timeout_error: str = "",
+    ) -> None:
         token = str(row.run_lease_token or "")
         if not token:
             return
@@ -468,6 +521,8 @@ class CronManager:
                 raise_on_error=raise_on_error,
                 lease_token=token,
                 disable_after=str(row.trigger).startswith("date:"),
+                timeout_seconds=timeout_seconds,
+                timeout_error=timeout_error,
             )
         )
         try:

@@ -22,6 +22,9 @@ _LOCAL_BACKEND_KINDS = {"local_shell", "filesystem"}
 POLICY_WORKSPACE_ROOT_DIR = "workspace_root_dir"
 POLICY_TOKEN_QUOTA = "token_quota"
 POLICY_MAX_AGENTS = "max_agents"
+# Automation tasks of one member running at once, and minutes one run may take.
+POLICY_MAX_CONCURRENT_TASKS = "max_concurrent_tasks"
+POLICY_TASK_TIMEOUT_MINUTES = "task_timeout_minutes"
 POLICY_ALLOWED_BACKEND_TYPES = "allowed_backend_types"
 
 # Expert-picker types. Storage kind ``shell`` is the same capability as builtin
@@ -104,6 +107,17 @@ def max_agents_of(raw: Any) -> int | None:
         return raw
     if isinstance(raw, Mapping) and "value" not in raw:
         raw = raw.get(POLICY_MAX_AGENTS)
+    text = active_policy_value(raw)
+    if text is None:
+        return None
+    try:
+        return int(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def policy_int(raw: Any) -> int | None:
+    """An enabled numeric policy value, or None when unset or not a number."""
     text = active_policy_value(raw)
     if text is None:
         return None

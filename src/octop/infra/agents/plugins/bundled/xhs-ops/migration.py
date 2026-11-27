@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import mimetypes
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -13,6 +12,13 @@ from uuid import uuid4
 from octop.infra.plugin_apps.contracts import PluginAppError
 
 MAX_SOURCE_BYTES = 20 * 1024 * 1024
+# By suffix, not mimetypes: on Windows mimetypes also reads the registry, which may not know .webp.
+IMAGE_SUFFIXES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+}
 COLLECTIONS = (
     "projects",
     "accounts",
@@ -426,8 +432,8 @@ async def prepare_profile_assets(
                     missing += 1
                     missing_paths.append(str(path))
                     continue
-                mime_type = mimetypes.guess_type(path.name)[0]
-                if mime_type not in {"image/png", "image/jpeg", "image/webp"}:
+                mime_type = IMAGE_SUFFIXES.get(path.suffix.lower())
+                if mime_type is None:
                     missing += 1
                     missing_paths.append(str(path))
                     continue
@@ -507,8 +513,8 @@ async def prepare_run_evidence(
                 missing_paths.append(str(path))
                 entries.append({"missing_path": str(path)})
                 continue
-            mime_type = mimetypes.guess_type(path.name)[0]
-            if mime_type not in {"image/png", "image/jpeg", "image/webp"}:
+            mime_type = IMAGE_SUFFIXES.get(path.suffix.lower())
+            if mime_type is None:
                 missing += 1
                 missing_paths.append(str(path))
                 entries.append({"missing_path": str(path)})

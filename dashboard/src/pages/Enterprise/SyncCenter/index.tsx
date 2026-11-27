@@ -10,7 +10,12 @@ import {
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  cloudFilesApi,
+  type CloudExpert,
+} from "../../../api/modules/cloudFiles";
+import { apiErrorMessage } from "../../../utils/apiError";
 import { useTranslation } from "react-i18next";
 import { enterpriseApi } from "../../../enterprise/api/core";
 import { useEnterprise } from "../../../enterprise/EnterpriseContext";
@@ -42,8 +47,10 @@ export default function SyncCenterPage() {
       </div>
     );
   const { sync, tenant } = snapshot;
+  const cloudOn = snapshot.cloudFiles?.state === "on";
   const syncNow = async () => {
     await enterpriseApi.syncNow();
+    if (cloudOn) await cloudFilesApi.syncNow();
     await refresh();
     void message.success(t("enterprise.account.sync.allSynced"));
   };
@@ -216,10 +223,20 @@ export default function SyncCenterPage() {
                       <td className="r ent-num">{row.pending}</td>
                       <td className="r ent-num">{formatInt(row.synced)}</td>
                       <td className="ent-num">
-                        {formatServerHourMinute(row.lastSyncedAt, timeZone)}
+                        {row.lastSyncedAt
+                          ? formatServerHourMinute(row.lastSyncedAt, timeZone)
+                          : "—"}
                       </td>
                       <td>
-                        {row.upload ? (
+                        {row.kind === "files" &&
+                        row.cloud &&
+                        row.cloud !== "on" ? (
+                          <span className="is-badge">
+                            {t(
+                              `enterprise.account.sync.cloudFiles.${row.cloud}`,
+                            )}
+                          </span>
+                        ) : row.upload ? (
                           <div className="sy-progress-cell">
                             <span>
                               {t(
@@ -246,6 +263,11 @@ export default function SyncCenterPage() {
                 </tbody>
               </table>
             </div>
+            {snapshot.cloudFiles &&
+            (snapshot.cloudFiles.state === "on" ||
+              snapshot.cloudFiles.state === "read_only") ? (
+              <CloudExperts onRestored={() => void refresh()} />
+            ) : null}
             <div className="ent-tcard sy-sec">
               <div className="ent-tcard-hd">
                 <div className="is-card-title">
@@ -304,6 +326,110 @@ export default function SyncCenterPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Your experts kept in 企业云端存储; one that is not on this computer can be restored here. */
+function CloudExperts({ onRestored }: { onRestored: () => void }) {
+  const { t } = useTranslation();
+  const [items, setItems] = useState<CloudExpert[] | null>(null);
+  const [busy, setBusy] = useState("");
+  const load = () =>
+    cloudFilesApi
+      .experts()
+      .then((r) => setItems(r.items))
+      .catch(() => setItems([]));
+  useEffect(() => {
+    void load();
+  }, []);
+  const restore = async (item: CloudExpert) => {
+    setBusy(item.expert_id);
+    try {
+      const result = await cloudFilesApi.restore(item.expert_id);
+      void message.success(
+        t("enterprise.account.sync.cloudExperts.restored", {
+          name: result.name,
+          count: result.written,
+        }),
+      );
+      await load();
+      onRestored();
+    } catch (err) {
+      void message.error(
+        apiErrorMessage(
+          err,
+          t("enterprise.account.sync.cloudExperts.failed"),
+          t,
+        ),
+      );
+    } finally {
+      setBusy("");
+    }
+  };
+  return (
+    <div className="ent-tcard sy-sec">
+      <div className="ent-tcard-hd">
+        <div className="is-card-title">
+          {t("enterprise.account.sync.cloudExperts.title")}
+          <div className="is-subtitle">
+            {t("enterprise.account.sync.cloudExperts.subtitle")}
+          </div>
+        </div>
+      </div>
+      {items && items.length ? (
+        <table className="ent-table">
+          <thead>
+            <tr>
+              <th>{t("enterprise.account.sync.cloudExperts.name")}</th>
+              <th className="r">
+                {t("enterprise.account.sync.cloudExperts.files")}
+              </th>
+              <th className="r">
+                {t("enterprise.account.sync.cloudExperts.size")}
+              </th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.expert_id}>
+                <td>
+                  <strong>{item.name}</strong>
+                </td>
+                <td className="r ent-num">{formatInt(item.files)}</td>
+                <td className="r ent-num">{formatBytes(item.bytes)}</td>
+                <td className="r">
+                  {item.local_agent_id ? (
+                    <span className="is-badge">
+                      {t("enterprise.account.sync.cloudExperts.here")}
+                    </span>
+                  ) : (
+                    <Button
+                      size="small"
+                      loading={busy === item.expert_id}
+                      onClick={() => void restore(item)}
+                    >
+                      {t("enterprise.account.sync.cloudExperts.restore")}
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="sy-empty">
+          <span className="sy-empty-icon">
+            <Cloud size={16} aria-hidden />
+          </span>
+          <span>
+            {items === null
+              ? t("common.loading")
+              : t("enterprise.account.sync.cloudExperts.empty")}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

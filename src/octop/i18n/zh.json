@@ -471,6 +471,8 @@
     "BRIDGE_PEER_CONNECTION_OWNED": "对端已把这条云端协同登记在另一个用户名下，当前账号无法接管。请让原用户删除那条连接，或改用同一个对端账号。如果填写的地址其实指向本机，请改成对端的真实地址。",
     "CRON_TRIGGER_INVALID": "无效的定时触发器。",
     "CRON_ALREADY_RUNNING": "该任务已在其他实例上运行。",
+    "EXPORT_BUSY": "已经有一个导出在进行，请等它完成。",
+    "CRON_TASK_LIMIT": "同时运行的自动化任务已达到企业设置的上限。",
     "SLASH_UNKNOWN": "未知的斜杠指令。",
     "SLASH_BAD_ARGS": "参数无效。",
     "ATTACHMENT_UNSUPPORTED_TYPE": "不支持此文件类型。",
@@ -772,7 +774,8 @@
         "header": "[引用消息]",
         "current": "[当前消息]"
       }
-    }
+    },
+    "dlp_blocked": "这条消息包含「{rule}」，按企业安全规则没有发送。请去掉相关内容后再试。"
   },
   "threads": {
     "gc_kept_postgres": "保留了 {agent} 的 {threads} 个孤儿检查点会话（{bytes} 字节）：PostgreSQL 上的检查点只报告、不删除。",
@@ -793,6 +796,10 @@
       "timeout": "脚本执行超过 {seconds} 秒。",
       "failed": "脚本失败（退出码 {code}）：{detail}",
       "unreadable": "无法读取工作区脚本 {path}。"
+    },
+    "limits": {
+      "concurrent": "已跳过：同时运行的任务已达到企业上限 {limit} 个。",
+      "timeout": "运行超过企业设置的 {minutes} 分钟上限，已停止。"
     }
   },
   "agents": {

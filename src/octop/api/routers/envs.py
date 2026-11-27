@@ -70,6 +70,13 @@ def _after_env_sync(server: Any, previous: dict[str, str], new: dict[str, str]) 
     asyncio.create_task(_reload(), name="reload-agents-search-env")
 
 
+def _keep_enterprise_env(server: Any) -> None:
+    """Variables delivered by the enterprise win over the member's own of the same name."""
+    import os
+
+    os.environ.update(getattr(server, "_enterprise_env", None) or {})
+
+
 @router.get("", summary="List global environment variables")
 async def list_envs(
     _: Any = Depends(require_permission("envs")),
@@ -112,6 +119,7 @@ async def batch_save_envs(
     _restore_secret_sentinel(cleaned, previous)
     save_env_file(path, cleaned)
     apply_env_file_replace(path, previous=previous)
+    _keep_enterprise_env(server)
     _after_env_sync(server, previous, cleaned)
     return _redact_env_items(list_env_items(path))
 
@@ -137,5 +145,6 @@ async def delete_env(
     values.pop(k, None)
     save_env_file(path, values)
     apply_env_file_replace(path, previous=previous)
+    _keep_enterprise_env(server)
     _after_env_sync(server, previous, values)
     return _redact_env_items(list_env_items(path))

@@ -45,6 +45,7 @@
 }
 
 .formCard {
+  margin-bottom: 16px;
   max-width: 800px;
   border-radius: var(--fn-radius-lg);
   transition: all var(--fn-transition);
@@ -104,4 +105,55 @@
 .stateTextError {
   font-size: 14px;
   color: var(--fn-color-danger);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.currentAgent {
+  font-size: 13px;
+  color: var(--fn-text-secondary);
+  margin-right: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.behaviorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--fn-border-subtle, rgba(0, 0, 0, 0.06));
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.behaviorTitle {
+  font-weight: 600;
+  color: var(--fn-text-primary);
+}
+
+.behaviorDesc {
+  font-size: 13px;
+  color: var(--fn-text-tertiary);
+  margin-top: 2px;
+}
+
+.advanced {
+  max-width: 800px;
 }

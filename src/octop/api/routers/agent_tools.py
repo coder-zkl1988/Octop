@@ -138,6 +138,11 @@ def _list_plugin_tool_items(
     raw_plugins = agent_cfg.get("plugins")
     plugins_cfg: dict[str, Any] = raw_plugins if isinstance(raw_plugins, dict) else {}
     items: list[ToolSettingsItem] = []
+    from octop.infra.enterprise_plugins import denied_tools
+
+    settings = getattr(getattr(server, "services", None), "settings_repo", None)
+    # Tools the enterprise switched off are not shown at all: the member cannot turn them back on.
+    hidden = denied_tools(settings) if settings is not None else set()
     for plugin in mgr.list_installed():
         if plugin.get("error"):
             continue
@@ -151,6 +156,8 @@ def _list_plugin_tool_items(
         agent_on = agent_plugin_enabled(agent_cfg, plugin_id)
         for tool in plugin.get("tools") or []:
             name = str(tool["name"])
+            if name in hidden:
+                continue
             tool_cfg: dict[str, Any] = {}
             plugin_entry = plugins_cfg.get(plugin_id)
             if isinstance(plugin_entry, dict):

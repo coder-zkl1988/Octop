@@ -16,6 +16,12 @@ vi.mock("../../api/modules/auth", () => ({
       enterprise_mode: true,
     }),
     getCaptcha: vi.fn(),
+    getEnterpriseCaptcha: vi.fn(async () => ({
+      provider: "off",
+      site_key: "",
+      trigger: "after_failures",
+      after_failures: 2,
+    })),
     getOauthStatus: vi.fn(),
     getLdapStatus: vi.fn(),
     getPasskeyLoginStatus: vi.fn(),

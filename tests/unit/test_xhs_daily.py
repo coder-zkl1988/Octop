@@ -590,3 +590,91 @@ async def test_unknown_chunk_keeps_budget_across_midnight_until_its_stop_day() -
     assert (
         daily.quota(ctx, domain, ctx.doc, current, {"index": 0, "planned": 4})["like"]["max"] == 2
     )
+
+
+async def test_consecutive_anomalous_blocks_drop_the_rest_of_the_segment() -> None:
+    ctx = await context()
+    three = plan(posts=2)
+    three["keywords"] = [{"keyword": f"兴趣{n}", "count": 2} for n in (1, 2, 3)]
+    day = await save(ctx, [three])
+    assert day["browse_defaults"]["anomaly_stop_after"] == 2
+    ctx.results = [
+        identity(ctx),
+        reply("RECORD_JSON:", record(index=1, browsed=0)),
+        reply("RECORD_JSON:", record(index=2, browsed=0)),
+        reply("RECORD_JSON:", record(index=3)),
+    ]
+    await start(ctx, day)
+    await ctx.drain()
+    run = ctx.doc["runs"][0]
+    # Two empty searches in a row: the third block is never sent to the phone.
+    assert len(ctx.phone_calls) == 3
+    assert [chunk["status"] for chunk in run["chunks"]] == ["completed", "completed", "cancelled"]
+    assert run["status"] == "success" and run["stopped_early"]["reason"] == "anomaly_streak"
+    assert run["summary"]["browsed"] == 0 and run["summary"]["target_met"] is False
+
+
+def test_top_up_only_when_asked_and_never_past_eighty_percent() -> None:
+    account = {
+        "id": "a1",
+        "name": "A",
+        "interest_pool": {"core": ["a", "b", "c", "d", "e"], "extended": ["f"], "general": ["g"]},
+        "browse_defaults": {"daily_segments": 1, "daily_target_posts": 10, "shortfall": "topup"},
+    }
+    short = [{"date": "2026-11-04", "status": "success", "summary": {"planned": 10, "browsed": 3}}]
+    topped = operations.build_plans(account, "2026-11-04", previous_runs=short)[0]
+    plain = operations.build_plans(
+        {**account, "browse_defaults": {**account["browse_defaults"], "shortfall": "record"}},
+        "2026-11-04",
+        previous_runs=short,
+    )[0]
+    # 80% of 10 is 8; 3 were read, so 5 more — added to the home feed and explained.
+    assert topped["home_feed_count"] == plain["home_feed_count"] + 5
+    assert "补到计划的 80%" in topped["rationale"][-1]
+    met = [{"date": "2026-11-04", "status": "success", "summary": {"planned": 10, "browsed": 9}}]
+    assert (
+        operations.build_plans(account, "2026-11-04", previous_runs=met)[0]["home_feed_count"]
+        == plain["home_feed_count"]
+    )
+
+
+def test_home_block_prompt_carries_the_open_ratio_and_gap() -> None:
+    account = {"entry_mode": "new", "platform_account_id": "x", "name": "A"}
+    chunk = {"mode": "home", "keyword": None, "planned": 4, "quota": {}}
+    text = daily._task(
+        domain,
+        account,
+        plan(),
+        chunk,
+        {"home_open_percent": 35, "open_gap_sec_min": 6, "open_gap_sec_max": 20},
+    )
+    assert "每 100 张卡片点开 35 张" in text and "停留 6–20 秒" in text
+    assert "点开" not in daily._task(domain, account, plan(), chunk).split("首页每浏览5篇")[1][:40]
+
+
+async def test_project_default_is_copied_to_accounts_that_follow_the_project() -> None:
+    ctx = await context()
+    first = ctx.doc["accounts"][0]
+    follower = {
+        **first,
+        "id": "a2",
+        "name": "B",
+        "operation_settings": {"source": "project", "version": 3},
+    }
+    ctx.doc["accounts"].append(follower)
+    interaction = operations.InteractionConfig().model_dump()
+    body = {
+        "account_id": "a1",
+        "account_version": first["version"],
+        "version": 0,
+        "browse_defaults": {"daily_target_posts": 40, "home_open_percent": 50},
+        "interaction": interaction,
+    }
+    with pytest.raises(domain.PluginAppError, match="project_default_missing"):
+        await domain.command(ctx, "ops.configure", {**body, "source": "project"})
+    await domain.command(ctx, "ops.configure", {**body, "save_as_project_default": True})
+    project = ctx.doc["projects"][0]
+    assert project["operation_defaults"]["browse_defaults"]["home_open_percent"] == 50
+    assert ctx.doc["accounts"][0]["operation_settings"]["source"] == "account"
+    updated = ctx.doc["accounts"][1]["operation_settings"]
+    assert updated["browse_defaults"]["daily_target_posts"] == 40 and updated["version"] == 4

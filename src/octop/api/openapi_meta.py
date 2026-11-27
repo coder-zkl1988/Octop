@@ -137,6 +137,10 @@ OPENAPI_TAGS: list[dict[str, str]] = [
         "name": "filesystem",
         "description": "Host filesystem directory browsing for dashboard forms.",
     },
+    {
+        "name": "local-settings",
+        "description": "This computer's workspace folders, their size, and the member's data export.",
+    },
     {"name": "mbti", "description": "MBTI persona presets applied to agent personality."},
     {"name": "experts", "description": "Bundled expert templates for creating specialized agents."},
     {
@@ -190,7 +194,7 @@ OPENAPI_TAGS: list[dict[str, str]] = [
     },
     {
         "name": "xhs-ops",
-        "description": "Typed resource facade for the licensed 小红书运营 application.",
+        "description": "Typed resource facade for the licensed 小红薯运营 application.",
     },
 ]
 

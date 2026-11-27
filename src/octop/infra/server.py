@@ -745,6 +745,12 @@ class OctopServer:
                 await bridge_mgr.resume_auto_connections()
 
         asyncio.create_task(_resume_bridges(), name="bridge-auto-resume")
+        if self.config is not None and self.config.enterprise_backend_url:
+            from octop.infra.cloud_files import sync_loop  # noqa: PLC0415
+
+            self._cloud_files_task: asyncio.Task[None] | None = asyncio.create_task(
+                sync_loop(self), name="enterprise-cloud-files"
+            )
 
         from octop.infra.setup.completion import seal_setup_wizard_if_installed  # noqa: PLC0415
 
@@ -852,6 +858,9 @@ class OctopServer:
         if not self._started:
             return
         try:
+            cloud_task = getattr(self, "_cloud_files_task", None)
+            if cloud_task is not None:
+                cloud_task.cancel()
             from octop.infra.connectors.gateway import agently_auth
 
             await _shutdown_step("agently auth", agently_auth.close)

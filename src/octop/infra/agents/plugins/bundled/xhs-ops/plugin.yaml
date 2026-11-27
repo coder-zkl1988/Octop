@@ -1,7 +1,7 @@
 id: xhs-ops
-version: 0.9.0
-name: 小红书运营
-description: 内容编辑、手机发布、账号运营、评论审核和老号接管。需要企业单独授权。
+version: 0.10.0
+name: 小红薯运营
+description: 建号、养号、内容计划与创作、排期发布、笔记维护、老号接管和复盘。需要企业单独授权。
 icon: icon.svg
 group: ops
 kind: tool
@@ -15,7 +15,7 @@ app:
   entry: domain.py
   tool_feature: [xhs.content, xhs.ops, xhs.publish, xhs.comment, xhs.takeover, xhs.analytics]
   scheduler: true
-  scheduler_features: [xhs.ops]
+  scheduler_features: [xhs.ops, xhs.comment, xhs.analytics]
   commands:
     project.save: [xhs.content, xhs.ops]
     project.delete: [xhs.ops]
@@ -100,7 +100,63 @@ app:
     migration.import: [xhs.ops]
     sync.outbox.list: [xhs.analytics]
     sync.outbox.push: [xhs.analytics]
+    settings.save: []
+    performance.feedback: [xhs.analytics]
+    performance.configure: [xhs.analytics]
+    pause.set: []
+    material.save: [xhs.content]
+    material.organize: [xhs.content]
+    material.delete: [xhs.content]
+    bizdoc.save: [xhs.content]
+    bizdoc.delete: [xhs.content]
+    consent.save: [xhs.content, xhs.ops, xhs.takeover]
+    consent.revoke: [xhs.content, xhs.ops, xhs.takeover]
+    consent.handled: [xhs.content, xhs.ops, xhs.takeover]
+    coldstart.save: [xhs.ops]
+    coldstart.apply: [xhs.ops]
+    task.add: [xhs.content]
+    task.generate: [xhs.content]
+    task.dismiss: [xhs.content]
+    plan.generate: [xhs.content]
+    plan.update: [xhs.content, xhs.publish]
+    content.meta: [xhs.content]
+    content.precheck: [xhs.content, xhs.publish]
+    compliance.record: [xhs.content]
+    template.submit: [xhs.content]
+    catalog.refresh: []
+    request.create: []
+    inbox.collect: [xhs.comment]
+    reply.draft: [xhs.comment]
+    reply.save: [xhs.comment]
+    reply.approve: [xhs.comment]
+    reply.ignore: [xhs.comment]
+    reply.delete: [xhs.comment]
+    reply.lead: [xhs.comment]
+    lead.update: [xhs.comment]
+    notice.record: [xhs.ops, xhs.takeover]
+    persona_file.save: [xhs.ops]
+    persona_file.image: [xhs.ops]
+    content.rewrite: [xhs.content]
+    plan.reschedule: [xhs.publish]
+    material.reconstruct: [xhs.content]
+    alert.dismiss: []
+    profile.sync_personas: [xhs.ops]
+    persona.regenerate_one: [xhs.ops]
+    onboarding.tags_done: [xhs.ops]
+    pool.replace_keyword: [xhs.ops]
+    profile.rewrite_bio: [xhs.ops]
+    takeover.apply_plan: [xhs.takeover]
+    coldstart.observe: [xhs.ops]
+    coldstart.pause: [xhs.ops]
+    template.candidate: [xhs.content]
+    transfer.sync: [xhs.ops]
+    transfer.create: [xhs.ops]
+    transfer.cancel: [xhs.ops]
+    transfer.accept: [xhs.ops]
+    transfer.decline: [xhs.ops]
   read_scopes:
+    post_stats: [xhs.analytics]
+    performance_note: [xhs.analytics]
     projects: [xhs.content, xhs.ops, xhs.publish, xhs.takeover]
     accounts: [xhs.ops, xhs.publish, xhs.takeover, xhs.comment]
     persona_candidates: [xhs.ops]
@@ -125,6 +181,29 @@ app:
     audit_outbox: [xhs.analytics]
     migration_imports: [xhs.ops]
     takeover_events: [xhs.takeover, xhs.analytics]
+    materials: [xhs.content]
+    biz_docs: [xhs.content]
+    authorizations: [xhs.content, xhs.ops, xhs.takeover]
+    content_tasks: [xhs.content, xhs.publish]
+    reply_items: [xhs.comment]
+    leads: [xhs.comment]
+    member_settings: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover, xhs.analytics]
+    effective_policy: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
+    queue: [xhs.publish, xhs.ops, xhs.comment]
+    alerts: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
+    account_health: [xhs.ops, xhs.takeover, xhs.publish]
+    cold_start_status: [xhs.ops]
+    catalog_cache: [xhs.content, xhs.analytics]
+    template_submissions: [xhs.content]
+    member_requests: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
+    last_plan: [xhs.content]
+    transfers: [xhs.ops]
+    plan_suggestions: [xhs.content]
+    persona_sources: [xhs.ops]
+    coldstart_observation: [xhs.ops]
+    last_reschedule: [xhs.publish]
+    bio_suggestion: [xhs.ops]
+    dismissed_alerts: [xhs.content, xhs.publish, xhs.ops, xhs.comment, xhs.takeover]
   record_scopes:
     runs:
       kinds:
@@ -140,6 +219,9 @@ app:
         account_profile_read: [xhs.ops]
         account_profile_apply: [xhs.ops]
         account_profile_verify: [xhs.ops]
+        inbox: [xhs.comment]
+        reply: [xhs.comment]
+        reply_delete: [xhs.comment]
       summary_fields: [id, kind, status, account_id, device_id, account_version, day_id, day_version, created_at, updated_at]
   features:
     - xhs.content
