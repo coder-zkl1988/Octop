@@ -71,4 +71,19 @@ describe("sidebarNav", () => {
       ]);
     }
   });
+
+  it("opens Memory through Personalization for users with memory access", () => {
+    const user = {
+      ...adminUser,
+      role: "user" as const,
+      permissions: ["memory"],
+    };
+    const items = buildNavSections(user).flatMap((section) => section.items);
+
+    expect(items.map(({ key, path }) => [key, path])).toEqual([
+      ["chat", "/chat"],
+      ["apps", "/apps"],
+      ["personalization", "/personalization/memory"],
+    ]);
+  });
 });

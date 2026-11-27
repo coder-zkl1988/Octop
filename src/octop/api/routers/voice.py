@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import (
     APIRouter,
@@ -31,8 +31,8 @@ from octop.api.deps import (
 )
 from octop.i18n.domains.voice import realtime_error_message
 from octop.infra.errors import ErrorCode, OctopError
-from octop.infra.users.permissions import user_has_permission
 from octop.infra.utils.locale import Locale, normalize_locale, resolve_request_locale
+from octop.infra.utils.secret_fields import Secret, is_secret_field, model_secret_names
 from octop.infra.voice import realtime
 from octop.infra.voice.manager import VoiceManager
 from octop.infra.voice.presets import load_voice_presets
@@ -59,29 +59,18 @@ def _active_payload(mgr: VoiceManager) -> dict[str, Any]:
     return active
 
 
-_SECRET_EXTRA_KEYS = frozenset(
-    {
-        "api_key",
-        "access_token",
-        "refresh_token",
-        "secret",
-        "secret_id",
-        "secret_key",
-        "token",
-    }
-)
+# Tencent voice extras use secret_id, which the shared suffix list does not cover.
+_VOICE_EXTRA_SECRET_KEYS = frozenset({"secret_id"})
 
 
-def _row_to_dict(r: Any, *, reveal_secret: bool = True) -> dict[str, Any]:
-    """Serialize a voice provider row. ``reveal_secret=False`` hides the API key."""
+def _row_to_dict(r: Any) -> dict[str, Any]:
     return {
         "id": r.id,
         "name": r.name,
         "kind": r.kind,
         "capability": r.capability,
         "base_url": r.base_url,
-        "api_key": r.api_key if reveal_secret else None,
-        "has_api_key": bool(r.api_key),
+        "api_key": r.api_key,
         "extra": r.get_extra(),
         "note": r.note,
         "enabled": bool(r.enabled),
@@ -90,12 +79,14 @@ def _row_to_dict(r: Any, *, reveal_secret: bool = True) -> dict[str, Any]:
 
 def _public_voice_row(r: Any) -> dict[str, Any]:
     """Voice provider list for any signed-in user: drop stored credentials."""
-    data = _row_to_dict(r, reveal_secret=False)
-    data["api_key_set"] = bool(data.get("has_api_key"))
+    data = _row_to_dict(r)
+    for name in model_secret_names(VoiceProviderCreateBody):
+        data[f"{name}_set"] = bool(data.get(name))
+        data[name] = None
     extra = data.get("extra")
     if isinstance(extra, dict):
         data["extra"] = {
-            key: None if key.lower() in _SECRET_EXTRA_KEYS else value
+            key: None if is_secret_field(key, extra_keys=_VOICE_EXTRA_SECRET_KEYS) else value
             for key, value in extra.items()
         }
     return data
@@ -106,7 +97,7 @@ class VoiceProviderCreateBody(BaseModel):
     kind: str
     capability: str
     base_url: str | None = None
-    api_key: str | None = None
+    api_key: Annotated[str | None, Secret()] = None
     extra_json: str | None = None
     note: str | None = None
 
@@ -115,7 +106,7 @@ class VoiceProviderPatchBody(BaseModel):
     kind: str | None = None
     capability: str | None = None
     base_url: str | None = None
-    api_key: str | None = None
+    api_key: Annotated[str | None, Secret()] = None
     extra_json: str | None = None
     note: str | None = None
     enabled: bool | None = None
@@ -148,12 +139,10 @@ async def list_voice_presets(_: Any = Depends(current_user)) -> list[dict[str, A
 
 @router.get("/providers")
 async def list_voice_providers(
-    user: Any = Depends(current_user),
+    _: Any = Depends(current_user),
     server: Any = Depends(get_server),
 ) -> list[dict[str, Any]]:
-    """Return voice providers with credentials visible only to voice managers."""
-    if user_has_permission(user, "voice"):
-        return [_row_to_dict(r) for r in server.services.voice_provider_repo.list_all()]
+    """Return voice providers. Credentials stay on the admin route."""
     return [_public_voice_row(r) for r in server.services.voice_provider_repo.list_all()]
 
 

@@ -56,10 +56,11 @@ async def test_provider_api_keys_hidden_from_regular_users(env_admin_alice: Admi
     alice_view = (await client.get("/api/providers", headers=alice_auth)).json()
     assert alice_view
     assert all(row["api_key"] is None for row in alice_view)
-    assert any(row["has_api_key"] for row in alice_view)
+    assert any(row["api_key_set"] for row in alice_view)
 
     admin_view = (await client.get("/api/providers", headers=admin_auth)).json()
-    assert any(row["api_key"] for row in admin_view)
+    assert all(row["api_key"] is None for row in admin_view)
+    assert any(row["api_key_set"] for row in admin_view)
 
 
 async def test_voice_provider_keys_hidden_from_regular_users(env_admin_alice: AdminAlice) -> None:

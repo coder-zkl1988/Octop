@@ -57,6 +57,7 @@ vi.mock("../hooks/useChatAttachments", () => ({
 vi.mock("../hooks/chatStore", () => ({
   onSteerRestore: () => () => {},
   consumePendingPrefillAttachments: () => [],
+  onSteerRestore: () => () => undefined,
   readInputDraft: (agentId: string) =>
     agentId === "agent-2" ? "target expert draft" : "",
   writeInputDraft: vi.fn(),

@@ -7,6 +7,7 @@ import {
   Link2,
   Database,
   Cpu,
+  Brain,
   Users as UsersIcon,
   Activity,
   Share2,
@@ -84,6 +85,7 @@ export const SIDEBAR_NAV_KEYS = [
   "apps",
   "admin-users",
   "models",
+  "admin-memory",
   "admin-storage",
   "admin-plugins",
   "admin-security",
@@ -139,6 +141,7 @@ export const SIDEBAR_GROUPED_NAV_KEYS = [
   "acp",
   "admin-users",
   "models",
+  "admin-memory",
   "admin-storage",
   "admin-plugins",
   "admin-security",
@@ -314,6 +317,14 @@ export function buildNavSections(
         path: "/admin/users",
         icon: <UsersIcon size={iconSize} strokeWidth={iconStroke} />,
         labelKey: "nav.adminUsers",
+      });
+    }
+    if (navAllowed(user, "admin-memory")) {
+      adminItems.push({
+        key: "admin-memory",
+        path: "/admin/memory",
+        icon: <Brain size={iconSize} strokeWidth={iconStroke} />,
+        labelKey: "nav.adminMemory",
       });
     }
     if (navAllowed(user, "admin-storage")) {
