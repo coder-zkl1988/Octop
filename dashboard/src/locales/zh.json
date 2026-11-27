@@ -319,6 +319,7 @@
     "agent": "智能体",
     "skills": "技能",
     "agentConfig": "运行配置",
+    "resources": "资源",
     "settings": "设置",
     "voice": "语音",
     "observability": "可观测",

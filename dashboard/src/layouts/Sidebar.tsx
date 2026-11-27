@@ -45,6 +45,7 @@ import { DESKTOP_DRAG_REGION_CLASS } from "../utils/desktopChrome";
 
 const NAV_GROUPS_STORAGE_KEY = "octop:sidebar-nav-groups";
 const LEGACY_COLLAPSED_GROUP_IDS: Record<string, string> = {
+  "nav.resources": "resources",
   "nav.settings": "settings",
   "nav.control": "control",
   "nav.admin": "admin",

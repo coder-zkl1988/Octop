@@ -88,14 +88,21 @@ export const SIDEBAR_NAV_KEYS = [
   "admin-plugins",
   "admin-security",
   "admin-advanced",
+  "local-settings",
 ] as const;
 
-export const BUILTIN_NAV_GROUP_IDS = ["settings", "control", "admin"] as const;
+export const BUILTIN_NAV_GROUP_IDS = [
+  "resources",
+  "control",
+  "settings",
+  "admin",
+] as const;
 
 const BUILTIN_NAV_GROUP_LABEL_KEYS: Record<
   (typeof BUILTIN_NAV_GROUP_IDS)[number],
   string
 > = {
+  resources: "nav.resources",
   settings: "nav.settings",
   control: "nav.control",
   admin: "nav.admin",
@@ -145,6 +152,8 @@ export const SIDEBAR_GROUPED_NAV_KEYS = [
   "admin-advanced",
   "agent-config",
   "apps",
+  "token-usage",
+  "local-settings",
 ] as const;
 
 const GROUPED_NAV_KEY_SET = new Set<string>(SIDEBAR_GROUPED_NAV_KEYS);
@@ -181,99 +190,45 @@ export function buildNavSections(
       labelKey: "nav.tasks",
     });
   }
-  if (navAllowed(user, "token-usage")) {
-    topItems.push({
-      key: "token-usage",
-      path: "/token-usage",
-      icon: <Activity size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.tokenUsage",
-    });
-  }
   const sections: NavSection[] = [{ items: topItems }];
 
-  const settingsItems: NavItem[] = [];
-  settingsItems.push({
-    key: "apps",
-    path: "/apps",
-    icon: <AppWindow size={iconSize} strokeWidth={iconStroke} />,
-    labelKey: "nav.apps",
-  });
-  if (navAllowed(user, "personalization")) {
-    settingsItems.push({
-      key: "personalization",
-      path: personalizationNavPath(user),
-      icon: <Sparkles size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.personalization",
-    });
-  }
-  // Enterprise: models sit under settings (cloud read-only + local whitelist).
-  if (navAllowed(user, "models")) {
-    settingsItems.push({
-      key: "models",
-      path: "/admin/models",
-      icon: <Cpu size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.models",
-    });
-  }
-  if (navAllowed(user, "channels")) {
-    settingsItems.push({
-      key: "channels",
-      path: "/personalization/channels",
-      icon: <Waypoints size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.channels",
-    });
-  }
-  if (navAllowed(user, "connectors")) {
-    settingsItems.push({
-      key: "connectors",
-      path: "/connectors",
-      icon: <Link2 size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.connectors",
-    });
-  }
-  if (navAllowed(user, "skill-packages")) {
-    settingsItems.push({
-      key: "skill-packages",
-      path: "/skill-packages",
-      icon: <Package size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.skillPackages",
-    });
-  }
+  // Design order: 资源 → 控制 → 设置 (→ 管理 on self-hosted).
+  const resourceItems: NavItem[] = [];
   if (navAllowed(user, "knowledge-bases")) {
-    settingsItems.push({
+    resourceItems.push({
       key: "knowledge-bases",
       path: "/knowledge-bases",
       icon: <Database size={iconSize} strokeWidth={iconStroke} />,
       labelKey: "nav.knowledgeBases",
     });
   }
-  // Enterprise desktops have no admin group: device-only settings live here.
-  if (
-    import.meta.env.VITE_ENTERPRISE_MODE === "1" &&
-    navAllowed(user, "admin-advanced")
-  ) {
-    settingsItems.push({
-      key: "admin-advanced",
-      path: "/local-settings",
-      icon: <HardDrive size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.localSettings",
+  if (navAllowed(user, "skill-packages")) {
+    resourceItems.push({
+      key: "skill-packages",
+      path: "/skill-packages",
+      icon: <Package size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.skillPackages",
     });
   }
-  if (navAllowed(user, "bridge")) {
-    settingsItems.push({
-      key: "bridge",
-      path: "/bridge",
-      icon: <Cloudy size={iconSize} strokeWidth={iconStroke} />,
-      labelKey: "nav.bridge",
+  if (navAllowed(user, "connectors")) {
+    resourceItems.push({
+      key: "connectors",
+      path: "/connectors",
+      icon: <Link2 size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.connectors",
     });
   }
-  if (settingsItems.length > 0) {
-    sections.push({
-      id: "settings",
-      groupKey: "nav.settings",
-      items: settingsItems,
-    });
-  }
+  resourceItems.push({
+    key: "apps",
+    path: "/apps",
+    icon: <AppWindow size={iconSize} strokeWidth={iconStroke} />,
+    labelKey: "nav.apps",
+  });
+  sections.push({
+    id: "resources",
+    groupKey: "nav.resources",
+    items: resourceItems,
+  });
 
   const controlItems: NavItem[] = [];
   if (navAllowed(user, "workbench")) {
@@ -315,6 +270,68 @@ export function buildNavSections(
       id: "control",
       groupKey: "nav.control",
       items: controlItems,
+    });
+  }
+
+  const settingsItems: NavItem[] = [];
+  if (navAllowed(user, "personalization")) {
+    settingsItems.push({
+      key: "personalization",
+      path: personalizationNavPath(user),
+      icon: <Sparkles size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.personalization",
+    });
+  }
+  // Enterprise: models sit under settings (cloud read-only + local whitelist).
+  if (navAllowed(user, "models")) {
+    settingsItems.push({
+      key: "models",
+      path: "/admin/models",
+      icon: <Cpu size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.models",
+    });
+  }
+  if (navAllowed(user, "channels")) {
+    settingsItems.push({
+      key: "channels",
+      path: "/personalization/channels",
+      icon: <Waypoints size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.channels",
+    });
+  }
+  if (navAllowed(user, "bridge")) {
+    settingsItems.push({
+      key: "bridge",
+      path: "/bridge",
+      icon: <Cloudy size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.bridge",
+    });
+  }
+  if (navAllowed(user, "token-usage")) {
+    settingsItems.push({
+      key: "token-usage",
+      path: "/token-usage",
+      icon: <Activity size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.tokenUsage",
+    });
+  }
+  // Enterprise desktops have no admin group: device-only settings live here.
+  if (
+    import.meta.env.VITE_ENTERPRISE_MODE === "1" &&
+    navAllowed(user, "admin-advanced")
+  ) {
+    settingsItems.push({
+      key: "local-settings",
+      path: "/local-settings",
+      icon: <SlidersHorizontal size={iconSize} strokeWidth={iconStroke} />,
+      labelKey: "nav.localSettings",
+    });
+  }
+  if (settingsItems.length > 0) {
+    sections.push({
+      id: "settings",
+      groupKey: "nav.settings",
+      items: settingsItems,
     });
   }
 

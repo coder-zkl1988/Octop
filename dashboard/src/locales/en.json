@@ -319,6 +319,7 @@
     "agent": "Agent",
     "skills": "Skills",
     "agentConfig": "Configuration",
+    "resources": "Resources",
     "settings": "Settings",
     "voice": "Voice",
     "observability": "Observability",

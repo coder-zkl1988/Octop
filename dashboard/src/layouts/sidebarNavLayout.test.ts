@@ -34,16 +34,11 @@ describe("sidebarNavLayout", () => {
     const sections = catalog();
     expect(sectionsFromLayout(sections, null)).toBe(sections);
     const editor = editorFromCatalog(sections, null);
-    expect(editor.ungrouped).toEqual([
-      "chat",
-      "experts",
-      "tasks",
-      "token-usage",
-    ]);
+    expect(editor.ungrouped).toEqual(["chat", "experts", "tasks"]);
     expect(editor.groups.map((group) => group.id)).toEqual(
       import.meta.env.VITE_ENTERPRISE_MODE === "1"
-        ? ["settings", "control"]
-        : ["settings", "control", "admin"],
+        ? ["resources", "control", "settings"]
+        : ["resources", "control", "settings", "admin"],
     );
     expect(editor.hidden).toEqual([]);
   });
@@ -99,10 +94,10 @@ describe("sidebarNavLayout", () => {
     const next = deleteGroup(editor, "settings");
     expect(next.groups.map((group) => group.id)).toEqual(
       import.meta.env.VITE_ENTERPRISE_MODE === "1"
-        ? ["control"]
-        : ["control", "admin"],
+        ? ["resources", "control"]
+        : ["resources", "control", "admin"],
     );
-    expect(next.ungrouped.slice(0, 2)).toEqual(["apps", "personalization"]);
+    expect(next.ungrouped.slice(0, 2)).toEqual(["personalization", "models"]);
     expect(next.ungrouped).toContain("chat");
   });
 
