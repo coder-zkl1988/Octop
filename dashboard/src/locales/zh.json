@@ -4485,6 +4485,8 @@
       "launchAtLogin": "开机时启动 Tabby",
       "keepRunning": "关闭窗口后继续在后台运行",
       "keepRunningHint": "定时任务和 IM 通道需要它。",
+      "preventSleep": "防止系统休眠",
+      "preventSleepHint": "Tabby 运行期间电脑不会自动休眠，屏幕仍会按系统设置熄灭。",
       "prereleaseBadge": "测试版",
       "prereleaseHint": "v{{version}} 是测试版本。",
       "prereleaseConfirmTitle": "升级到测试版？",
