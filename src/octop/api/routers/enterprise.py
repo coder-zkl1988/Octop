@@ -30,6 +30,7 @@ from octop.infra.enterprise_client import clear_persisted_session
 from octop.infra.enterprise_client import session_entry as load_session_entry
 from octop.infra.enterprise_device import headers as device_headers
 from octop.infra.enterprise_device import is_registered, mark_registered, registration_body
+from octop.infra.enterprise_memory_sharing import record_policy as record_memory_sharing_policy
 from octop.infra.enterprise_policy import enterprise_policy_permissions
 from octop.infra.errors import ErrorCode, OctopError
 from octop.infra.users.resource_policy import (
@@ -467,6 +468,7 @@ def _model_row(raw: dict[str, Any], *, allowed: bool = True) -> dict[str, Any]:
 async def _snapshot(server: Any, user_id: int) -> dict[str, Any]:
     me, policy_raw, resources, device_key, usage = await _load_snapshot_inputs(server, user_id)
     enterprise_permissions = enterprise_policy_permissions(policy_raw)
+    record_memory_sharing_policy(server, user_id, policy_raw)
     local_user = server.user_manager.get_by_id(user_id) if server.user_manager is not None else None
     if local_user is not None and local_user.permissions != enterprise_permissions:
         local_user.permissions = enterprise_permissions

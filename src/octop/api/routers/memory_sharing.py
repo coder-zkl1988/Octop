@@ -20,6 +20,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 
 from octop.api.common.agent import assert_agent_access_row, assert_agent_owner, user_owns_agent
+from octop.api.common.memory_sharing_gate import require_memory_sharing_policy
 from octop.api.common.public_base import resolve_public_base
 from octop.api.deps import current_user, get_server, require_permission
 from octop.infra.agents import memory_sharing
@@ -48,6 +49,7 @@ router = APIRouter(
     prefix="/memory-sharing",
     dependencies=[
         Depends(require_permission("memory")),
+        Depends(require_memory_sharing_policy),
         Depends(require_loaded_session),
     ],
 )

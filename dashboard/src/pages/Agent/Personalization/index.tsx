@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useMatch, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useMatch, useNavigate } from "react-router-dom";
 import { Alert, Button, Empty } from "antd";
 import {
   Bot,
@@ -31,6 +31,7 @@ import AgentPluginsPanel from "./components/AgentPluginsPanel";
 import MemoryPanel from "../Memory/MemoryPanel";
 import ChannelsPanel from "../Channels/ChannelsPanel";
 import EnterprisePolicyPanel from "./components/EnterprisePolicyPanel";
+import { useMemorySharingAccess } from "../../../enterprise/memorySharing";
 import styles from "./index.module.less";
 
 export type PersonalizationTab =
@@ -69,7 +70,10 @@ export default function PersonalizationPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const mcpAccessActive = Boolean(useMatch("/personalization/memory/mcp"));
+  const mcpRouteActive = Boolean(useMatch("/personalization/memory/mcp"));
+  const memorySharing = useMemorySharingAccess();
+  const memorySharingAllowed = memorySharing.allowed;
+  const mcpAccessActive = mcpRouteActive && memorySharingAllowed;
   const isMobile = useIsMobile();
   const user = useCurrentUser();
   const { activeAgentId, agents, loading } = useAgent();
@@ -97,17 +101,19 @@ export default function PersonalizationPage() {
     isAllowed,
   });
 
-  const mcpAccess = {
-    active: mcpAccessActive,
-    onChange: (active: boolean) =>
-      navigate({
-        pathname: active
-          ? "/personalization/memory/mcp"
-          : "/personalization/memory",
-        search: location.search,
-        hash: location.hash,
-      }),
-  };
+  const mcpAccess = memorySharingAllowed
+    ? {
+        active: mcpAccessActive,
+        onChange: (active: boolean) =>
+          navigate({
+            pathname: active
+              ? "/personalization/memory/mcp"
+              : "/personalization/memory",
+            search: location.search,
+            hash: location.hash,
+          }),
+      }
+    : undefined;
 
   const pathTabs = useMemo(
     () => ({
@@ -156,6 +162,15 @@ export default function PersonalizationPage() {
     ) : (
       node
     );
+
+  if (mcpRouteActive && !memorySharingAllowed && !memorySharing.pending) {
+    return (
+      <Navigate
+        to={{ pathname: "/personalization/memory", search: location.search }}
+        replace
+      />
+    );
+  }
 
   if (!loading && ownedAgents.length === 0 && !mcpAccessActive) {
     return (

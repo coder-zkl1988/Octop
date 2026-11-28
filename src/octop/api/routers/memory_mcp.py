@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from octop.api.common.agent import assert_agent_access_row
+from octop.api.common.memory_sharing_gate import require_memory_sharing_policy
 from octop.api.deps import current_user, get_server, require_permission
 from octop.api.routers.memory_sharing import memory_client_base, require_loaded_session
 from octop.infra.agents import codex_memory_review, memory_sharing
@@ -23,6 +24,7 @@ router = APIRouter(
     prefix="/memory-mcp/tokens",
     dependencies=[
         Depends(require_permission("memory")),
+        Depends(require_memory_sharing_policy),
         Depends(require_loaded_session),
     ],
 )

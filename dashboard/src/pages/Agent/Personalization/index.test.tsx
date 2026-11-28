@@ -5,7 +5,7 @@
  */
 
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -82,6 +82,11 @@ vi.mock("./components/MBTISelector", () => panel("mbti"));
 vi.mock("../Memory/MemoryPanel", () => panel("memory"));
 vi.mock("../Channels/ChannelsPanel", () => panel("channels"));
 
+const memorySharing = { allowed: true, pending: false };
+vi.mock("../../../enterprise/memorySharing", () => ({
+  useMemorySharingAccess: () => memorySharing,
+}));
+
 import PersonalizationPage from "./index";
 
 function renderPage(path = "/personalization/skills") {
@@ -109,6 +114,8 @@ describe("PersonalizationPage expert ownership", () => {
     navigate.mockReset();
     agentState.loading = false;
     tabState.activeTab = "skills";
+    memorySharing.allowed = true;
+    memorySharing.pending = false;
   });
 
   it("offers to create an expert instead of showing a shared one", () => {
@@ -179,5 +186,38 @@ describe("PersonalizationPage expert ownership", () => {
     renderPage();
 
     expect(screen.getByText("memory:team-1")).toBeInTheDocument();
+  });
+
+  it("sends 共享记忆 links back to memory when the enterprise policy hides it", () => {
+    agentState.agents = [mine];
+    agentState.activeAgentId = mine.agent_id;
+    tabState.activeTab = "memory";
+    memorySharing.allowed = false;
+
+    render(
+      <MemoryRouter initialEntries={["/personalization/memory/mcp"]}>
+        <Routes>
+          <Route
+            path="/personalization/memory/mcp"
+            element={<PersonalizationPage />}
+          />
+          <Route path="/personalization/memory" element={<div>back</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("back")).toBeInTheDocument();
+  });
+
+  it("waits for the enterprise policy before leaving 共享记忆", () => {
+    agentState.agents = [mine];
+    agentState.activeAgentId = mine.agent_id;
+    tabState.activeTab = "memory";
+    memorySharing.allowed = false;
+    memorySharing.pending = true;
+
+    renderPage("/personalization/memory/mcp");
+
+    expect(screen.getByText("memory:mine-1")).toBeInTheDocument();
   });
 });
