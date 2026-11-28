@@ -58,7 +58,10 @@ export default function DesktopUpdatePanel() {
   const handleStartupChange = useCallback(
     async (
       patch: Partial<
-        Pick<DesktopClientSettings, "launchAtLogin" | "closeBehavior">
+        Pick<
+          DesktopClientSettings,
+          "launchAtLogin" | "closeBehavior" | "preventSleep"
+        >
       >,
     ) => {
       const next = await getDesktopBridge()?.clientSettings.set(patch);
@@ -248,6 +251,25 @@ export default function DesktopUpdatePanel() {
             </p>
             <p className={styles.stableOnlyHint}>
               {t("advancedSettings.update.keepRunningHint")}
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.stableOnlyRow}>
+          <Switch
+            aria-label={t("advancedSettings.update.preventSleep")}
+            checked={settings?.preventSleep === true}
+            onChange={(checked) =>
+              void handleStartupChange({ preventSleep: checked })
+            }
+            disabled={!settings}
+          />
+          <div className={styles.stableOnlyCopy}>
+            <p className={styles.stableOnlyLabel}>
+              {t("advancedSettings.update.preventSleep")}
+            </p>
+            <p className={styles.stableOnlyHint}>
+              {t("advancedSettings.update.preventSleepHint")}
             </p>
           </div>
         </div>

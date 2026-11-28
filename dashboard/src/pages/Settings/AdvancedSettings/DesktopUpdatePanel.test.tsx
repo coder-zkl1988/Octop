@@ -17,6 +17,7 @@ beforeEach(() => {
       get: vi.fn().mockResolvedValue({
         launchAtLogin: false,
         closeBehavior: "quit",
+        preventSleep: false,
         themeBackground: "system",
         stableOnly: true,
       }),
@@ -99,6 +100,7 @@ describe("<DesktopUpdatePanel />", () => {
     set.mockImplementation(async (patch: object) => ({
       launchAtLogin: false,
       closeBehavior: "quit",
+      preventSleep: false,
       themeBackground: "system",
       stableOnly: true,
       ...patch,
@@ -120,5 +122,13 @@ describe("<DesktopUpdatePanel />", () => {
     await user.click(keepRunning);
     expect(set).toHaveBeenCalledWith({ closeBehavior: "tray" });
     await vi.waitFor(() => expect(keepRunning).toBeChecked());
+
+    const preventSleep = screen.getByRole("switch", {
+      name: "advancedSettings.update.preventSleep",
+    });
+    expect(preventSleep).not.toBeChecked();
+    await user.click(preventSleep);
+    expect(set).toHaveBeenCalledWith({ preventSleep: true });
+    await vi.waitFor(() => expect(preventSleep).toBeChecked());
   });
 });

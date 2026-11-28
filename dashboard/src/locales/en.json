@@ -4485,6 +4485,8 @@
       "launchAtLogin": "Open Tabby at login",
       "keepRunning": "Keep running in the background after the window closes",
       "keepRunningHint": "Scheduled tasks and IM channels need it.",
+      "preventSleep": "Prevent system sleep",
+      "preventSleepHint": "Keeps the computer awake while Tabby runs. The display still turns off as usual.",
       "prereleaseBadge": "Pre-release",
       "prereleaseHint": "v{{version}} is a pre-release test build.",
       "prereleaseConfirmTitle": "Upgrade to a pre-release?",
