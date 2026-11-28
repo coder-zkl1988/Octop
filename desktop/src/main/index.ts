@@ -6,6 +6,7 @@ import {
   Menu,
   nativeImage,
   net,
+  powerSaveBlocker,
   protocol,
   screen,
   shell,
@@ -27,6 +28,7 @@ import {
   type UpdateCheckResult,
 } from "../shared/ipc-contract";
 import { resolveAppVersion } from "./app-version";
+import { createSystemSettingsApplier, type SystemSettingsApplier } from "./system/system-settings";
 import { desktopLog, installDesktopLog } from "./log/desktop-log";
 import { DeviceCredentialStore } from "./session/device-credential";
 import { DeviceSessionClient } from "./session/device-session";
@@ -119,6 +121,7 @@ interface PortableManifestFile {
 
 let supervisor: SidecarSupervisor | null = null;
 let settingsStore: ClientSettingsStore;
+let applySystemSettings: SystemSettingsApplier = () => {};
 // §7 accounts: renews the Dashboard session without a password. Registered by
 // the renderer once it holds a JWT; used whenever that JWT has expired.
 let deviceSession: DeviceSessionClient | null = null;
@@ -444,6 +447,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.clientSettingsSet, (_e, patch: Partial<ClientSettings>) => {
     const saved = settingsStore.save(patch);
     closeBehavior = saved.closeBehavior;
+    applySystemSettings(saved);
     return saved;
   });
 
@@ -906,6 +910,15 @@ async function boot(): Promise<void> {
   settingsStore = new ClientSettingsStore(defaultClientSettingsPath(app.getPath("userData")));
   const settings = settingsStore.load();
   closeBehavior = settings.closeBehavior;
+  applySystemSettings = createSystemSettingsApplier({
+    platform: process.platform,
+    setLoginItemSettings: (login) => app.setLoginItemSettings(login),
+    powerSaveBlocker,
+    xdgConfigHome: process.env.XDG_CONFIG_HOME || join(app.getPath("home"), ".config"),
+    linuxExec: process.env.APPIMAGE || process.execPath,
+    log: (message) => desktopLog().warn(message),
+  });
+  applySystemSettings(settings);
   // Apply the source before resolving, so a stored "system" reads the OS
   // preference rather than whatever an earlier explicit source left behind.
   applyNativeTheme({

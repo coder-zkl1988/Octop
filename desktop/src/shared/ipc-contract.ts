@@ -8,6 +8,8 @@ export interface ClientSettings {
   launchAtLogin: boolean;
   /** Close-window behaviour: quit vs. keep in tray. */
   closeBehavior: "quit" | "tray";
+  /** Keep the system from sleeping while the shell runs (display may still turn off). */
+  preventSleep: boolean;
   /**
    * Device light/dark preference shared with the Dashboard (`system` follows
    * the OS). The Early Window paints from this; the page reports changes back.

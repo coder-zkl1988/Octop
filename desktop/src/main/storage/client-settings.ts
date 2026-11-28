@@ -11,11 +11,13 @@ import type { ClientSettings } from "../../shared/ipc-contract";
 const DEFAULTS: ClientSettings = {
   launchAtLogin: false,
   closeBehavior: "tray",
+  preventSleep: false,
   themeBackground: "system",
   stableOnly: true,
 };
 
 const SETTING_KEYS = new Set(Object.keys(DEFAULTS));
+const BOOLEAN_KEYS = new Set(["stableOnly", "launchAtLogin", "preventSleep"]);
 
 export class ClientSettingsStore {
   constructor(private readonly filePath: string) {}
@@ -29,7 +31,7 @@ export class ClientSettingsStore {
         const value = raw[key];
         if (value === undefined) continue;
         // Basic shape validation: only accept known scalar values.
-        if (key === "stableOnly" || key === "launchAtLogin") {
+        if (BOOLEAN_KEYS.has(key)) {
           if (typeof value === "boolean") (out as Record<string, unknown>)[key] = value;
         } else if (typeof value === "string") {
           (out as Record<string, unknown>)[key] = value;
@@ -46,7 +48,7 @@ export class ClientSettingsStore {
     const sanitized: Record<string, unknown> = {};
     for (const key of SETTING_KEYS) {
       const value = (next as Record<string, unknown>)[key];
-      if (key === "stableOnly" || key === "launchAtLogin") {
+      if (BOOLEAN_KEYS.has(key)) {
         sanitized[key] = value === true;
       } else if (key === "closeBehavior") {
         sanitized[key] = value === "quit" ? "quit" : "tray";

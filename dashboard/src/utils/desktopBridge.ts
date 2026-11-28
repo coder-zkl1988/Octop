@@ -7,6 +7,7 @@
 export interface DesktopClientSettings {
   launchAtLogin: boolean;
   closeBehavior: "quit" | "tray";
+  preventSleep: boolean;
   themeBackground: "system" | "light" | "dark";
   stableOnly: boolean;
 }
