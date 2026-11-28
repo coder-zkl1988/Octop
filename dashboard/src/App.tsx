@@ -5,7 +5,6 @@ import enUS from "antd/locale/en_US";
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
 import { useEffect } from "react";
-import DesktopWindowControls from "./components/DesktopWindowControls";
 import DesktopWindowDragBand from "./components/DesktopWindowDragBand";
 import {
   DesktopChromeProvider,
@@ -35,8 +34,6 @@ import { LayoutModeProvider } from "./context/LayoutModeContext";
 import { VoiceOutputProvider } from "./context/VoiceOutputContext";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useUnauthorizedRedirect } from "./hooks/useUnauthorizedRedirect";
-import { isDesktopShell as isWailsDesktopShell } from "./utils/desktopChrome";
-import { installDesktopExternalLinks } from "./utils/desktopExternalLinks";
 import { ispaceAntdTheme } from "./styles/ispaceTheme";
 import "@fontsource-variable/manrope/wght.css";
 import "@fontsource/jetbrains-mono/400.css";
@@ -71,8 +68,6 @@ function ThemedApp() {
 
   useUnauthorizedRedirect();
 
-  useEffect(() => installDesktopExternalLinks(), []);
-
   // Set document title based on current language
   useEffect(() => {
     document.title = t("app.pageTitle");
@@ -90,9 +85,6 @@ function ThemedApp() {
       <AntdAppProvider>
         <DesktopChromeProvider value={desktopChrome}>
           <DesktopWindowDragBand />
-          {desktopChrome && isWailsDesktopShell() ? (
-            <DesktopWindowControls chrome={desktopChrome} />
-          ) : null}
           <EnterpriseProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />

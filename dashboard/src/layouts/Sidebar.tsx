@@ -41,7 +41,6 @@ import {
 } from "./SidebarEnterprise";
 import styles from "./Sidebar.module.less";
 import { typeSize } from "../utils/mobileTypeScale";
-import { DESKTOP_DRAG_REGION_CLASS } from "../utils/desktopChrome";
 
 const NAV_GROUPS_STORAGE_KEY = "octop:sidebar-nav-groups";
 const LEGACY_COLLAPSED_GROUP_IDS: Record<string, string> = {
@@ -816,7 +815,7 @@ export default function Sidebar({
       }}
     >
       <div
-        className={`${styles.sidebarBrand} ${DESKTOP_DRAG_REGION_CLASS}`}
+        className={styles.sidebarBrand}
         style={{
           display: "flex",
           alignItems: "center",

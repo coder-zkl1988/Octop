@@ -292,6 +292,10 @@ write_green_overrides() {
         # wheels are macosx_14. 4.11.0.86 still has macosx_13_0_x86_64 and
         # accepts numpy>=1.26 on Python 3.12.
         echo "opencv-python==4.11.0.86"
+        # zeroconf 0.149+ ships no macOS Intel wheel; a runner build is tagged
+        # macosx_15_0_x86_64 and uv rejects it for the 13.0 target.
+        # 0.148.0 is the last release with cp312 macosx_10_13_x86_64.
+        echo "zeroconf==0.148.0"
       } > "$out"
       echo "$out"
       ;;

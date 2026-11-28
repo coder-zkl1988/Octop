@@ -4,7 +4,7 @@
     {
       "name": "app-region",
       "status": "nonstandard",
-      "description": "Wails/WebView window drag region. `drag` makes the element a window drag handle; `no-drag` keeps a control clickable inside a drag region.",
+      "description": "Electron/Chromium window drag region. `drag` makes the element a window drag handle; `no-drag` keeps a control clickable inside a drag region.",
       "syntax": "drag | no-drag",
       "values": [{ "name": "drag" }, { "name": "no-drag" }]
     },
